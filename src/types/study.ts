@@ -40,6 +40,8 @@ export interface Study {
   priorCount?: number;
   sex: 'M' | 'F';
   age: number;
+  /** Group ID for multi-zone studies (same patient, multiple body areas) */
+  linkedStudyGroup?: string;
 }
 
 export interface TaskType {

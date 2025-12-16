@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { UrgencyBadge } from "@/components/ui/UrgencyBadge";
+import { LinkedBodyAreasDisplay } from "@/components/ui/LinkedStudiesBadge";
 import { DeadlineTimer } from "@/components/ui/DeadlineTimer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -267,8 +268,7 @@ export function StudyListPage() {
                   </td>
                   <td className="text-sm">{study.clientName}</td>
                   <td>
-                    <div className="text-sm font-medium">{study.modality}</div>
-                    <div className="text-xs text-muted-foreground">{study.bodyArea}</div>
+                    <LinkedBodyAreasDisplay study={study} allStudies={mockStudies} />
                   </td>
                   <td>
                     <div className="text-sm">{format(parseISO(study.receivedAt), "MMM d, yyyy")}</div>
