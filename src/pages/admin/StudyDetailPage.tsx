@@ -1,17 +1,20 @@
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Download, UserPlus, History } from "lucide-react";
+import { ArrowLeft, Download, UserPlus, History, Link2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { UrgencyBadge } from "@/components/ui/UrgencyBadge";
 import { DeadlineTimer } from "@/components/ui/DeadlineTimer";
+import { getLinkedStudies } from "@/components/ui/LinkedStudiesBadge";
 import { mockStudies, mockPriorStudies, mockAuditLog } from "@/data/mockData";
 import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 
 export function StudyDetailPage() {
   const { studyId } = useParams();
   const navigate = useNavigate();
 
   const study = mockStudies.find(s => s.id === studyId) || mockStudies[0];
+  const linkedStudies = getLinkedStudies(study, mockStudies);
   const studyAuditLog = mockAuditLog.filter(l => l.studyId === study.id);
 
   return (
@@ -139,8 +142,57 @@ export function StudyDetailPage() {
           )}
         </div>
 
-        {/* Audit History */}
-        <div className="col-span-1">
+        {/* Right Column */}
+        <div className="col-span-1 space-y-6">
+          {/* Linked Body Parts */}
+          {linkedStudies.length > 0 && (
+            <div className="clinical-card border-primary/30 bg-primary/5">
+              <div className="clinical-card-header">
+                <h3 className="text-sm font-semibold flex items-center gap-2">
+                  <Link2 className="w-4 h-4 text-primary" />
+                  Linked Body Parts
+                </h3>
+                <span className="text-xs text-muted-foreground">{linkedStudies.length + 1} zones</span>
+              </div>
+              <div className="divide-y divide-border">
+                {/* Current study */}
+                <div className="p-3 bg-primary/10">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium">{study.bodyArea}</p>
+                      <p className="text-xs text-muted-foreground font-mono">{study.id}</p>
+                    </div>
+                    <span className="text-xs px-2 py-0.5 rounded bg-primary/20 text-primary font-medium">Current</span>
+                  </div>
+                </div>
+                {/* Linked studies */}
+                {linkedStudies.map((linked) => (
+                  <button
+                    key={linked.id}
+                    onClick={() => navigate(`/study/${linked.id}`)}
+                    className="w-full p-3 text-left hover:bg-muted/50 transition-colors"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium">{linked.bodyArea}</p>
+                        <p className="text-xs text-muted-foreground font-mono">{linked.id}</p>
+                      </div>
+                      <span className={cn(
+                        "text-xs px-2 py-0.5 rounded font-medium",
+                        linked.status === 'finalized' || linked.status === 'delivered' 
+                          ? "bg-status-finalized/20 text-status-finalized"
+                          : "bg-muted text-muted-foreground"
+                      )}>
+                        {linked.status.replace('-', ' ')}
+                      </span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Audit History */}
           <div className="clinical-card">
             <div className="clinical-card-header">
               <h3 className="text-sm font-semibold flex items-center gap-2">
