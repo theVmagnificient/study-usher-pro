@@ -6,42 +6,64 @@ import { DeadlineTimer } from "@/components/ui/DeadlineTimer";
 import { LinkedBodyAreasDisplay } from "@/components/ui/LinkedStudiesBadge";
 import { mockStudies } from "@/data/mockData";
 import { cn } from "@/lib/utils";
-import { FileCheck, User, AlertTriangle, Clock } from "lucide-react";
+import { FileCheck, User, AlertTriangle, Clock, CheckCircle, Loader2 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { differenceInHours } from "date-fns";
+import { differenceInHours, format } from "date-fns";
 
 export function ValidationQueuePage() {
   const navigate = useNavigate();
 
-  // Filter studies that would be in validation queue
-  const validationStudies = mockStudies.filter(s => 
-    ['draft-ready', 'under-validation'].includes(s.status)
+  // Studies pending validation
+  const pendingValidation = mockStudies.filter(s => 
+    ['draft-ready'].includes(s.status)
   ).sort((a, b) => 
     new Date(a.deadline).getTime() - new Date(b.deadline).getTime()
   );
 
-  // Split into urgent (deadline within 1 hour) and retrospective queues
+  // Studies currently being validated (in progress)
+  const inProgressValidation = mockStudies.filter(s => 
+    ['under-validation'].includes(s.status)
+  ).sort((a, b) => 
+    new Date(a.deadline).getTime() - new Date(b.deadline).getTime()
+  );
+
+  // Completed validations
+  const completedValidation = mockStudies.filter(s => 
+    ['finalized', 'delivered'].includes(s.status)
+  ).sort((a, b) => 
+    new Date(b.deadline).getTime() - new Date(a.deadline).getTime()
+  );
+
+  const allValidationStudies = [...pendingValidation, ...inProgressValidation];
+
+  // Split into urgent and retrospective
   const now = new Date();
-  const urgentStudies = validationStudies.filter(s => {
+  
+  const isUrgent = (s: typeof mockStudies[0]) => {
     const hoursUntilDeadline = differenceInHours(new Date(s.deadline), now);
     return hoursUntilDeadline < 1 || s.urgency === 'stat';
-  });
-  
-  const retrospectiveStudies = validationStudies.filter(s => {
-    const hoursUntilDeadline = differenceInHours(new Date(s.deadline), now);
-    return hoursUntilDeadline >= 1 && s.urgency !== 'stat';
-  });
+  };
+
+  // Urgent queue breakdown
+  const urgentPending = pendingValidation.filter(isUrgent);
+  const urgentInProgress = inProgressValidation.filter(isUrgent);
+  const urgentCompleted = completedValidation.filter(isUrgent);
+
+  // Retrospective queue breakdown
+  const retroPending = pendingValidation.filter(s => !isUrgent(s));
+  const retroInProgress = inProgressValidation.filter(s => !isUrgent(s));
+  const retroCompleted = completedValidation.filter(s => !isUrgent(s));
 
   const handleStudyClick = (studyId: string) => {
     navigate(`/report/${studyId}`);
   };
 
-  const StudyItem = ({ study }: { study: typeof mockStudies[0] }) => (
+  const StudyItem = ({ study, showDeadline = true }: { study: typeof mockStudies[0]; showDeadline?: boolean }) => (
     <div
       onClick={() => handleStudyClick(study.id)}
       className={cn(
         "queue-item",
-        study.urgency === 'stat' && "queue-item-urgent"
+        study.urgency === 'stat' && !['finalized', 'delivered'].includes(study.status) && "queue-item-urgent"
       )}
     >
       <div className="flex items-center gap-4">
@@ -65,16 +87,60 @@ export function ValidationQueuePage() {
           {study.assignedPhysician}
         </div>
         <UrgencyBadge urgency={study.urgency} />
-        <DeadlineTimer deadline={study.deadline} />
+        {showDeadline ? (
+          <DeadlineTimer deadline={study.deadline} />
+        ) : (
+          <span className="text-sm text-muted-foreground">
+            {format(new Date(study.deadline), "MMM d, yyyy")}
+          </span>
+        )}
       </div>
     </div>
   );
 
   const EmptyState = ({ message, submessage }: { message: string; submessage: string }) => (
-    <div className="clinical-card p-12 text-center">
-      <FileCheck className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
-      <p className="text-lg font-medium text-foreground">{message}</p>
-      <p className="text-sm text-muted-foreground">{submessage}</p>
+    <div className="clinical-card p-8 text-center">
+      <FileCheck className="w-10 h-10 text-muted-foreground mx-auto mb-2" />
+      <p className="text-sm font-medium text-foreground">{message}</p>
+      <p className="text-xs text-muted-foreground">{submessage}</p>
+    </div>
+  );
+
+  const QueueSection = ({ 
+    title, 
+    icon: Icon, 
+    studies, 
+    emptyMessage, 
+    showDeadline = true,
+    accentColor = "muted"
+  }: { 
+    title: string; 
+    icon: React.ElementType;
+    studies: typeof mockStudies; 
+    emptyMessage: string;
+    showDeadline?: boolean;
+    accentColor?: "muted" | "primary" | "success";
+  }) => (
+    <div className="mb-6">
+      <div className="flex items-center gap-2 mb-3">
+        <Icon className={cn(
+          "w-4 h-4",
+          accentColor === "primary" && "text-primary",
+          accentColor === "success" && "text-status-finalized",
+          accentColor === "muted" && "text-muted-foreground"
+        )} />
+        <h3 className="text-sm font-semibold">{title}</h3>
+        <span className="text-xs text-muted-foreground">({studies.length})</span>
+      </div>
+      {studies.length > 0 ? (
+        <div className="space-y-2">
+          {studies.map((study) => (
+            <StudyItem key={study.id} study={study} showDeadline={showDeadline} />
+          ))}
+        </div>
+      ) : (
+        <p className="text-sm text-muted-foreground italic pl-6">{emptyMessage}</p>
+      )}
     </div>
   );
 
@@ -82,7 +148,7 @@ export function ValidationQueuePage() {
     <div>
       <PageHeader
         title="Validation Queue"
-        subtitle={`${validationStudies.length} studies awaiting validation`}
+        subtitle={`${allValidationStudies.length} studies awaiting validation`}
       />
 
       <Tabs defaultValue="urgent" className="w-full">
@@ -90,18 +156,18 @@ export function ValidationQueuePage() {
           <TabsTrigger value="urgent" className="gap-2">
             <AlertTriangle className="w-4 h-4" />
             Urgent Queue
-            {urgentStudies.length > 0 && (
+            {(urgentPending.length + urgentInProgress.length) > 0 && (
               <span className="ml-1 bg-destructive text-destructive-foreground text-xs px-1.5 py-0.5 rounded-full">
-                {urgentStudies.length}
+                {urgentPending.length + urgentInProgress.length}
               </span>
             )}
           </TabsTrigger>
           <TabsTrigger value="retrospective" className="gap-2">
             <Clock className="w-4 h-4" />
             Retrospective Queue
-            {retrospectiveStudies.length > 0 && (
+            {(retroPending.length + retroInProgress.length) > 0 && (
               <span className="ml-1 bg-muted text-muted-foreground text-xs px-1.5 py-0.5 rounded-full">
-                {retrospectiveStudies.length}
+                {retroPending.length + retroInProgress.length}
               </span>
             )}
           </TabsTrigger>
@@ -114,17 +180,31 @@ export function ValidationQueuePage() {
               Studies requiring review within 1 hour — prioritize speed while maintaining accuracy
             </p>
           </div>
-          <div className="space-y-3">
-            {urgentStudies.map((study) => (
-              <StudyItem key={study.id} study={study} />
-            ))}
-            {urgentStudies.length === 0 && (
-              <EmptyState 
-                message="No urgent studies" 
-                submessage="All studies have sufficient time for review" 
-              />
-            )}
-          </div>
+          
+          <QueueSection
+            title="In Progress"
+            icon={Loader2}
+            studies={urgentInProgress}
+            emptyMessage="No urgent validations in progress"
+            accentColor="primary"
+          />
+          
+          <QueueSection
+            title="To Validate"
+            icon={FileCheck}
+            studies={urgentPending}
+            emptyMessage="No urgent studies pending validation"
+            accentColor="muted"
+          />
+          
+          <QueueSection
+            title="Completed"
+            icon={CheckCircle}
+            studies={urgentCompleted}
+            emptyMessage="No urgent validations completed yet"
+            showDeadline={false}
+            accentColor="success"
+          />
         </TabsContent>
 
         <TabsContent value="retrospective">
@@ -134,17 +214,31 @@ export function ValidationQueuePage() {
               Focus on detailed analysis and accuracy — take time to ensure thorough review
             </p>
           </div>
-          <div className="space-y-3">
-            {retrospectiveStudies.map((study) => (
-              <StudyItem key={study.id} study={study} />
-            ))}
-            {retrospectiveStudies.length === 0 && (
-              <EmptyState 
-                message="No retrospective studies" 
-                submessage="Studies with flexible deadlines will appear here" 
-              />
-            )}
-          </div>
+          
+          <QueueSection
+            title="In Progress"
+            icon={Loader2}
+            studies={retroInProgress}
+            emptyMessage="No retrospective validations in progress"
+            accentColor="primary"
+          />
+          
+          <QueueSection
+            title="To Validate"
+            icon={FileCheck}
+            studies={retroPending}
+            emptyMessage="No retrospective studies pending validation"
+            accentColor="muted"
+          />
+          
+          <QueueSection
+            title="Completed"
+            icon={CheckCircle}
+            studies={retroCompleted}
+            emptyMessage="No retrospective validations completed yet"
+            showDeadline={false}
+            accentColor="success"
+          />
         </TabsContent>
       </Tabs>
     </div>
