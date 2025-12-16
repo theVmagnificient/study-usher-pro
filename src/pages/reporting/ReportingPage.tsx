@@ -11,13 +11,15 @@ import {
   AlertTriangle,
   MessageSquare,
   CheckCircle,
-  RotateCcw
+  RotateCcw,
+  Link2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { UrgencyBadge } from "@/components/ui/UrgencyBadge";
 import { DeadlineTimer } from "@/components/ui/DeadlineTimer";
 import { mockStudies, mockPriorStudies } from "@/data/mockData";
+import { getLinkedStudies } from "@/components/ui/LinkedStudiesBadge";
 import { cn } from "@/lib/utils";
 import {
   Dialog,
@@ -33,8 +35,8 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 export function ReportingPage() {
   const { studyId } = useParams();
   const navigate = useNavigate();
-  
   const study = mockStudies.find(s => s.id === studyId) || mockStudies[0];
+  const linkedStudies = getLinkedStudies(study, mockStudies);
   
   const [protocol, setProtocol] = useState("Non-contrast CT of the chest was performed using standard departmental protocol.");
   const [findings, setFindings] = useState("");
@@ -194,6 +196,54 @@ export function ReportingPage() {
 
         {/* Right Sidebar - Supporting Info */}
         <aside className="w-80 border-l border-border bg-muted/30 p-4 space-y-4">
+          {/* Linked Body Parts (Multi-Zone) */}
+          {linkedStudies.length > 0 && (
+            <div className="clinical-card border-primary/30 bg-primary/5">
+              <div className="clinical-card-header">
+                <h3 className="text-sm font-semibold flex items-center gap-2">
+                  <Link2 className="w-4 h-4 text-primary" />
+                  Linked Body Parts
+                </h3>
+                <span className="text-xs text-muted-foreground">{linkedStudies.length + 1} zones</span>
+              </div>
+              <div className="divide-y divide-border">
+                {/* Current study */}
+                <div className="p-3 bg-primary/10">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium">{study.bodyArea}</p>
+                      <p className="text-xs text-muted-foreground font-mono">{study.id}</p>
+                    </div>
+                    <span className="text-xs px-2 py-0.5 rounded bg-primary/20 text-primary font-medium">Current</span>
+                  </div>
+                </div>
+                {/* Linked studies */}
+                {linkedStudies.map((linked) => (
+                  <button
+                    key={linked.id}
+                    onClick={() => navigate(`/report/${linked.id}`)}
+                    className="w-full p-3 text-left hover:bg-muted/50 transition-colors"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium">{linked.bodyArea}</p>
+                        <p className="text-xs text-muted-foreground font-mono">{linked.id}</p>
+                      </div>
+                      <span className={cn(
+                        "text-xs px-2 py-0.5 rounded font-medium",
+                        linked.status === 'finalized' || linked.status === 'delivered' 
+                          ? "bg-status-finalized/20 text-status-finalized"
+                          : "bg-muted text-muted-foreground"
+                      )}>
+                        {linked.status.replace('-', ' ')}
+                      </span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Prior Studies */}
           {study.hasPriors && (
             <div className="clinical-card">

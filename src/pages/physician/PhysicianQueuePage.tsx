@@ -3,6 +3,7 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { UrgencyBadge } from "@/components/ui/UrgencyBadge";
 import { DeadlineTimer } from "@/components/ui/DeadlineTimer";
+import { LinkedBodyAreasDisplay } from "@/components/ui/LinkedStudiesBadge";
 import { mockStudies } from "@/data/mockData";
 import { cn } from "@/lib/utils";
 import { FileText, AlertCircle } from "lucide-react";
@@ -64,8 +65,9 @@ export function PhysicianQueuePage() {
                   <span className="font-mono text-xs font-medium">{study.id}</span>
                   <StatusBadge status={study.status} />
                 </div>
-                <div className="text-sm text-muted-foreground">
-                  {study.modality} {study.bodyArea} • {study.patientId} ({study.sex}/{study.age}y)
+                <div className="text-sm text-muted-foreground flex items-center gap-2">
+                  <LinkedBodyAreasDisplay study={study} allStudies={mockStudies} />
+                  <span>• {study.patientId} ({study.sex}/{study.age}y)</span>
                 </div>
               </div>
             </div>
