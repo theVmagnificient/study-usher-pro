@@ -1,13 +1,15 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, MoreHorizontal, Download, UserPlus, Calendar } from "lucide-react";
-import { format, parseISO, isAfter, isBefore, startOfDay, endOfDay } from "date-fns";
+import { Search, MoreHorizontal, Download, UserPlus, Calendar, Clock } from "lucide-react";
+import { format, parseISO, isAfter, isBefore, set } from "date-fns";
+import { cn } from "@/lib/utils";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { UrgencyBadge } from "@/components/ui/UrgencyBadge";
 import { DeadlineTimer } from "@/components/ui/DeadlineTimer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -51,9 +53,23 @@ export function StudyListPage() {
   const [modalityFilter, setModalityFilter] = useState<string>("all");
   const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined);
   const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
+  const [timeFrom, setTimeFrom] = useState<string>("00:00");
+  const [timeTo, setTimeTo] = useState<string>("23:59");
 
   const clients = [...new Set(mockStudies.map((s) => s.clientName))];
   const modalities = [...new Set(mockStudies.map((s) => s.modality))];
+
+  const getDateTimeFrom = () => {
+    if (!dateFrom) return null;
+    const [hours, minutes] = timeFrom.split(":").map(Number);
+    return set(dateFrom, { hours, minutes, seconds: 0 });
+  };
+
+  const getDateTimeTo = () => {
+    if (!dateTo) return null;
+    const [hours, minutes] = timeTo.split(":").map(Number);
+    return set(dateTo, { hours, minutes, seconds: 59 });
+  };
 
   const filteredStudies = mockStudies.filter((study) => {
     const matchesSearch =
@@ -65,8 +81,11 @@ export function StudyListPage() {
     const matchesModality = modalityFilter === "all" || study.modality === modalityFilter;
     
     const receivedDate = parseISO(study.receivedAt);
-    const matchesDateFrom = !dateFrom || isAfter(receivedDate, startOfDay(dateFrom)) || receivedDate.getTime() === startOfDay(dateFrom).getTime();
-    const matchesDateTo = !dateTo || isBefore(receivedDate, endOfDay(dateTo));
+    const dateTimeFrom = getDateTimeFrom();
+    const dateTimeTo = getDateTimeTo();
+    
+    const matchesDateFrom = !dateTimeFrom || isAfter(receivedDate, dateTimeFrom) || receivedDate.getTime() === dateTimeFrom.getTime();
+    const matchesDateTo = !dateTimeTo || isBefore(receivedDate, dateTimeTo);
     
     return matchesSearch && matchesStatus && matchesClient && matchesModality && matchesDateFrom && matchesDateTo;
   });
@@ -78,6 +97,8 @@ export function StudyListPage() {
   const clearDateFilters = () => {
     setDateFrom(undefined);
     setDateTo(undefined);
+    setTimeFrom("00:00");
+    setTimeTo("23:59");
   };
 
   return (
@@ -136,12 +157,15 @@ export function StudyListPage() {
             </SelectContent>
           </Select>
 
-          {/* Date Range Filter */}
+          {/* Date Range Filter - From */}
           <Popover>
             <PopoverTrigger asChild>
-              <Button variant="outline" className="w-[140px] justify-start text-left font-normal">
+              <Button variant="outline" className={cn(
+                "w-[180px] justify-start text-left font-normal",
+                !dateFrom && "text-muted-foreground"
+              )}>
                 <Calendar className="mr-2 h-4 w-4" />
-                {dateFrom ? format(dateFrom, "MMM d") : "From"}
+                {dateFrom ? `${format(dateFrom, "MMM d")} ${timeFrom}` : "From date & time"}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="start">
@@ -150,15 +174,32 @@ export function StudyListPage() {
                 selected={dateFrom}
                 onSelect={setDateFrom}
                 initialFocus
+                className={cn("p-3 pointer-events-auto")}
               />
+              <div className="border-t p-3">
+                <Label className="text-xs text-muted-foreground">Time</Label>
+                <div className="flex items-center gap-2 mt-1">
+                  <Clock className="h-4 w-4 text-muted-foreground" />
+                  <Input
+                    type="time"
+                    value={timeFrom}
+                    onChange={(e) => setTimeFrom(e.target.value)}
+                    className="w-[120px]"
+                  />
+                </div>
+              </div>
             </PopoverContent>
           </Popover>
 
+          {/* Date Range Filter - To */}
           <Popover>
             <PopoverTrigger asChild>
-              <Button variant="outline" className="w-[140px] justify-start text-left font-normal">
+              <Button variant="outline" className={cn(
+                "w-[180px] justify-start text-left font-normal",
+                !dateTo && "text-muted-foreground"
+              )}>
                 <Calendar className="mr-2 h-4 w-4" />
-                {dateTo ? format(dateTo, "MMM d") : "To"}
+                {dateTo ? `${format(dateTo, "MMM d")} ${timeTo}` : "To date & time"}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="start">
@@ -167,13 +208,26 @@ export function StudyListPage() {
                 selected={dateTo}
                 onSelect={setDateTo}
                 initialFocus
+                className={cn("p-3 pointer-events-auto")}
               />
+              <div className="border-t p-3">
+                <Label className="text-xs text-muted-foreground">Time</Label>
+                <div className="flex items-center gap-2 mt-1">
+                  <Clock className="h-4 w-4 text-muted-foreground" />
+                  <Input
+                    type="time"
+                    value={timeTo}
+                    onChange={(e) => setTimeTo(e.target.value)}
+                    className="w-[120px]"
+                  />
+                </div>
+              </div>
             </PopoverContent>
           </Popover>
 
           {(dateFrom || dateTo) && (
             <Button variant="ghost" size="sm" onClick={clearDateFilters}>
-              Clear dates
+              Clear
             </Button>
           )}
         </div>
