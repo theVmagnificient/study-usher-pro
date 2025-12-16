@@ -13,6 +13,7 @@ import { SLADashboardPage } from "@/pages/admin/SLADashboardPage";
 import { UserManagementPage } from "@/pages/admin/UserManagementPage";
 import { StudyDetailPage } from "@/pages/admin/StudyDetailPage";
 import { PhysicianSchedulePage } from "@/pages/admin/PhysicianSchedulePage";
+import { WorkforceCapacityPage } from "@/pages/admin/WorkforceCapacityPage";
 
 // Physician Pages
 import { PhysicianQueuePage } from "@/pages/physician/PhysicianQueuePage";
@@ -44,6 +45,7 @@ const App = () => (
           <Route path="/schedule/:physicianId" element={<AppLayout><PhysicianSchedulePage /></AppLayout>} />
           <Route path="/audit" element={<AppLayout><AuditLogPage /></AppLayout>} />
           <Route path="/sla" element={<AppLayout><SLADashboardPage /></AppLayout>} />
+          <Route path="/workforce" element={<AppLayout><WorkforceCapacityPage /></AppLayout>} />
           
           {/* Physician routes with layout */}
           <Route path="/queue" element={<AppLayout><PhysicianQueuePage /></AppLayout>} />
