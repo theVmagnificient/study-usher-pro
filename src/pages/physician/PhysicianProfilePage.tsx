@@ -1,10 +1,12 @@
+import { useNavigate } from "react-router-dom";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { mockPhysicians } from "@/data/mockData";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Clock, Phone, MessageCircle } from "lucide-react";
+import { Calendar, Clock, Phone, MessageCircle, CalendarClock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export function PhysicianProfilePage() {
+  const navigate = useNavigate();
   // Using first physician as current user for demo
   const physician = mockPhysicians[0];
 
@@ -56,6 +58,14 @@ export function PhysicianProfilePage() {
           <div className="clinical-card">
             <div className="clinical-card-header">
               <h3 className="text-sm font-semibold">Working Schedule</h3>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => navigate(`/schedule/${physician.id}`)}
+              >
+                <CalendarClock className="w-4 h-4 mr-2" />
+                Manage Schedule
+              </Button>
             </div>
             <div className="clinical-card-body">
               <div className="grid grid-cols-2 gap-4">
