@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, Filter, MoreHorizontal, Download, UserPlus } from "lucide-react";
+import { Search, MoreHorizontal, Download, UserPlus, Calendar } from "lucide-react";
+import { format, parseISO, isAfter, isBefore, startOfDay, endOfDay } from "date-fns";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { UrgencyBadge } from "@/components/ui/UrgencyBadge";
@@ -21,7 +22,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { mockStudies, mockPhysicians } from "@/data/mockData";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { mockStudies } from "@/data/mockData";
 import type { StudyStatus, Study } from "@/types/study";
 
 const statusOptions: { value: StudyStatus | "all"; label: string }[] = [
@@ -42,6 +49,8 @@ export function StudyListPage() {
   const [statusFilter, setStatusFilter] = useState<StudyStatus | "all">("all");
   const [clientFilter, setClientFilter] = useState<string>("all");
   const [modalityFilter, setModalityFilter] = useState<string>("all");
+  const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined);
+  const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
 
   const clients = [...new Set(mockStudies.map((s) => s.clientName))];
   const modalities = [...new Set(mockStudies.map((s) => s.modality))];
@@ -54,11 +63,21 @@ export function StudyListPage() {
     const matchesStatus = statusFilter === "all" || study.status === statusFilter;
     const matchesClient = clientFilter === "all" || study.clientName === clientFilter;
     const matchesModality = modalityFilter === "all" || study.modality === modalityFilter;
-    return matchesSearch && matchesStatus && matchesClient && matchesModality;
+    
+    const receivedDate = parseISO(study.receivedAt);
+    const matchesDateFrom = !dateFrom || isAfter(receivedDate, startOfDay(dateFrom)) || receivedDate.getTime() === startOfDay(dateFrom).getTime();
+    const matchesDateTo = !dateTo || isBefore(receivedDate, endOfDay(dateTo));
+    
+    return matchesSearch && matchesStatus && matchesClient && matchesModality && matchesDateFrom && matchesDateTo;
   });
 
   const handleRowClick = (study: Study) => {
     navigate(`/study/${study.id}`);
+  };
+
+  const clearDateFilters = () => {
+    setDateFrom(undefined);
+    setDateTo(undefined);
   };
 
   return (
@@ -116,6 +135,47 @@ export function StudyListPage() {
               ))}
             </SelectContent>
           </Select>
+
+          {/* Date Range Filter */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className="w-[140px] justify-start text-left font-normal">
+                <Calendar className="mr-2 h-4 w-4" />
+                {dateFrom ? format(dateFrom, "MMM d") : "From"}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <CalendarComponent
+                mode="single"
+                selected={dateFrom}
+                onSelect={setDateFrom}
+                initialFocus
+              />
+            </PopoverContent>
+          </Popover>
+
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className="w-[140px] justify-start text-left font-normal">
+                <Calendar className="mr-2 h-4 w-4" />
+                {dateTo ? format(dateTo, "MMM d") : "To"}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <CalendarComponent
+                mode="single"
+                selected={dateTo}
+                onSelect={setDateTo}
+                initialFocus
+              />
+            </PopoverContent>
+          </Popover>
+
+          {(dateFrom || dateTo) && (
+            <Button variant="ghost" size="sm" onClick={clearDateFilters}>
+              Clear dates
+            </Button>
+          )}
         </div>
       </div>
 
@@ -129,6 +189,7 @@ export function StudyListPage() {
                 <th>Patient</th>
                 <th>Client</th>
                 <th>Modality / Area</th>
+                <th>Received</th>
                 <th>Status</th>
                 <th>Urgency</th>
                 <th>Assigned To</th>
@@ -154,6 +215,10 @@ export function StudyListPage() {
                   <td>
                     <div className="text-sm font-medium">{study.modality}</div>
                     <div className="text-xs text-muted-foreground">{study.bodyArea}</div>
+                  </td>
+                  <td>
+                    <div className="text-sm">{format(parseISO(study.receivedAt), "MMM d, yyyy")}</div>
+                    <div className="text-xs text-muted-foreground">{format(parseISO(study.receivedAt), "HH:mm")}</div>
                   </td>
                   <td>
                     <StatusBadge status={study.status} />
