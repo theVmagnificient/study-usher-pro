@@ -43,26 +43,20 @@ export function LinkedBodyAreasDisplay({ study, allStudies, showBadge = true }: 
     : [];
   
   const isMultiZone = linkedStudies.length > 0;
-  const allBodyAreas = isMultiZone 
-    ? [study.bodyArea, ...linkedStudies.map(s => s.bodyArea)]
-    : [study.bodyArea];
+  const otherBodyAreas = linkedStudies.map(s => s.bodyArea);
   
   return (
     <div>
-      <div className="text-sm font-medium">{study.modality}</div>
-      <div className={cn(
-        "text-xs",
-        isMultiZone ? "text-primary font-medium" : "text-muted-foreground"
-      )}>
-        {isMultiZone ? (
-          <span className="flex items-center gap-1">
-            <Link2 className="w-3 h-3 inline" />
-            {allBodyAreas.join(" + ")}
-          </span>
-        ) : (
-          study.bodyArea
-        )}
+      <div className="flex items-center gap-2">
+        <span className="text-sm font-medium">{study.modality}</span>
+        <span className="text-sm font-semibold text-foreground">{study.bodyArea}</span>
       </div>
+      {isMultiZone && (
+        <div className="text-xs text-primary font-medium flex items-center gap-1">
+          <Link2 className="w-3 h-3" />
+          <span>+ {otherBodyAreas.join(", ")}</span>
+        </div>
+      )}
     </div>
   );
 }
