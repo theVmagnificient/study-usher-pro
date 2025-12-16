@@ -30,7 +30,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+
 
 export function ReportingPage() {
   const { studyId } = useParams();
@@ -46,8 +46,6 @@ export function ReportingPage() {
   const [showReturnDialog, setShowReturnDialog] = useState(false);
   const [returnComment, setReturnComment] = useState("");
   
-  const [clinicalNotesOpen, setClinicalNotesOpen] = useState(false);
-  const [techNotesOpen, setTechNotesOpen] = useState(false);
   const [expandedPrior, setExpandedPrior] = useState<string | null>(null);
   
   const isValidator = ['draft-ready', 'under-validation'].includes(study.status);
@@ -119,6 +117,38 @@ export function ReportingPage() {
           </div>
         </div>
       )}
+
+      {/* Clinical & Technical Notes - Important Context */}
+      <div className="mx-4 mt-4 grid grid-cols-2 gap-4">
+        <div className="clinical-card border-l-4 border-l-primary">
+          <div className="clinical-card-header">
+            <h3 className="text-sm font-semibold flex items-center gap-2">
+              <FileText className="w-4 h-4 text-primary" />
+              Clinical Notes
+            </h3>
+          </div>
+          <div className="clinical-card-body">
+            <p className="text-sm text-foreground">
+              Patient presents with persistent cough for 3 weeks. History of smoking (20 pack-years). 
+              Rule out pulmonary pathology.
+            </p>
+          </div>
+        </div>
+        <div className="clinical-card border-l-4 border-l-muted-foreground">
+          <div className="clinical-card-header">
+            <h3 className="text-sm font-semibold flex items-center gap-2">
+              <MessageSquare className="w-4 h-4 text-muted-foreground" />
+              Technical Notes
+            </h3>
+          </div>
+          <div className="clinical-card-body">
+            <p className="text-sm text-foreground">
+              Study performed on Siemens SOMATOM Definition Edge. 
+              Slice thickness: 1.5mm. kVp: 120. Motion artifact present - limited evaluation of bases.
+            </p>
+          </div>
+        </div>
+      </div>
 
       <div className="flex">
         {/* Main Content - Report Editor */}
@@ -285,53 +315,6 @@ export function ReportingPage() {
             </div>
           )}
 
-          {/* Clinical Notes */}
-          <Collapsible open={clinicalNotesOpen} onOpenChange={setClinicalNotesOpen}>
-            <div className="clinical-card">
-              <CollapsibleTrigger asChild>
-                <button className="clinical-card-header w-full flex items-center justify-between cursor-pointer hover:bg-muted/50">
-                  <h3 className="text-sm font-semibold">Clinical Notes</h3>
-                  {clinicalNotesOpen ? (
-                    <ChevronDown className="w-4 h-4 text-muted-foreground" />
-                  ) : (
-                    <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                  )}
-                </button>
-              </CollapsibleTrigger>
-              <CollapsibleContent>
-                <div className="clinical-card-body">
-                  <p className="text-sm text-muted-foreground">
-                    Patient presents with persistent cough for 3 weeks. History of smoking (20 pack-years). 
-                    Rule out pulmonary pathology.
-                  </p>
-                </div>
-              </CollapsibleContent>
-            </div>
-          </Collapsible>
-
-          {/* Technical Notes */}
-          <Collapsible open={techNotesOpen} onOpenChange={setTechNotesOpen}>
-            <div className="clinical-card">
-              <CollapsibleTrigger asChild>
-                <button className="clinical-card-header w-full flex items-center justify-between cursor-pointer hover:bg-muted/50">
-                  <h3 className="text-sm font-semibold">Technical Notes</h3>
-                  {techNotesOpen ? (
-                    <ChevronDown className="w-4 h-4 text-muted-foreground" />
-                  ) : (
-                    <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                  )}
-                </button>
-              </CollapsibleTrigger>
-              <CollapsibleContent>
-                <div className="clinical-card-body">
-                  <p className="text-sm text-muted-foreground">
-                    Study performed on Siemens SOMATOM Definition Edge. 
-                    Slice thickness: 1.5mm. kVp: 120. Motion artifact present - limited evaluation of bases.
-                  </p>
-                </div>
-              </CollapsibleContent>
-            </div>
-          </Collapsible>
         </aside>
       </div>
 
