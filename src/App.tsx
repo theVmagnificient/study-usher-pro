@@ -12,6 +12,7 @@ import { AuditLogPage } from "@/pages/admin/AuditLogPage";
 import { SLADashboardPage } from "@/pages/admin/SLADashboardPage";
 import { UserManagementPage } from "@/pages/admin/UserManagementPage";
 import { StudyDetailPage } from "@/pages/admin/StudyDetailPage";
+import { PhysicianSchedulePage } from "@/pages/admin/PhysicianSchedulePage";
 
 // Physician Pages
 import { PhysicianQueuePage } from "@/pages/physician/PhysicianQueuePage";
@@ -40,6 +41,7 @@ const App = () => (
           <Route path="/study/:studyId" element={<AppLayout><StudyDetailPage /></AppLayout>} />
           <Route path="/task-types" element={<AppLayout><TaskTypesPage /></AppLayout>} />
           <Route path="/users" element={<AppLayout><UserManagementPage /></AppLayout>} />
+          <Route path="/schedule/:physicianId" element={<AppLayout><PhysicianSchedulePage /></AppLayout>} />
           <Route path="/audit" element={<AppLayout><AuditLogPage /></AppLayout>} />
           <Route path="/sla" element={<AppLayout><SLADashboardPage /></AppLayout>} />
           

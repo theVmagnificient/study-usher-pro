@@ -223,9 +223,14 @@ export const mockPhysicians: Physician[] = [
     fullName: "Dr. Sarah Johnson",
     phone: "+1 (555) 123-4567",
     telegram: "@drsjohnson",
+    role: "validating-radiologist",
     schedule: {
       days: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
       hours: { start: "08:00", end: "18:00" },
+    },
+    customSchedule: {
+      "2024-01-15": [8, 9, 10, 11, 12, 13, 14, 15, 16, 17],
+      "2024-01-16": [9, 10, 11, 12, 13, 14, 15],
     },
     supportedModalities: ["CT", "MRI", "X-Ray"],
     supportedBodyAreas: ["Head", "Neck", "Chest", "Spine"],
@@ -251,6 +256,7 @@ export const mockPhysicians: Physician[] = [
     id: "PHY-002",
     fullName: "Dr. Michael Chen",
     phone: "+1 (555) 234-5678",
+    role: "reporting-radiologist",
     schedule: {
       days: ["Monday", "Tuesday", "Wednesday", "Friday"],
       hours: { start: "09:00", end: "17:00" },
@@ -280,6 +286,7 @@ export const mockPhysicians: Physician[] = [
     fullName: "Dr. Emily Davis",
     phone: "+1 (555) 345-6789",
     telegram: "@dredavis",
+    role: "admin",
     schedule: {
       days: ["Tuesday", "Wednesday", "Thursday", "Saturday"],
       hours: { start: "07:00", end: "15:00" },

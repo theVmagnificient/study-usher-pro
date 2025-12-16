@@ -60,10 +60,13 @@ export interface Physician {
   fullName: string;
   phone: string;
   telegram?: string;
+  role: UserRole;
   schedule: {
     days: string[];
     hours: { start: string; end: string };
   };
+  /** Custom schedule overrides for specific dates (key: YYYY-MM-DD) */
+  customSchedule?: Record<string, number[]>;
   supportedModalities: Modality[];
   supportedBodyAreas: BodyArea[];
   activeStudies: number;
