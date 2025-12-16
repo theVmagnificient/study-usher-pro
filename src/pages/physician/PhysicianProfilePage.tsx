@@ -1,14 +1,37 @@
+import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { mockPhysicians } from "@/data/mockData";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Clock, Phone, MessageCircle, CalendarClock } from "lucide-react";
+import { Clock, Phone, MessageCircle, CalendarClock } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { startOfWeek, addDays, format, getDay } from "date-fns";
+
+const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const shortDayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 export function PhysicianProfilePage() {
   const navigate = useNavigate();
   // Using first physician as current user for demo
   const physician = mockPhysicians[0];
+
+  const currentWeekDays = useMemo(() => {
+    const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 }); // Monday
+    return Array.from({ length: 7 }, (_, i) => {
+      const date = addDays(weekStart, i);
+      const dayIndex = getDay(date);
+      const dayName = dayNames[dayIndex];
+      const isWorkingDay = physician.schedule.days.includes(dayName);
+      
+      return {
+        date,
+        shortName: shortDayNames[dayIndex],
+        dayNumber: format(date, "d"),
+        isWorkingDay,
+        hours: isWorkingDay ? `${physician.schedule.hours.start} - ${physician.schedule.hours.end}` : "Off",
+      };
+    });
+  }, [physician]);
 
   return (
     <div className="max-w-4xl">
@@ -57,7 +80,7 @@ export function PhysicianProfilePage() {
           {/* Schedule Card */}
           <div className="clinical-card">
             <div className="clinical-card-header">
-              <h3 className="text-sm font-semibold">Working Schedule</h3>
+              <h3 className="text-sm font-semibold">This Week's Schedule</h3>
               <Button 
                 variant="outline" 
                 size="sm"
@@ -68,21 +91,26 @@ export function PhysicianProfilePage() {
               </Button>
             </div>
             <div className="clinical-card-body">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="section-header">Days</label>
-                  <div className="flex items-center gap-2">
-                    <Calendar className="w-4 h-4 text-muted-foreground" />
-                    <p className="text-sm">{physician.schedule.days.join(", ")}</p>
+              <div className="grid grid-cols-7 gap-2">
+                {currentWeekDays.map((day) => (
+                  <div 
+                    key={day.shortName} 
+                    className={`text-center p-3 rounded-lg border ${
+                      day.isWorkingDay 
+                        ? "bg-primary/10 border-primary/20" 
+                        : "bg-muted/50 border-border"
+                    }`}
+                  >
+                    <p className="text-xs font-medium text-muted-foreground">{day.shortName}</p>
+                    <p className="text-lg font-semibold mt-1">{day.dayNumber}</p>
+                    <div className="flex items-center justify-center gap-1 mt-2">
+                      <Clock className="w-3 h-3 text-muted-foreground" />
+                      <p className={`text-xs ${day.isWorkingDay ? "text-foreground" : "text-muted-foreground"}`}>
+                        {day.hours}
+                      </p>
+                    </div>
                   </div>
-                </div>
-                <div>
-                  <label className="section-header">Hours</label>
-                  <div className="flex items-center gap-2">
-                    <Clock className="w-4 h-4 text-muted-foreground" />
-                    <p className="text-sm">{physician.schedule.hours.start} - {physician.schedule.hours.end}</p>
-                  </div>
-                </div>
+                ))}
               </div>
             </div>
           </div>
