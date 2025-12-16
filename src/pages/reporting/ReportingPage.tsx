@@ -5,14 +5,15 @@ import {
   Download, 
   Save, 
   Send, 
-  ChevronDown, 
   ChevronRight,
   FileText,
   AlertTriangle,
   MessageSquare,
   CheckCircle,
   RotateCcw,
-  Link2
+  Link2,
+  X,
+  History
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/StatusBadge";
@@ -30,6 +31,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import type { PriorStudy } from "@/types/study";
 
 
 export function ReportingPage() {
@@ -46,7 +48,7 @@ export function ReportingPage() {
   const [showReturnDialog, setShowReturnDialog] = useState(false);
   const [returnComment, setReturnComment] = useState("");
   
-  const [expandedPrior, setExpandedPrior] = useState<string | null>(null);
+  const [selectedPrior, setSelectedPrior] = useState<PriorStudy | null>(null);
   
   const isValidator = ['draft-ready', 'under-validation'].includes(study.status);
   const isReturned = study.status === 'returned';
@@ -69,6 +71,10 @@ export function ReportingPage() {
   const handleReturn = () => {
     setShowReturnDialog(false);
     navigate(-1);
+  };
+
+  const handlePriorClick = (prior: PriorStudy) => {
+    setSelectedPrior(selectedPrior?.id === prior.id ? null : prior);
   };
 
   return (
@@ -152,8 +158,13 @@ export function ReportingPage() {
 
       <div className="flex">
         {/* Main Content - Report Editor */}
-        <div className="flex-1 p-6">
-          <div className="max-w-3xl space-y-6">
+        <div className={cn("flex-1 p-6", selectedPrior && "border-r border-border")}>
+          <div className="space-y-6">
+            <div className="flex items-center gap-2 mb-4">
+              <span className="text-sm font-semibold text-primary">Current Report</span>
+              <span className="text-xs text-muted-foreground font-mono">{study.id}</span>
+            </div>
+            
             {/* Study Protocol */}
             <div>
               <label className="field-label">Study Protocol</label>
@@ -224,8 +235,58 @@ export function ReportingPage() {
           </div>
         </div>
 
+        {/* Prior Study Comparison Panel */}
+        {selectedPrior && (
+          <div className="flex-1 p-6 bg-muted/20">
+            <div className="space-y-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <History className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-sm font-semibold text-muted-foreground">Prior Report</span>
+                  <span className="text-xs text-muted-foreground">{selectedPrior.type} • {selectedPrior.date}</span>
+                </div>
+                <Button variant="ghost" size="icon" onClick={() => setSelectedPrior(null)}>
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+              
+              {/* Prior Protocol */}
+              <div>
+                <label className="field-label text-muted-foreground">Study Protocol</label>
+                <div className="report-textarea bg-muted/50 min-h-[100px]">
+                  <p className="text-sm text-muted-foreground italic">Protocol not available for prior studies</p>
+                </div>
+              </div>
+
+              {/* Prior Findings */}
+              <div>
+                <label className="field-label text-muted-foreground">Findings</label>
+                <div className="report-textarea bg-muted/50 min-h-[200px]">
+                  <p className="text-sm">{selectedPrior.reportText}</p>
+                </div>
+              </div>
+
+              {/* Prior Impression */}
+              <div>
+                <label className="field-label text-muted-foreground">Impression</label>
+                <div className="report-textarea bg-muted/50 min-h-[100px]">
+                  <p className="text-sm text-muted-foreground italic">See findings above</p>
+                </div>
+              </div>
+
+              {/* Download button */}
+              <div className="pt-4 border-t border-border">
+                <Button variant="outline" size="sm">
+                  <Download className="w-4 h-4 mr-2" />
+                  Download DICOM
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Right Sidebar - Supporting Info */}
-        <aside className="w-80 border-l border-border bg-muted/30 p-4 space-y-4">
+        <aside className="w-72 border-l border-border bg-muted/30 p-4 space-y-4 flex-shrink-0">
           {/* Linked Body Parts (Multi-Zone) */}
           {linkedStudies.length > 0 && (
             <div className="clinical-card border-primary/30 bg-primary/5">
@@ -283,33 +344,26 @@ export function ReportingPage() {
               </div>
               <div className="divide-y divide-border">
                 {mockPriorStudies.map((prior) => (
-                  <div key={prior.id} className="p-3">
-                    <button
-                      onClick={() => setExpandedPrior(expandedPrior === prior.id ? null : prior.id)}
-                      className="flex items-center justify-between w-full text-left"
-                    >
-                      <div>
-                        <p className="text-sm font-medium">{prior.type}</p>
-                        <p className="text-xs text-muted-foreground">{prior.date}</p>
-                      </div>
-                      {expandedPrior === prior.id ? (
-                        <ChevronDown className="w-4 h-4 text-muted-foreground" />
-                      ) : (
-                        <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                      )}
-                    </button>
-                    {expandedPrior === prior.id && prior.reportText && (
-                      <div className="mt-2 pt-2 border-t border-border">
-                        <p className="text-xs text-muted-foreground leading-relaxed">
-                          {prior.reportText}
-                        </p>
-                        <Button variant="ghost" size="sm" className="mt-2 h-7 text-xs">
-                          <Download className="w-3 h-3 mr-1" />
-                          Download DICOM
-                        </Button>
-                      </div>
+                  <button
+                    key={prior.id}
+                    onClick={() => handlePriorClick(prior)}
+                    className={cn(
+                      "w-full p-3 text-left transition-colors flex items-center justify-between",
+                      selectedPrior?.id === prior.id 
+                        ? "bg-primary/10 border-l-2 border-l-primary" 
+                        : "hover:bg-muted/50"
                     )}
-                  </div>
+                  >
+                    <div>
+                      <p className="text-sm font-medium">{prior.type}</p>
+                      <p className="text-xs text-muted-foreground">{prior.date}</p>
+                    </div>
+                    {selectedPrior?.id === prior.id ? (
+                      <span className="text-xs text-primary font-medium">Viewing</span>
+                    ) : (
+                      <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                    )}
+                  </button>
                 ))}
               </div>
             </div>
