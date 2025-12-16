@@ -13,7 +13,10 @@ import {
   RotateCcw,
   Link2,
   X,
-  History
+  History,
+  User,
+  ChevronUp,
+  ChevronDown
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/StatusBadge";
@@ -49,7 +52,8 @@ export function ReportingPage() {
   const [returnComment, setReturnComment] = useState("");
   
   const [selectedPrior, setSelectedPrior] = useState<PriorStudy | null>(null);
-  
+  const [summaryExpanded, setSummaryExpanded] = useState(true);
+
   const isValidator = ['draft-ready', 'under-validation'].includes(study.status);
   const isReturned = study.status === 'returned';
 
@@ -372,7 +376,100 @@ export function ReportingPage() {
         </aside>
       </div>
 
-      {/* Submit Confirmation Dialog */}
+      {/* Patient Summary Panel - Bottom Right */}
+      <div className="fixed bottom-4 right-4 w-80 bg-card border border-border rounded-lg shadow-lg z-20">
+        <button
+          onClick={() => setSummaryExpanded(!summaryExpanded)}
+          className="w-full p-3 flex items-center justify-between bg-primary/5 rounded-t-lg hover:bg-primary/10 transition-colors"
+        >
+          <div className="flex items-center gap-2">
+            <User className="w-4 h-4 text-primary" />
+            <span className="text-sm font-semibold">Patient Summary</span>
+            <span className="text-xs text-muted-foreground">{study.patientId}</span>
+          </div>
+          {summaryExpanded ? (
+            <ChevronDown className="w-4 h-4 text-muted-foreground" />
+          ) : (
+            <ChevronUp className="w-4 h-4 text-muted-foreground" />
+          )}
+        </button>
+        
+        {summaryExpanded && (
+          <div className="p-4 space-y-4 max-h-[400px] overflow-y-auto">
+            {/* Demographics */}
+            <div>
+              <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Demographics</h4>
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                <div>
+                  <span className="text-muted-foreground">Sex:</span>
+                  <span className="ml-1 font-medium">{study.sex === 'M' ? 'Male' : 'Female'}</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Age:</span>
+                  <span className="ml-1 font-medium">{study.age} years</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Current Study */}
+            <div>
+              <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Current Study</h4>
+              <div className="text-sm space-y-1">
+                <p><span className="text-muted-foreground">Type:</span> <span className="font-medium">{study.modality} {study.bodyArea}</span></p>
+                <p><span className="text-muted-foreground">Client:</span> <span className="font-medium">{study.clientName}</span></p>
+              </div>
+            </div>
+
+            {/* Clinical History */}
+            <div>
+              <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Clinical History</h4>
+              <p className="text-sm">
+                Persistent cough for 3 weeks. History of smoking (20 pack-years). Rule out pulmonary pathology.
+              </p>
+            </div>
+
+            {/* Prior Studies Summary */}
+            {study.hasPriors && (
+              <div>
+                <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+                  Prior Imaging ({mockPriorStudies.length})
+                </h4>
+                <div className="space-y-2">
+                  {mockPriorStudies.map((prior) => (
+                    <div key={prior.id} className="text-sm p-2 bg-muted/50 rounded">
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="font-medium">{prior.type}</span>
+                        <span className="text-xs text-muted-foreground">{prior.date}</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground line-clamp-2">{prior.reportText}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Key Findings from Priors */}
+            <div>
+              <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Key Points</h4>
+              <ul className="text-sm space-y-1">
+                <li className="flex items-start gap-2">
+                  <span className="text-primary">•</span>
+                  <span>No acute cardiopulmonary findings on prior CT</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-primary">•</span>
+                  <span>Clear lungs on prior chest X-ray</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-muted-foreground">•</span>
+                  <span>Normal abdominal organs on prior CT</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+        )}
+      </div>
+
       <Dialog open={showSubmitDialog} onOpenChange={setShowSubmitDialog}>
         <DialogContent>
           <DialogHeader>
