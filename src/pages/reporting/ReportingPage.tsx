@@ -178,13 +178,27 @@ export function ReportingPage() {
                 <ChevronDown className="w-4 h-4 text-muted-foreground" />
               )}
             </div>
-            {!commentsExpanded && (
-              <div className="clinical-card-body">
-                <p className="text-sm text-foreground line-clamp-1">
-                  {study.validatorComments[0].text}
-                </p>
-              </div>
-            )}
+            {!commentsExpanded && (() => {
+              const sortedComments = [...study.validatorComments].sort(
+                (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+              );
+              const latestComment = sortedComments[0];
+              const latestDate = new Date(latestComment.timestamp);
+              const latestTime = latestDate.toLocaleTimeString('en-US', {
+                hour: '2-digit',
+                minute: '2-digit'
+              });
+              return (
+                <div className="clinical-card-body">
+                  <p className="text-sm text-foreground line-clamp-1">
+                    {latestComment.text}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    — {latestComment.validatorName} • {latestTime}
+                  </p>
+                </div>
+              );
+            })()}
           </button>
           {commentsExpanded && (
             <div className="mt-2 space-y-2">
