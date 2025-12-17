@@ -65,6 +65,7 @@ export function ReportingPage() {
   const [summaryExpanded, setSummaryExpanded] = useState(true);
   const [notesExpanded, setNotesExpanded] = useState(false);
   const [validatorComment, setValidatorComment] = useState("");
+  const [commentsExpanded, setCommentsExpanded] = useState(true);
 
   // Mock English translations (auto-generated from Russian report)
   const englishTranslation = {
@@ -171,6 +172,55 @@ export function ReportingPage() {
               </p>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Validator Comments - Collapsible Section at Top */}
+      {study.validatorComments && study.validatorComments.length > 0 && (
+        <div className="mx-4 mt-4">
+          <button
+            onClick={() => setCommentsExpanded(!commentsExpanded)}
+            className="w-full clinical-card border-l-4 border-l-amber-500 bg-amber-500/10 dark:bg-amber-500/20 hover:bg-amber-500/15 dark:hover:bg-amber-500/25 transition-colors cursor-pointer text-left"
+          >
+            <div className="clinical-card-header">
+              <h3 className="text-sm font-semibold flex items-center gap-2 text-foreground">
+                <MessageCircle className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                Validator Feedback
+                <span className="ml-1 text-xs font-normal text-muted-foreground">
+                  ({study.validatorComments.length} comment{study.validatorComments.length !== 1 ? 's' : ''})
+                </span>
+              </h3>
+              {commentsExpanded ? (
+                <ChevronUp className="w-4 h-4 text-muted-foreground" />
+              ) : (
+                <ChevronDown className="w-4 h-4 text-muted-foreground" />
+              )}
+            </div>
+            {!commentsExpanded && (
+              <div className="clinical-card-body">
+                <p className="text-sm text-foreground line-clamp-1">
+                  {study.validatorComments[0].text}
+                </p>
+              </div>
+            )}
+          </button>
+          {commentsExpanded && (
+            <div className="mt-2 space-y-2">
+              {study.validatorComments.map((comment) => (
+                <div
+                  key={comment.id}
+                  className="clinical-card border-l-4 border-l-amber-400/50 bg-amber-500/5 dark:bg-amber-500/10"
+                >
+                  <div className="clinical-card-body">
+                    <p className="text-sm text-foreground">{comment.text}</p>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      — {comment.validatorName}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -351,13 +401,13 @@ export function ReportingPage() {
               )}
             </div>
 
-            {/* Validator Comment Section */}
-            {isValidator ? (
+            {/* Validator Comment Input Section - for validators */}
+            {isValidator && (
               <div className="clinical-card border-l-4 border-l-amber-500 bg-amber-500/10 dark:bg-amber-500/20">
                 <div className="clinical-card-header">
                   <h3 className="text-sm font-semibold flex items-center gap-2 text-foreground">
                     <MessageCircle className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-                    Validator Comment
+                    Add Validator Comment
                   </h3>
                   <span className="text-xs text-muted-foreground">Optional feedback for the reporting radiologist</span>
                 </div>
@@ -369,21 +419,6 @@ export function ReportingPage() {
                     placeholder="Leave a comment about the report quality, suggestions for improvement, or positive feedback..."
                     rows={3}
                   />
-                </div>
-              </div>
-            ) : study.validatorComment && (
-              <div className="clinical-card border-l-4 border-l-amber-500 bg-amber-500/10 dark:bg-amber-500/20">
-                <div className="clinical-card-header">
-                  <h3 className="text-sm font-semibold flex items-center gap-2 text-foreground">
-                    <MessageCircle className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-                    Validator Feedback
-                  </h3>
-                  {study.validatorName && (
-                    <span className="text-xs text-muted-foreground">from {study.validatorName}</span>
-                  )}
-                </div>
-                <div className="clinical-card-body">
-                  <p className="text-sm text-foreground">{study.validatorComment}</p>
                 </div>
               </div>
             )}

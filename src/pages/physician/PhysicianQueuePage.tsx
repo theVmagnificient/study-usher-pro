@@ -29,7 +29,7 @@ export function PhysicianQueuePage() {
 
   // Studies with validator comments
   const commentedStudies = mockStudies.filter(s => 
-    s.validatorComment && ['finalized', 'delivered'].includes(s.status)
+    s.validatorComments && s.validatorComments.length > 0 && ['finalized', 'delivered'].includes(s.status)
   ).sort((a, b) => 
     new Date(b.deadline).getTime() - new Date(a.deadline).getTime()
   );
@@ -78,7 +78,7 @@ export function PhysicianQueuePage() {
             {study.priorCount} prior{study.priorCount !== 1 ? 's' : ''}
           </span>
         )}
-        {study.validatorComment && (
+        {study.validatorComments && study.validatorComments.length > 0 && (
           <span className="flex items-center gap-1 text-amber-600">
             <MessageCircle className="w-4 h-4" />
           </span>
@@ -107,12 +107,15 @@ export function PhysicianQueuePage() {
             <LinkedBodyAreasDisplay study={study} allStudies={mockStudies} />
             <span>• {study.patientId}</span>
           </div>
-          <div className="mt-2 p-2 bg-amber-500/10 dark:bg-amber-500/20 rounded border border-amber-500/30">
-            <p className="text-sm text-foreground line-clamp-2">{study.validatorComment}</p>
-            {study.validatorName && (
-              <p className="text-xs text-muted-foreground mt-1">— {study.validatorName}</p>
-            )}
-          </div>
+          {study.validatorComments && study.validatorComments.length > 0 && (
+            <div className="mt-2 p-2 bg-amber-500/10 dark:bg-amber-500/20 rounded border border-amber-500/30">
+              <p className="text-sm text-foreground line-clamp-2">{study.validatorComments[0].text}</p>
+              <p className="text-xs text-muted-foreground mt-1">— {study.validatorComments[0].validatorName}</p>
+              {study.validatorComments.length > 1 && (
+                <p className="text-xs text-amber-600 mt-1">+{study.validatorComments.length - 1} more comment{study.validatorComments.length > 2 ? 's' : ''}</p>
+              )}
+            </div>
+          )}
         </div>
       </div>
       <div className="flex items-center gap-6">
