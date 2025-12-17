@@ -210,7 +210,7 @@ export function ReportingPage() {
             <div>
               <label className="field-label">Findings</label>
               <textarea
-                className="report-textarea min-h-[200px]"
+                className="report-textarea"
                 value={findings}
                 onChange={(e) => setFindings(e.target.value)}
                 placeholder="Document all imaging findings in detail..."
