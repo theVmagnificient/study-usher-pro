@@ -53,8 +53,7 @@ export function ReportingPage() {
   
   const [selectedPrior, setSelectedPrior] = useState<PriorStudy | null>(null);
   const [summaryExpanded, setSummaryExpanded] = useState(true);
-  const [clinicalNotesExpanded, setClinicalNotesExpanded] = useState(false);
-  const [technicalNotesExpanded, setTechnicalNotesExpanded] = useState(false);
+  const [notesExpanded, setNotesExpanded] = useState(false);
 
   const clinicalNotesText = `Patient presents with persistent cough for 3 weeks, productive of yellowish sputum. History of smoking (20 pack-years), quit 2 years ago. Reports occasional dyspnea on exertion and mild chest discomfort. No hemoptysis. No fever or night sweats reported. Family history significant for lung cancer (father, diagnosed age 62). Previous chest X-ray from 6 months ago showed no significant abnormalities. Patient currently on ACE inhibitor for hypertension - consider ACE inhibitor-induced cough in differential. Weight loss of 5kg over past 2 months noted. Rule out pulmonary pathology including malignancy given risk factors.`;
 
@@ -137,7 +136,7 @@ export function ReportingPage() {
       {/* Clinical & Technical Notes - Important Context */}
       <div className="mx-4 mt-4 grid grid-cols-2 gap-4">
         <button
-          onClick={() => setClinicalNotesExpanded(!clinicalNotesExpanded)}
+          onClick={() => setNotesExpanded(!notesExpanded)}
           className="clinical-card border-l-4 border-l-primary text-left w-full hover:bg-primary/5 transition-colors cursor-pointer"
         >
           <div className="clinical-card-header">
@@ -145,7 +144,7 @@ export function ReportingPage() {
               <FileText className="w-4 h-4 text-primary" />
               Clinical Notes
             </h3>
-            {clinicalNotesExpanded ? (
+            {notesExpanded ? (
               <ChevronUp className="w-4 h-4 text-muted-foreground" />
             ) : (
               <ChevronDown className="w-4 h-4 text-muted-foreground" />
@@ -154,14 +153,14 @@ export function ReportingPage() {
           <div className="clinical-card-body">
             <p className={cn(
               "text-sm text-foreground transition-all",
-              !clinicalNotesExpanded && "line-clamp-2"
+              !notesExpanded && "line-clamp-2"
             )}>
               {clinicalNotesText}
             </p>
           </div>
         </button>
         <button
-          onClick={() => setTechnicalNotesExpanded(!technicalNotesExpanded)}
+          onClick={() => setNotesExpanded(!notesExpanded)}
           className="clinical-card border-l-4 border-l-muted-foreground text-left w-full hover:bg-muted/50 transition-colors cursor-pointer"
         >
           <div className="clinical-card-header">
@@ -169,7 +168,7 @@ export function ReportingPage() {
               <MessageSquare className="w-4 h-4 text-muted-foreground" />
               Technical Notes
             </h3>
-            {technicalNotesExpanded ? (
+            {notesExpanded ? (
               <ChevronUp className="w-4 h-4 text-muted-foreground" />
             ) : (
               <ChevronDown className="w-4 h-4 text-muted-foreground" />
@@ -178,7 +177,7 @@ export function ReportingPage() {
           <div className="clinical-card-body">
             <p className={cn(
               "text-sm text-foreground transition-all",
-              !technicalNotesExpanded && "line-clamp-2"
+              !notesExpanded && "line-clamp-2"
             )}>
               {technicalNotesText}
             </p>
