@@ -310,17 +310,17 @@ export function ReportingPage() {
 
             {/* Validator Comment Section */}
             {isValidator ? (
-              <div className="clinical-card border-l-4 border-l-amber-500 bg-amber-50/50">
+              <div className="clinical-card border-l-4 border-l-amber-500 bg-amber-500/10 dark:bg-amber-500/20">
                 <div className="clinical-card-header">
-                  <h3 className="text-sm font-semibold flex items-center gap-2">
-                    <MessageCircle className="w-4 h-4 text-amber-600" />
+                  <h3 className="text-sm font-semibold flex items-center gap-2 text-foreground">
+                    <MessageCircle className="w-4 h-4 text-amber-600 dark:text-amber-400" />
                     Validator Comment
                   </h3>
                   <span className="text-xs text-muted-foreground">Optional feedback for the reporting radiologist</span>
                 </div>
                 <div className="clinical-card-body">
                   <textarea
-                    className="report-textarea bg-white"
+                    className="report-textarea bg-background"
                     value={validatorComment}
                     onChange={(e) => setValidatorComment(e.target.value)}
                     placeholder="Leave a comment about the report quality, suggestions for improvement, or positive feedback..."
@@ -329,10 +329,10 @@ export function ReportingPage() {
                 </div>
               </div>
             ) : study.validatorComment && (
-              <div className="clinical-card border-l-4 border-l-amber-500 bg-amber-50/50">
+              <div className="clinical-card border-l-4 border-l-amber-500 bg-amber-500/10 dark:bg-amber-500/20">
                 <div className="clinical-card-header">
-                  <h3 className="text-sm font-semibold flex items-center gap-2">
-                    <MessageCircle className="w-4 h-4 text-amber-600" />
+                  <h3 className="text-sm font-semibold flex items-center gap-2 text-foreground">
+                    <MessageCircle className="w-4 h-4 text-amber-600 dark:text-amber-400" />
                     Validator Feedback
                   </h3>
                   {study.validatorName && (
