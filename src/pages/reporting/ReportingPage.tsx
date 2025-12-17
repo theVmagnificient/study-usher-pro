@@ -57,8 +57,6 @@ export function ReportingPage() {
   const [impression, setImpression] = useState("");
   
   const [showSubmitDialog, setShowSubmitDialog] = useState(false);
-  const [showReturnDialog, setShowReturnDialog] = useState(false);
-  const [returnComment, setReturnComment] = useState("");
   
   const [selectedPrior, setSelectedPrior] = useState<PriorStudy | null>(null);
   const [showEnglishTranslation, setShowEnglishTranslation] = useState(false);
@@ -98,7 +96,6 @@ export function ReportingPage() {
   };
 
   const handleReturn = () => {
-    setShowReturnDialog(false);
     navigate(-1);
   };
 
@@ -413,7 +410,11 @@ export function ReportingPage() {
               <div className="flex items-center justify-between pt-4 border-t border-border">
                 {isValidator ? (
                   <div className="flex items-center gap-3">
-                    <Button variant="outline" onClick={() => setShowReturnDialog(true)}>
+                    <Button 
+                      variant="outline" 
+                      onClick={handleReturn}
+                      disabled={!validatorComment.trim()}
+                    >
                       <RotateCcw className="w-4 h-4 mr-2" />
                       Return for Revision
                     </Button>
@@ -696,32 +697,6 @@ export function ReportingPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Return for Revision Dialog */}
-      <Dialog open={showReturnDialog} onOpenChange={setShowReturnDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Return for Revision</DialogTitle>
-            <DialogDescription>
-              Please provide a comment explaining what needs to be revised.
-            </DialogDescription>
-          </DialogHeader>
-          <div>
-            <label className="field-label">Comment (required)</label>
-            <Textarea
-              value={returnComment}
-              onChange={(e) => setReturnComment(e.target.value)}
-              placeholder="Explain what changes are needed..."
-              className="min-h-[100px]"
-            />
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowReturnDialog(false)}>Cancel</Button>
-            <Button onClick={handleReturn} disabled={!returnComment.trim()}>
-              Return to Physician
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
