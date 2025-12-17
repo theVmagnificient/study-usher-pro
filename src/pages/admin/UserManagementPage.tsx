@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Edit2, Calendar, Clock, CalendarClock, Shield } from "lucide-react";
+import { Plus, Edit2, Calendar, Clock, CalendarClock, Shield, Search } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { mockPhysicians } from "@/data/mockData";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -31,6 +32,12 @@ export function UserManagementPage() {
   const navigate = useNavigate();
   const [selectedPhysician, setSelectedPhysician] = useState<string | null>(null);
   const [physicians, setPhysicians] = useState<Physician[]>(mockPhysicians);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const filteredPhysicians = physicians.filter(p => {
+    const query = searchQuery.toLowerCase();
+    return p.fullName.toLowerCase().includes(query) || p.id.toLowerCase().includes(query);
+  });
 
   const selected = physicians.find(p => p.id === selectedPhysician);
 
@@ -61,6 +68,18 @@ export function UserManagementPage() {
         {/* Physician List */}
         <div className="col-span-2">
           <div className="clinical-card overflow-hidden">
+            {/* Search Filter */}
+            <div className="p-4 border-b border-border">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search by name or ID..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+            </div>
             <table className="data-table">
               <thead>
                 <tr>
@@ -73,7 +92,7 @@ export function UserManagementPage() {
                 </tr>
               </thead>
               <tbody>
-                {physicians.map((physician) => (
+                {filteredPhysicians.map((physician) => (
                   <tr 
                     key={physician.id}
                     className={cn(
