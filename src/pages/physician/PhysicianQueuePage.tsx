@@ -107,7 +107,7 @@ export function PhysicianQueuePage() {
             <LinkedBodyAreasDisplay study={study} allStudies={mockStudies} />
             <span>• {study.patientId}</span>
           </div>
-          <div className="mt-2 p-2 bg-amber-50 rounded border border-amber-200">
+          <div className="mt-2 p-2 bg-amber-500/10 dark:bg-amber-500/20 rounded border border-amber-500/30">
             <p className="text-sm text-foreground line-clamp-2">{study.validatorComment}</p>
             {study.validatorName && (
               <p className="text-xs text-muted-foreground mt-1">— {study.validatorName}</p>
