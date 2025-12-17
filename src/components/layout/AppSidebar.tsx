@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import { useTheme } from "next-themes";
+import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import {
   LayoutDashboard,
@@ -19,6 +20,7 @@ import {
   Moon,
   Sun,
 } from "lucide-react";
+import { LanguageSwitcher } from "@/components/ui/LanguageSwitcher";
 import type { UserRole } from "@/types/study";
 
 interface AppSidebarProps {
@@ -27,39 +29,40 @@ interface AppSidebarProps {
 }
 
 interface NavItem {
-  label: string;
+  labelKey: string;
   path: string;
   icon: typeof LayoutDashboard;
   roles: UserRole[];
 }
 
 const navItems: NavItem[] = [
-  { label: "Study List", path: "/studies", icon: FileText, roles: ["admin"] },
-  { label: "Task Types", path: "/task-types", icon: FolderCog, roles: ["admin"] },
-  { label: "User Management", path: "/users", icon: Users, roles: ["admin"] },
-  { label: "Workforce Capacity", path: "/workforce", icon: CalendarDays, roles: ["admin"] },
-  { label: "Audit Log", path: "/audit", icon: Activity, roles: ["admin"] },
-  { label: "SLA Dashboard", path: "/sla", icon: LayoutDashboard, roles: ["admin"] },
-  { label: "My Queue", path: "/queue", icon: ClipboardList, roles: ["reporting-radiologist"] },
-  { label: "Validation Queue", path: "/validation", icon: CheckSquare, roles: ["validating-radiologist", "admin"] },
-  { label: "My Profile", path: "/profile", icon: User, roles: ["reporting-radiologist", "validating-radiologist"] },
+  { labelKey: "nav.studyList", path: "/studies", icon: FileText, roles: ["admin"] },
+  { labelKey: "nav.taskTypes", path: "/task-types", icon: FolderCog, roles: ["admin"] },
+  { labelKey: "nav.userManagement", path: "/users", icon: Users, roles: ["admin"] },
+  { labelKey: "nav.workforceCapacity", path: "/workforce", icon: CalendarDays, roles: ["admin"] },
+  { labelKey: "nav.auditLog", path: "/audit", icon: Activity, roles: ["admin"] },
+  { labelKey: "nav.slaDashboard", path: "/sla", icon: LayoutDashboard, roles: ["admin"] },
+  { labelKey: "nav.myQueue", path: "/queue", icon: ClipboardList, roles: ["reporting-radiologist"] },
+  { labelKey: "nav.validationQueue", path: "/validation", icon: CheckSquare, roles: ["validating-radiologist", "admin"] },
+  { labelKey: "nav.myProfile", path: "/profile", icon: User, roles: ["reporting-radiologist", "validating-radiologist"] },
 ];
-
-const roleLabels: Record<UserRole, string> = {
-  "admin": "Admin",
-  "reporting-radiologist": "Reporting Radiologist",
-  "validating-radiologist": "Validating Radiologist",
-};
 
 export function AppSidebar({ currentRole, onRoleChange }: AppSidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
   const { theme, setTheme } = useTheme();
+  const { t } = useTranslation();
 
   const filteredItems = navItems.filter((item) => item.roles.includes(currentRole));
 
   const toggleTheme = () => {
     setTheme(theme === "dark" ? "light" : "dark");
+  };
+
+  const roleLabels: Record<UserRole, string> = {
+    "admin": t("roles.admin"),
+    "reporting-radiologist": t("roles.reportingRadiologist"),
+    "validating-radiologist": t("roles.validatingRadiologist"),
   };
 
   return (
@@ -95,16 +98,16 @@ export function AppSidebar({ currentRole, onRoleChange }: AppSidebarProps) {
       {!collapsed && (
         <div className="px-3 py-3 border-b border-sidebar-border">
           <label className="text-[10px] uppercase tracking-wider text-sidebar-foreground/60 block mb-1.5">
-            Active Role
+            {t("sidebar.activeRole")}
           </label>
           <select
             value={currentRole}
             onChange={(e) => onRoleChange(e.target.value as UserRole)}
             className="w-full text-xs bg-sidebar-accent text-sidebar-foreground border-0 rounded px-2 py-1.5 focus:ring-1 focus:ring-sidebar-ring outline-none"
           >
-            <option value="admin">Admin</option>
-            <option value="reporting-radiologist">Reporting Radiologist</option>
-            <option value="validating-radiologist">Validating Radiologist</option>
+            <option value="admin">{t("roles.admin")}</option>
+            <option value="reporting-radiologist">{t("roles.reportingRadiologist")}</option>
+            <option value="validating-radiologist">{t("roles.validatingRadiologist")}</option>
           </select>
         </div>
       )}
@@ -128,13 +131,18 @@ export function AppSidebar({ currentRole, onRoleChange }: AppSidebarProps) {
                   )}
                 >
                   <Icon className="w-4 h-4 flex-shrink-0" />
-                  {!collapsed && <span>{item.label}</span>}
+                  {!collapsed && <span>{t(item.labelKey)}</span>}
                 </NavLink>
               </li>
             );
           })}
         </ul>
       </nav>
+
+      {/* Language Toggle */}
+      <div className="px-3 py-2 border-t border-sidebar-border">
+        <LanguageSwitcher collapsed={collapsed} />
+      </div>
 
       {/* Theme Toggle */}
       <div className="px-3 py-2 border-t border-sidebar-border">
@@ -150,7 +158,7 @@ export function AppSidebar({ currentRole, onRoleChange }: AppSidebarProps) {
           ) : (
             <Moon className="w-4 h-4 flex-shrink-0" />
           )}
-          {!collapsed && <span>{theme === "dark" ? "Light Mode" : "Dark Mode"}</span>}
+          {!collapsed && <span>{theme === "dark" ? t("sidebar.lightMode") : t("sidebar.darkMode")}</span>}
         </button>
       </div>
 
