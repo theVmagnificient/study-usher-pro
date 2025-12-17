@@ -132,11 +132,11 @@ export function PhysicianQueuePage() {
 
       {/* Workload Warning */}
       {activeCount >= maxActive && (
-        <div className="clinical-card p-4 mb-6 border-l-4 border-l-urgency-urgent bg-orange-50">
+        <div className="clinical-card p-4 mb-6 border-l-4 border-l-[hsl(var(--urgency-urgent))] bg-[hsl(var(--urgency-urgent)/0.15)]">
           <div className="flex items-center gap-3">
-            <AlertCircle className="w-5 h-5 text-urgency-urgent" />
+            <AlertCircle className="w-5 h-5 text-[hsl(var(--urgency-urgent))]" />
             <div>
-              <p className="text-sm font-medium">Maximum workload reached</p>
+              <p className="text-sm font-medium text-foreground">Maximum workload reached</p>
               <p className="text-xs text-muted-foreground">Complete a study before starting a new one</p>
             </div>
           </div>
