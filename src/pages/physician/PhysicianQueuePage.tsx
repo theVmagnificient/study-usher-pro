@@ -6,7 +6,7 @@ import { DeadlineTimer } from "@/components/ui/DeadlineTimer";
 import { LinkedBodyAreasDisplay } from "@/components/ui/LinkedStudiesBadge";
 import { mockStudies } from "@/data/mockData";
 import { cn } from "@/lib/utils";
-import { FileText, AlertCircle, CheckCircle, Clock } from "lucide-react";
+import { FileText, AlertCircle, CheckCircle, Clock, MessageCircle } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from "date-fns";
 
@@ -23,6 +23,13 @@ export function PhysicianQueuePage() {
   // Completed studies (finalized/delivered)
   const completedStudies = mockStudies.filter(s => 
     ['finalized', 'delivered'].includes(s.status)
+  ).sort((a, b) => 
+    new Date(b.deadline).getTime() - new Date(a.deadline).getTime()
+  );
+
+  // Studies with validator comments
+  const commentedStudies = mockStudies.filter(s => 
+    s.validatorComment && ['finalized', 'delivered'].includes(s.status)
   ).sort((a, b) => 
     new Date(b.deadline).getTime() - new Date(a.deadline).getTime()
   );
@@ -71,6 +78,47 @@ export function PhysicianQueuePage() {
             {study.priorCount} prior{study.priorCount !== 1 ? 's' : ''}
           </span>
         )}
+        {study.validatorComment && (
+          <span className="flex items-center gap-1 text-amber-600">
+            <MessageCircle className="w-4 h-4" />
+          </span>
+        )}
+      </div>
+    </div>
+  );
+
+  const CommentedStudyItem = ({ study }: { study: typeof mockStudies[0] }) => (
+    <div
+      onClick={() => handleStudyClick(study.id)}
+      className="queue-item"
+    >
+      <div className="flex items-center gap-4">
+        <div className="w-10 h-10 rounded bg-amber-100 flex items-center justify-center">
+          <MessageCircle className="w-5 h-5 text-amber-600" />
+        </div>
+        <div className="flex-1">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="font-mono text-xs font-medium">{study.id}</span>
+            <span className="text-xs px-2 py-0.5 rounded bg-status-finalized/20 text-status-finalized">
+              {study.status}
+            </span>
+          </div>
+          <div className="text-sm text-muted-foreground flex items-center gap-2">
+            <LinkedBodyAreasDisplay study={study} allStudies={mockStudies} />
+            <span>• {study.patientId}</span>
+          </div>
+          <div className="mt-2 p-2 bg-amber-50 rounded border border-amber-200">
+            <p className="text-sm text-foreground line-clamp-2">{study.validatorComment}</p>
+            {study.validatorName && (
+              <p className="text-xs text-muted-foreground mt-1">— {study.validatorName}</p>
+            )}
+          </div>
+        </div>
+      </div>
+      <div className="flex items-center gap-6">
+        <span className="text-sm text-muted-foreground">
+          {format(new Date(study.deadline), "MMM d, yyyy")}
+        </span>
       </div>
     </div>
   );
@@ -106,6 +154,15 @@ export function PhysicianQueuePage() {
               </span>
             )}
           </TabsTrigger>
+          <TabsTrigger value="commented" className="gap-2">
+            <MessageCircle className="w-4 h-4" />
+            Commented
+            {commentedStudies.length > 0 && (
+              <span className="ml-1 bg-amber-500 text-white text-xs px-1.5 py-0.5 rounded-full">
+                {commentedStudies.length}
+              </span>
+            )}
+          </TabsTrigger>
           <TabsTrigger value="completed" className="gap-2">
             <CheckCircle className="w-4 h-4" />
             Completed
@@ -128,6 +185,22 @@ export function PhysicianQueuePage() {
                 <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
                 <p className="text-lg font-medium text-foreground">No studies in queue</p>
                 <p className="text-sm text-muted-foreground">New studies will appear here when assigned</p>
+              </div>
+            )}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="commented">
+          <div className="space-y-3">
+            {commentedStudies.map((study) => (
+              <CommentedStudyItem key={study.id} study={study} />
+            ))}
+
+            {commentedStudies.length === 0 && (
+              <div className="clinical-card p-12 text-center">
+                <MessageCircle className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
+                <p className="text-lg font-medium text-foreground">No commented studies</p>
+                <p className="text-sm text-muted-foreground">Validator feedback on your reports will appear here</p>
               </div>
             )}
           </div>

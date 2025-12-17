@@ -144,6 +144,8 @@ export const mockStudies: Study[] = [
     priorCount: 1,
     sex: "M",
     age: 72,
+    validatorComment: "Excellent detailed description of the pelvic structures. Consider mentioning lymph node status more explicitly in future similar cases.",
+    validatorName: "Dr. Robert Williams",
   },
   {
     id: "STD-008",
@@ -159,6 +161,8 @@ export const mockStudies: Study[] = [
     hasPriors: false,
     sex: "F",
     age: 29,
+    validatorComment: "Good report overall. Please ensure to always mention ventricular size when reporting head CTs.",
+    validatorName: "Dr. Robert Williams",
   },
 ];
 

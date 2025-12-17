@@ -42,6 +42,10 @@ export interface Study {
   age: number;
   /** Group ID for multi-zone studies (same patient, multiple body areas) */
   linkedStudyGroup?: string;
+  /** Validator comment on the report quality/impressions */
+  validatorComment?: string;
+  /** Validator who left the comment */
+  validatorName?: string;
 }
 
 export interface TaskType {
