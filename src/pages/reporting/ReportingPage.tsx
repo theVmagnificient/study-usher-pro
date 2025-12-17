@@ -212,14 +212,9 @@ export function ReportingPage() {
                   >
                     <div className="clinical-card-body">
                       <p className="text-sm text-foreground">{comment.text}</p>
-                      <div className="flex items-center justify-between mt-2">
-                        <p className="text-xs text-muted-foreground">
-                          — {comment.validatorName}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {formattedDate} at {formattedTime}
-                        </p>
-                      </div>
+                      <p className="text-xs text-muted-foreground mt-2">
+                        — {comment.validatorName} • {formattedDate} at {formattedTime}
+                      </p>
                     </div>
                   </div>
                 );
