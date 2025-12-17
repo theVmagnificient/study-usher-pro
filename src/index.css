@@ -146,7 +146,7 @@
   }
 
   .status-in-progress {
-    @apply bg-[hsl(var(--status-in-progress)/0.15)] text-[hsl(210,15%,25%)];
+    @apply bg-[hsl(var(--status-in-progress)/0.2)] text-[hsl(45,90%,45%)] dark:text-[hsl(45,95%,65%)];
   }
 
   .status-draft-ready {
