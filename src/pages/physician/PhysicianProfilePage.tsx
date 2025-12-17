@@ -7,6 +7,19 @@ import { Clock, Phone, MessageCircle, CalendarClock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { startOfWeek, addDays, format, getDay } from "date-fns";
 
+// Mock monthly statistics
+const currentMonthStats = {
+  total: 156,
+  byModality: { CT: 68, MRI: 52, "X-Ray": 36 },
+  byBodyArea: { Spine: 58, Head: 42, Chest: 34, Neck: 22 },
+};
+
+const previousMonthStats = {
+  total: 143,
+  byModality: { CT: 61, MRI: 48, "X-Ray": 34 },
+  byBodyArea: { Spine: 52, Head: 38, Chest: 31, Neck: 22 },
+};
+
 const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 const shortDayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -143,11 +156,32 @@ export function PhysicianProfilePage() {
 
         {/* Statistics */}
         <div className="col-span-1 space-y-6">
-          {/* Total Count */}
+          {/* Monthly Stats */}
           <div className="clinical-card">
-            <div className="clinical-card-body text-center py-6">
-              <p className="text-4xl font-bold text-primary">{physician.statistics.total.toLocaleString()}</p>
-              <p className="text-sm text-muted-foreground mt-1">Total Studies Completed</p>
+            <div className="clinical-card-header">
+              <h3 className="text-sm font-semibold">Monthly Performance</h3>
+            </div>
+            <div className="clinical-card-body">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="text-center p-4 bg-primary/5 rounded-lg">
+                  <p className="text-xs text-muted-foreground uppercase tracking-wide">This Month</p>
+                  <p className="text-3xl font-bold text-primary mt-1">{currentMonthStats.total}</p>
+                  <p className="text-xs text-muted-foreground mt-1">{format(new Date(), "MMMM")}</p>
+                </div>
+                <div className="text-center p-4 bg-muted/50 rounded-lg">
+                  <p className="text-xs text-muted-foreground uppercase tracking-wide">Last Month</p>
+                  <p className="text-3xl font-bold text-foreground mt-1">{previousMonthStats.total}</p>
+                  <p className="text-xs text-muted-foreground mt-1">{format(addDays(new Date(), -30), "MMMM")}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* All-time Total */}
+          <div className="clinical-card">
+            <div className="clinical-card-body text-center py-4">
+              <p className="text-2xl font-bold text-primary">{physician.statistics.total.toLocaleString()}</p>
+              <p className="text-xs text-muted-foreground mt-1">All-Time Total</p>
             </div>
           </div>
 
@@ -155,16 +189,16 @@ export function PhysicianProfilePage() {
           <div className="clinical-card">
             <div className="clinical-card-header">
               <h3 className="text-sm font-semibold">By Modality</h3>
+              <span className="text-xs text-muted-foreground">This month</span>
             </div>
             <div className="clinical-card-body">
               <div className="space-y-3">
-                {Object.entries(physician.statistics.byModality)
-                  .filter(([_, count]) => count > 0)
+                {Object.entries(currentMonthStats.byModality)
                   .sort(([, a], [, b]) => b - a)
                   .map(([modality, count]) => (
                     <div key={modality} className="flex items-center justify-between">
                       <span className="text-sm">{modality}</span>
-                      <span className="text-sm font-medium">{count.toLocaleString()}</span>
+                      <span className="text-sm font-medium">{count}</span>
                     </div>
                   ))}
               </div>
@@ -175,16 +209,16 @@ export function PhysicianProfilePage() {
           <div className="clinical-card">
             <div className="clinical-card-header">
               <h3 className="text-sm font-semibold">By Body Area</h3>
+              <span className="text-xs text-muted-foreground">This month</span>
             </div>
             <div className="clinical-card-body">
               <div className="space-y-3">
-                {Object.entries(physician.statistics.byBodyArea)
-                  .filter(([_, count]) => count > 0)
+                {Object.entries(currentMonthStats.byBodyArea)
                   .sort(([, a], [, b]) => b - a)
                   .map(([area, count]) => (
                     <div key={area} className="flex items-center justify-between">
                       <span className="text-sm">{area}</span>
-                      <span className="text-sm font-medium">{count.toLocaleString()}</span>
+                      <span className="text-sm font-medium">{count}</span>
                     </div>
                   ))}
               </div>
