@@ -187,7 +187,7 @@ export function ReportingPage() {
 
       <div className="flex">
         {/* Main Content - Report Editor */}
-        <div className={cn("flex-1 p-6", selectedPrior && "border-r border-border")}>
+        <div className={cn("w-1/2 p-6", selectedPrior && "border-r border-border")}>
           <div className="space-y-6">
             <div className="flex items-center gap-2 mb-4">
               <span className="text-sm font-semibold text-primary">Current Report</span>
