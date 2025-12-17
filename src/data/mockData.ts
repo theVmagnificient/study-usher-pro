@@ -125,9 +125,24 @@ export const mockStudies: Study[] = [
     assignedPhysician: "Dr. Michael Chen",
     receivedAt: "2024-01-14T14:00:00Z",
     deadline: new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString(),
-    hasPriors: false,
+    hasPriors: true,
+    priorCount: 2,
     sex: "F",
     age: 41,
+    validatorComments: [
+      {
+        id: "VC-005",
+        text: "Please add comparison with prior abdominal US from 2023 as requested in the clinical notes.",
+        validatorName: "Dr. Robert Williams",
+        timestamp: "2024-01-15T10:30:00Z",
+      },
+      {
+        id: "VC-006",
+        text: "The liver measurements are missing from the findings section. Please include standardized measurements.",
+        validatorName: "Dr. Sarah Johnson",
+        timestamp: "2024-01-15T11:15:00Z",
+      },
+    ],
   },
   {
     id: "STD-007",
