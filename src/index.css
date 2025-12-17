@@ -242,7 +242,7 @@
 
   /* Report Textarea */
   .report-textarea {
-    @apply w-full min-h-[80px] p-3 text-sm border border-border rounded-md bg-card focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none resize-none overflow-hidden;
+    @apply w-full min-h-[80px] p-3 text-sm border border-border rounded-md bg-card focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none resize-y;
     font-family: 'IBM Plex Sans', system-ui, sans-serif;
     field-sizing: content;
     line-height: 1.6;
