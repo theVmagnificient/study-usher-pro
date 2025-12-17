@@ -92,14 +92,14 @@ export function ReportingPage() {
             </Button>
             <div>
               <div className="flex items-center gap-3">
-                <span className="font-mono text-sm font-medium">{study.id}</span>
+                <span className="font-mono text-xs text-muted-foreground">{study.id}</span>
                 <StatusBadge status={study.status} />
                 <UrgencyBadge urgency={study.urgency} />
               </div>
-              <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
-                <span>{study.patientId}</span>
-                <span>{study.modality} {study.bodyArea}</span>
-                <span>{study.sex}/{study.age}y</span>
+              <div className="flex items-center gap-4 mt-1">
+                <span className="text-xs text-muted-foreground">{study.patientId}</span>
+                <span className="text-base font-semibold text-foreground">{study.modality} {study.bodyArea}</span>
+                <span className="text-base font-medium text-foreground">{study.sex}/{study.age}y</span>
               </div>
             </div>
           </div>
