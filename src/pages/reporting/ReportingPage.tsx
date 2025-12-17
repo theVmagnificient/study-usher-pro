@@ -17,7 +17,8 @@ import {
   User,
   ChevronUp,
   ChevronDown,
-  MessageCircle
+  MessageCircle,
+  Languages
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/StatusBadge";
@@ -60,9 +61,17 @@ export function ReportingPage() {
   const [returnComment, setReturnComment] = useState("");
   
   const [selectedPrior, setSelectedPrior] = useState<PriorStudy | null>(null);
+  const [showEnglishTranslation, setShowEnglishTranslation] = useState(false);
   const [summaryExpanded, setSummaryExpanded] = useState(true);
   const [notesExpanded, setNotesExpanded] = useState(false);
   const [validatorComment, setValidatorComment] = useState("");
+
+  // Mock English translations (auto-generated from Russian report)
+  const englishTranslation = {
+    protocol: "Non-contrast CT of the chest was performed using standard departmental protocol. Slice thickness 1.5mm with iterative reconstruction.",
+    findings: "The lungs are clear bilaterally without evidence of consolidation, masses, or nodules. No pleural effusion identified. The mediastinal structures are within normal limits. Heart size is normal. No lymphadenopathy. The visualized portions of the upper abdomen are unremarkable.",
+    impression: "Normal chest CT examination. No acute cardiopulmonary process identified. Follow-up imaging is not indicated based on current findings."
+  };
 
   const clinicalNotesText = `Patient presents with persistent cough for 3 weeks, productive of yellowish sputum. History of smoking (20 pack-years), quit 2 years ago. Reports occasional dyspnea on exertion and mild chest discomfort. No hemoptysis. No fever or night sweats reported. Family history significant for lung cancer (father, diagnosed age 62). Previous chest X-ray from 6 months ago showed no significant abnormalities. Patient currently on ACE inhibitor for hypertension - consider ACE inhibitor-induced cough in differential. Weight loss of 5kg over past 2 months noted. Rule out pulmonary pathology including malignancy given risk factors.`;
 
@@ -228,14 +237,24 @@ export function ReportingPage() {
                 <span className="text-sm font-semibold text-primary">Current Report</span>
                 <span className="text-xs text-muted-foreground font-mono">{study.id}</span>
               </div>
-              {selectedPrior && (
+              {(selectedPrior || showEnglishTranslation) && (
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <History className="w-4 h-4 text-muted-foreground" />
-                    <span className="text-sm font-semibold text-muted-foreground">Prior Report</span>
-                    <span className="text-xs text-muted-foreground">{selectedPrior.type} • {selectedPrior.date}</span>
+                    {showEnglishTranslation ? (
+                      <>
+                        <Languages className="w-4 h-4 text-blue-500" />
+                        <span className="text-sm font-semibold text-blue-600 dark:text-blue-400">English Translation</span>
+                        <span className="text-xs text-muted-foreground">Auto-generated</span>
+                      </>
+                    ) : (
+                      <>
+                        <History className="w-4 h-4 text-muted-foreground" />
+                        <span className="text-sm font-semibold text-muted-foreground">Prior Report</span>
+                        <span className="text-xs text-muted-foreground">{selectedPrior?.type} • {selectedPrior?.date}</span>
+                      </>
+                    )}
                   </div>
-                  <Button variant="ghost" size="icon" onClick={() => setSelectedPrior(null)}>
+                  <Button variant="ghost" size="icon" onClick={() => showEnglishTranslation ? setShowEnglishTranslation(false) : setSelectedPrior(null)}>
                     <X className="w-4 h-4" />
                   </Button>
                 </div>
@@ -254,7 +273,15 @@ export function ReportingPage() {
                   readOnly={study.status === 'finalized' || study.status === 'delivered'}
                 />
               </div>
-              {selectedPrior && (
+              {showEnglishTranslation && (
+                <div>
+                  <label className="field-label text-blue-600 dark:text-blue-400">Study Protocol (EN)</label>
+                  <div className="report-textarea bg-blue-500/5 dark:bg-blue-500/10 border-blue-500/20">
+                    <p className="text-sm">{englishTranslation.protocol}</p>
+                  </div>
+                </div>
+              )}
+              {selectedPrior && !showEnglishTranslation && (
                 <div>
                   <label className="field-label text-muted-foreground">Study Protocol</label>
                   <div className="report-textarea bg-muted/50">
@@ -276,7 +303,15 @@ export function ReportingPage() {
                   readOnly={study.status === 'finalized' || study.status === 'delivered'}
                 />
               </div>
-              {selectedPrior && (
+              {showEnglishTranslation && (
+                <div>
+                  <label className="field-label text-blue-600 dark:text-blue-400">Findings (EN)</label>
+                  <div className="report-textarea bg-blue-500/5 dark:bg-blue-500/10 border-blue-500/20">
+                    <p className="text-sm">{englishTranslation.findings}</p>
+                  </div>
+                </div>
+              )}
+              {selectedPrior && !showEnglishTranslation && (
                 <div>
                   <label className="field-label text-muted-foreground">Findings</label>
                   <div className="report-textarea bg-muted/50">
@@ -298,7 +333,15 @@ export function ReportingPage() {
                   readOnly={study.status === 'finalized' || study.status === 'delivered'}
                 />
               </div>
-              {selectedPrior && (
+              {showEnglishTranslation && (
+                <div>
+                  <label className="field-label text-blue-600 dark:text-blue-400">Impression (EN)</label>
+                  <div className="report-textarea bg-blue-500/5 dark:bg-blue-500/10 border-blue-500/20">
+                    <p className="text-sm">{englishTranslation.impression}</p>
+                  </div>
+                </div>
+              )}
+              {selectedPrior && !showEnglishTranslation && (
                 <div>
                   <label className="field-label text-muted-foreground">Impression</label>
                   <div className="report-textarea bg-muted/50">
@@ -375,12 +418,14 @@ export function ReportingPage() {
                     : 'Changes are not auto-saved'}
                 </p>
               </div>
-              {selectedPrior && (
+              {(selectedPrior || showEnglishTranslation) && (
                 <div className="pt-4 border-t border-border">
-                  <Button variant="outline" size="sm">
-                    <Download className="w-4 h-4 mr-2" />
-                    Download DICOM
-                  </Button>
+                  {selectedPrior && (
+                    <Button variant="outline" size="sm">
+                      <Download className="w-4 h-4 mr-2" />
+                      Download DICOM
+                    </Button>
+                  )}
                 </div>
               )}
             </div>
@@ -437,6 +482,40 @@ export function ReportingPage() {
             </div>
           )}
 
+          {/* English Translation Toggle - Only for validators */}
+          {isValidator && (
+            <div className="clinical-card border-blue-500/30 bg-blue-500/5 dark:bg-blue-500/10">
+              <div className="clinical-card-header">
+                <h3 className="text-sm font-semibold flex items-center gap-2">
+                  <Languages className="w-4 h-4 text-blue-500" />
+                  Translation
+                </h3>
+              </div>
+              <button
+                onClick={() => {
+                  setShowEnglishTranslation(!showEnglishTranslation);
+                  if (!showEnglishTranslation) setSelectedPrior(null);
+                }}
+                className={cn(
+                  "w-full p-3 text-left transition-colors flex items-center justify-between",
+                  showEnglishTranslation 
+                    ? "bg-blue-500/10 dark:bg-blue-500/20 border-l-2 border-l-blue-500" 
+                    : "hover:bg-muted/50"
+                )}
+              >
+                <div>
+                  <p className="text-sm font-medium">English Version</p>
+                  <p className="text-xs text-muted-foreground">Auto-generated from Russian</p>
+                </div>
+                {showEnglishTranslation ? (
+                  <span className="text-xs text-blue-600 dark:text-blue-400 font-medium">Viewing</span>
+                ) : (
+                  <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                )}
+              </button>
+            </div>
+          )}
+
           {/* Prior Studies */}
           {study.hasPriors && (
             <div className="clinical-card">
@@ -448,7 +527,10 @@ export function ReportingPage() {
                 {mockPriorStudies.map((prior) => (
                   <button
                     key={prior.id}
-                    onClick={() => handlePriorClick(prior)}
+                    onClick={() => {
+                      handlePriorClick(prior);
+                      if (selectedPrior?.id !== prior.id) setShowEnglishTranslation(false);
+                    }}
                     className={cn(
                       "w-full p-3 text-left transition-colors flex items-center justify-between",
                       selectedPrior?.id === prior.id 
