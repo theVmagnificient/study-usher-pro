@@ -157,17 +157,17 @@ export function ReportingPage() {
       </header>
 
 
-      {/* Validator Comments - Collapsible Section at Top (Red styling) */}
+      {/* Comments - Collapsible Section at Top */}
       {study.validatorComments && study.validatorComments.length > 0 && (
         <div className="mx-4 mt-4">
           <button
             onClick={() => setCommentsExpanded(!commentsExpanded)}
-            className="w-full clinical-card border-l-4 border-l-destructive bg-destructive/10 hover:bg-destructive/15 transition-colors cursor-pointer text-left"
+            className="w-full clinical-card border-l-4 border-l-muted-foreground bg-muted/30 hover:bg-muted/50 transition-colors cursor-pointer text-left"
           >
             <div className="clinical-card-header">
               <h3 className="text-sm font-semibold flex items-center gap-2 text-foreground">
-                <AlertTriangle className="w-4 h-4 text-destructive" />
-                Revision Comments
+                <MessageCircle className="w-4 h-4 text-muted-foreground" />
+                Comments
                 <span className="ml-1 text-xs font-normal text-muted-foreground">
                   ({study.validatorComments.length} comment{study.validatorComments.length !== 1 ? 's' : ''})
                 </span>
@@ -188,19 +188,42 @@ export function ReportingPage() {
           </button>
           {commentsExpanded && (
             <div className="mt-2 space-y-2">
-              {study.validatorComments.map((comment) => (
-                <div
-                  key={comment.id}
-                  className="clinical-card border-l-4 border-l-destructive/50 bg-destructive/5"
-                >
-                  <div className="clinical-card-body">
-                    <p className="text-sm text-foreground">{comment.text}</p>
-                    <p className="text-xs text-muted-foreground mt-2">
-                      — {comment.validatorName}
-                    </p>
+              {study.validatorComments.map((comment) => {
+                const commentDate = new Date(comment.timestamp);
+                const formattedDate = commentDate.toLocaleDateString('en-US', { 
+                  month: 'short', 
+                  day: 'numeric',
+                  year: 'numeric'
+                });
+                const formattedTime = commentDate.toLocaleTimeString('en-US', {
+                  hour: '2-digit',
+                  minute: '2-digit'
+                });
+                
+                return (
+                  <div
+                    key={comment.id}
+                    className={cn(
+                      "clinical-card border-l-4",
+                      comment.isCritical 
+                        ? "border-l-destructive bg-destructive/5" 
+                        : "border-l-yellow-500 bg-yellow-500/5"
+                    )}
+                  >
+                    <div className="clinical-card-body">
+                      <p className="text-sm text-foreground">{comment.text}</p>
+                      <div className="flex items-center justify-between mt-2">
+                        <p className="text-xs text-muted-foreground">
+                          — {comment.validatorName}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {formattedDate} at {formattedTime}
+                        </p>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
