@@ -16,7 +16,8 @@ import {
   History,
   User,
   ChevronUp,
-  ChevronDown
+  ChevronDown,
+  MessageCircle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/StatusBadge";
@@ -61,6 +62,7 @@ export function ReportingPage() {
   const [selectedPrior, setSelectedPrior] = useState<PriorStudy | null>(null);
   const [summaryExpanded, setSummaryExpanded] = useState(true);
   const [notesExpanded, setNotesExpanded] = useState(false);
+  const [validatorComment, setValidatorComment] = useState("");
 
   const clinicalNotesText = `Patient presents with persistent cough for 3 weeks, productive of yellowish sputum. History of smoking (20 pack-years), quit 2 years ago. Reports occasional dyspnea on exertion and mild chest discomfort. No hemoptysis. No fever or night sweats reported. Family history significant for lung cancer (father, diagnosed age 62). Previous chest X-ray from 6 months ago showed no significant abnormalities. Patient currently on ACE inhibitor for hypertension - consider ACE inhibitor-induced cough in differential. Weight loss of 5kg over past 2 months noted. Rule out pulmonary pathology including malignancy given risk factors.`;
 
@@ -306,7 +308,42 @@ export function ReportingPage() {
               )}
             </div>
 
-            {/* Action Buttons Row */}
+            {/* Validator Comment Section */}
+            {isValidator ? (
+              <div className="clinical-card border-l-4 border-l-amber-500 bg-amber-50/50">
+                <div className="clinical-card-header">
+                  <h3 className="text-sm font-semibold flex items-center gap-2">
+                    <MessageCircle className="w-4 h-4 text-amber-600" />
+                    Validator Comment
+                  </h3>
+                  <span className="text-xs text-muted-foreground">Optional feedback for the reporting radiologist</span>
+                </div>
+                <div className="clinical-card-body">
+                  <textarea
+                    className="report-textarea bg-white"
+                    value={validatorComment}
+                    onChange={(e) => setValidatorComment(e.target.value)}
+                    placeholder="Leave a comment about the report quality, suggestions for improvement, or positive feedback..."
+                    rows={3}
+                  />
+                </div>
+              </div>
+            ) : study.validatorComment && (
+              <div className="clinical-card border-l-4 border-l-amber-500 bg-amber-50/50">
+                <div className="clinical-card-header">
+                  <h3 className="text-sm font-semibold flex items-center gap-2">
+                    <MessageCircle className="w-4 h-4 text-amber-600" />
+                    Validator Feedback
+                  </h3>
+                  {study.validatorName && (
+                    <span className="text-xs text-muted-foreground">from {study.validatorName}</span>
+                  )}
+                </div>
+                <div className="clinical-card-body">
+                  <p className="text-sm text-foreground">{study.validatorComment}</p>
+                </div>
+              </div>
+            )}
             <div className="grid grid-cols-2 gap-6">
               <div className="flex items-center justify-between pt-4 border-t border-border">
                 {isValidator ? (
