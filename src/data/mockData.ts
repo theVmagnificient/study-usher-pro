@@ -142,6 +142,18 @@ export const mockStudies: Study[] = [
         validatorName: "Dr. Sarah Johnson",
         timestamp: "2024-01-15T11:15:00Z",
       },
+      {
+        id: "VC-007",
+        text: "Gallbladder wall thickness should be documented. Also mention if there are any gallstones present.",
+        validatorName: "Dr. Robert Williams",
+        timestamp: "2024-01-15T12:00:00Z",
+      },
+      {
+        id: "VC-008",
+        text: "Please clarify the description of the right kidney finding - is it a simple cyst or complex?",
+        validatorName: "Dr. Sarah Johnson",
+        timestamp: "2024-01-15T14:20:00Z",
+      },
     ],
   },
   {

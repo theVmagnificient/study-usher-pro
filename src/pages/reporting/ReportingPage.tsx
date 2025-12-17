@@ -188,17 +188,17 @@ export function ReportingPage() {
         </div>
       )}
 
-      {/* Validator Comments - Collapsible Section at Top */}
+      {/* Validator Comments - Collapsible Section at Top (Red styling) */}
       {study.validatorComments && study.validatorComments.length > 0 && (
         <div className="mx-4 mt-4">
           <button
             onClick={() => setCommentsExpanded(!commentsExpanded)}
-            className="w-full clinical-card border-l-4 border-l-amber-500 bg-amber-500/10 dark:bg-amber-500/20 hover:bg-amber-500/15 dark:hover:bg-amber-500/25 transition-colors cursor-pointer text-left"
+            className="w-full clinical-card border-l-4 border-l-destructive bg-destructive/10 hover:bg-destructive/15 transition-colors cursor-pointer text-left"
           >
             <div className="clinical-card-header">
               <h3 className="text-sm font-semibold flex items-center gap-2 text-foreground">
-                <MessageCircle className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-                Validator Feedback
+                <AlertTriangle className="w-4 h-4 text-destructive" />
+                Revision Comments
                 <span className="ml-1 text-xs font-normal text-muted-foreground">
                   ({study.validatorComments.length} comment{study.validatorComments.length !== 1 ? 's' : ''})
                 </span>
@@ -222,7 +222,7 @@ export function ReportingPage() {
               {study.validatorComments.map((comment) => (
                 <div
                   key={comment.id}
-                  className="clinical-card border-l-4 border-l-amber-400/50 bg-amber-500/5 dark:bg-amber-500/10"
+                  className="clinical-card border-l-4 border-l-destructive/50 bg-destructive/5"
                 >
                   <div className="clinical-card-body">
                     <p className="text-sm text-foreground">{comment.text}</p>
