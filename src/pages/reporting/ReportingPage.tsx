@@ -161,32 +161,6 @@ export function ReportingPage() {
         </div>
       </header>
 
-      {/* Returned Warning - Collapsible */}
-      {isReturned && (
-        <div className="mx-4 mt-4">
-          <button
-            onClick={() => setReturnedExpanded(!returnedExpanded)}
-            className="w-full p-4 bg-destructive/10 border border-destructive/30 rounded-md hover:bg-destructive/15 transition-colors cursor-pointer text-left"
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <AlertTriangle className="w-5 h-5 text-destructive flex-shrink-0" />
-                <p className="text-sm font-medium text-destructive">Returned for Revision</p>
-              </div>
-              {returnedExpanded ? (
-                <ChevronUp className="w-4 h-4 text-muted-foreground" />
-              ) : (
-                <ChevronDown className="w-4 h-4 text-muted-foreground" />
-              )}
-            </div>
-            {returnedExpanded && (
-              <p className="text-sm text-muted-foreground mt-2 ml-8">
-                "Please add comparison with prior abdominal US from 2023."
-              </p>
-            )}
-          </button>
-        </div>
-      )}
 
       {/* Validator Comments - Collapsible Section at Top (Red styling) */}
       {study.validatorComments && study.validatorComments.length > 0 && (
