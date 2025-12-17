@@ -187,132 +187,138 @@ export function ReportingPage() {
 
       <div className="flex">
         {/* Main Content - Report Editor */}
-        <div className={cn("w-1/2 p-6", selectedPrior && "border-r border-border")}>
+        {/* Main Content - Report Editor */}
+        <div className="flex-1 p-6">
           <div className="space-y-6">
-            <div className="flex items-center gap-2 mb-4">
-              <span className="text-sm font-semibold text-primary">Current Report</span>
-              <span className="text-xs text-muted-foreground font-mono">{study.id}</span>
-            </div>
-            
-            {/* Study Protocol */}
-            <div>
-              <label className="field-label">Study Protocol</label>
-              <textarea
-                className="report-textarea"
-                value={protocol}
-                onChange={(e) => setProtocol(e.target.value)}
-                placeholder="Describe the imaging technique and protocol used..."
-                readOnly={study.status === 'finalized' || study.status === 'delivered'}
-              />
-            </div>
-
-            {/* Findings */}
-            <div>
-              <label className="field-label">Findings</label>
-              <textarea
-                className="report-textarea"
-                value={findings}
-                onChange={(e) => setFindings(e.target.value)}
-                placeholder="Document all imaging findings in detail..."
-                readOnly={study.status === 'finalized' || study.status === 'delivered'}
-              />
-            </div>
-
-            {/* Impression */}
-            <div>
-              <label className="field-label">Impression</label>
-              <textarea
-                className="report-textarea"
-                value={impression}
-                onChange={(e) => setImpression(e.target.value)}
-                placeholder="Provide a summary interpretation and recommendations..."
-                readOnly={study.status === 'finalized' || study.status === 'delivered'}
-              />
-            </div>
-
-            {/* Action Buttons */}
-            <div className="flex items-center justify-between pt-4 border-t border-border">
-              {isValidator ? (
-                <div className="flex items-center gap-3">
-                  <Button variant="outline" onClick={() => setShowReturnDialog(true)}>
-                    <RotateCcw className="w-4 h-4 mr-2" />
-                    Return for Revision
-                  </Button>
-                  <Button onClick={handleApprove}>
-                    <CheckCircle className="w-4 h-4 mr-2" />
-                    Finalize Report
-                  </Button>
-                </div>
-              ) : (
-                <div className="flex items-center gap-3">
-                  <Button variant="outline" onClick={handleSaveDraft}>
-                    <Save className="w-4 h-4 mr-2" />
-                    Save Draft
-                  </Button>
-                  <Button onClick={() => setShowSubmitDialog(true)}>
-                    <Send className="w-4 h-4 mr-2" />
-                    Submit for Validation
+            {/* Headers Row */}
+            <div className="grid grid-cols-2 gap-6">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-semibold text-primary">Current Report</span>
+                <span className="text-xs text-muted-foreground font-mono">{study.id}</span>
+              </div>
+              {selectedPrior && (
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <History className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-sm font-semibold text-muted-foreground">Prior Report</span>
+                    <span className="text-xs text-muted-foreground">{selectedPrior.type} • {selectedPrior.date}</span>
+                  </div>
+                  <Button variant="ghost" size="icon" onClick={() => setSelectedPrior(null)}>
+                    <X className="w-4 h-4" />
                   </Button>
                 </div>
               )}
-              <p className="text-xs text-muted-foreground">
-                {study.status === 'finalized' || study.status === 'delivered' 
-                  ? 'This report is finalized and cannot be edited'
-                  : 'Changes are not auto-saved'}
-              </p>
+            </div>
+            
+            {/* Study Protocol Row */}
+            <div className={cn("grid gap-6", selectedPrior ? "grid-cols-2" : "grid-cols-1")}>
+              <div>
+                <label className="field-label">Study Protocol</label>
+                <textarea
+                  className="report-textarea"
+                  value={protocol}
+                  onChange={(e) => setProtocol(e.target.value)}
+                  placeholder="Describe the imaging technique and protocol used..."
+                  readOnly={study.status === 'finalized' || study.status === 'delivered'}
+                />
+              </div>
+              {selectedPrior && (
+                <div>
+                  <label className="field-label text-muted-foreground">Study Protocol</label>
+                  <div className="report-textarea bg-muted/50">
+                    <p className="text-sm text-muted-foreground italic">Protocol not available for prior studies</p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Findings Row */}
+            <div className={cn("grid gap-6", selectedPrior ? "grid-cols-2" : "grid-cols-1")}>
+              <div>
+                <label className="field-label">Findings</label>
+                <textarea
+                  className="report-textarea"
+                  value={findings}
+                  onChange={(e) => setFindings(e.target.value)}
+                  placeholder="Document all imaging findings in detail..."
+                  readOnly={study.status === 'finalized' || study.status === 'delivered'}
+                />
+              </div>
+              {selectedPrior && (
+                <div>
+                  <label className="field-label text-muted-foreground">Findings</label>
+                  <div className="report-textarea bg-muted/50">
+                    <p className="text-sm">{selectedPrior.reportText}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Impression Row */}
+            <div className={cn("grid gap-6", selectedPrior ? "grid-cols-2" : "grid-cols-1")}>
+              <div>
+                <label className="field-label">Impression</label>
+                <textarea
+                  className="report-textarea"
+                  value={impression}
+                  onChange={(e) => setImpression(e.target.value)}
+                  placeholder="Provide a summary interpretation and recommendations..."
+                  readOnly={study.status === 'finalized' || study.status === 'delivered'}
+                />
+              </div>
+              {selectedPrior && (
+                <div>
+                  <label className="field-label text-muted-foreground">Impression</label>
+                  <div className="report-textarea bg-muted/50">
+                    <p className="text-sm text-muted-foreground italic">See findings above</p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Action Buttons Row */}
+            <div className={cn("grid gap-6", selectedPrior ? "grid-cols-2" : "grid-cols-1")}>
+              <div className="flex items-center justify-between pt-4 border-t border-border">
+                {isValidator ? (
+                  <div className="flex items-center gap-3">
+                    <Button variant="outline" onClick={() => setShowReturnDialog(true)}>
+                      <RotateCcw className="w-4 h-4 mr-2" />
+                      Return for Revision
+                    </Button>
+                    <Button onClick={handleApprove}>
+                      <CheckCircle className="w-4 h-4 mr-2" />
+                      Finalize Report
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-3">
+                    <Button variant="outline" onClick={handleSaveDraft}>
+                      <Save className="w-4 h-4 mr-2" />
+                      Save Draft
+                    </Button>
+                    <Button onClick={() => setShowSubmitDialog(true)}>
+                      <Send className="w-4 h-4 mr-2" />
+                      Submit for Validation
+                    </Button>
+                  </div>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  {study.status === 'finalized' || study.status === 'delivered' 
+                    ? 'This report is finalized and cannot be edited'
+                    : 'Changes are not auto-saved'}
+                </p>
+              </div>
+              {selectedPrior && (
+                <div className="pt-4 border-t border-border">
+                  <Button variant="outline" size="sm">
+                    <Download className="w-4 h-4 mr-2" />
+                    Download DICOM
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
         </div>
-
-        {/* Prior Study Comparison Panel */}
-        {selectedPrior && (
-          <div className="flex-1 p-6 bg-muted/20">
-            <div className="space-y-6">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <History className="w-4 h-4 text-muted-foreground" />
-                  <span className="text-sm font-semibold text-muted-foreground">Prior Report</span>
-                  <span className="text-xs text-muted-foreground">{selectedPrior.type} • {selectedPrior.date}</span>
-                </div>
-                <Button variant="ghost" size="icon" onClick={() => setSelectedPrior(null)}>
-                  <X className="w-4 h-4" />
-                </Button>
-              </div>
-              
-              {/* Prior Protocol */}
-              <div>
-                <label className="field-label text-muted-foreground">Study Protocol</label>
-                <div className="report-textarea bg-muted/50 min-h-[100px]">
-                  <p className="text-sm text-muted-foreground italic">Protocol not available for prior studies</p>
-                </div>
-              </div>
-
-              {/* Prior Findings */}
-              <div>
-                <label className="field-label text-muted-foreground">Findings</label>
-                <div className="report-textarea bg-muted/50 min-h-[200px]">
-                  <p className="text-sm">{selectedPrior.reportText}</p>
-                </div>
-              </div>
-
-              {/* Prior Impression */}
-              <div>
-                <label className="field-label text-muted-foreground">Impression</label>
-                <div className="report-textarea bg-muted/50 min-h-[100px]">
-                  <p className="text-sm text-muted-foreground italic">See findings above</p>
-                </div>
-              </div>
-
-              {/* Download button */}
-              <div className="pt-4 border-t border-border">
-                <Button variant="outline" size="sm">
-                  <Download className="w-4 h-4 mr-2" />
-                  Download DICOM
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Right Sidebar - Supporting Info */}
         <aside className="w-72 border-l border-border bg-muted/30 p-4 space-y-4 flex-shrink-0">
