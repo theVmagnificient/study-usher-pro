@@ -51,6 +51,7 @@ export interface ValidatorComment {
   text: string;
   validatorName: string;
   timestamp: string;
+  isCritical?: boolean;
 }
 
 export interface TaskType {
