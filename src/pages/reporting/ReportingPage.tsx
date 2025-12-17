@@ -302,7 +302,7 @@ export function ReportingPage() {
                   value={protocol}
                   onChange={(e) => setProtocol(e.target.value)}
                   placeholder="Describe the imaging technique and protocol used..."
-                  readOnly={study.status === 'finalized' || study.status === 'delivered'}
+                  readOnly={isValidator || study.status === 'finalized' || study.status === 'delivered'}
                 />
               </div>
               {showEnglishTranslation && (
@@ -335,7 +335,7 @@ export function ReportingPage() {
                   value={findings}
                   onChange={(e) => setFindings(e.target.value)}
                   placeholder="Document all imaging findings in detail..."
-                  readOnly={study.status === 'finalized' || study.status === 'delivered'}
+                  readOnly={isValidator || study.status === 'finalized' || study.status === 'delivered'}
                 />
               </div>
               {showEnglishTranslation && (
@@ -368,7 +368,7 @@ export function ReportingPage() {
                   value={impression}
                   onChange={(e) => setImpression(e.target.value)}
                   placeholder="Provide a summary interpretation and recommendations..."
-                  readOnly={study.status === 'finalized' || study.status === 'delivered'}
+                  readOnly={isValidator || study.status === 'finalized' || study.status === 'delivered'}
                 />
               </div>
               {showEnglishTranslation && (
