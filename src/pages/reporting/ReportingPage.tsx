@@ -66,12 +66,10 @@ export function ReportingPage() {
   const [commentsExpanded, setCommentsExpanded] = useState(true);
   const [returnedExpanded, setReturnedExpanded] = useState(true);
 
-  // Mock English translations (auto-generated from Russian report)
-  const englishTranslation = {
-    protocol: "Non-contrast CT of the chest was performed using standard departmental protocol. Slice thickness 1.5mm with iterative reconstruction.",
-    findings: "The lungs are clear bilaterally without evidence of consolidation, masses, or nodules. No pleural effusion identified. The mediastinal structures are within normal limits. Heart size is normal. No lymphadenopathy. The visualized portions of the upper abdomen are unremarkable.",
-    impression: "Normal chest CT examination. No acute cardiopulmonary process identified. Follow-up imaging is not indicated based on current findings."
-  };
+  // English translations (auto-generated from Russian report, editable)
+  const [englishProtocol, setEnglishProtocol] = useState("Non-contrast CT of the chest was performed using standard departmental protocol. Slice thickness 1.5mm with iterative reconstruction.");
+  const [englishFindings, setEnglishFindings] = useState("The lungs are clear bilaterally without evidence of consolidation, masses, or nodules. No pleural effusion identified. The mediastinal structures are within normal limits. Heart size is normal. No lymphadenopathy. The visualized portions of the upper abdomen are unremarkable.");
+  const [englishImpression, setEnglishImpression] = useState("Normal chest CT examination. No acute cardiopulmonary process identified. Follow-up imaging is not indicated based on current findings.");
 
   const clinicalNotesText = `Patient presents with persistent cough for 3 weeks, productive of yellowish sputum. History of smoking (20 pack-years), quit 2 years ago. Reports occasional dyspnea on exertion and mild chest discomfort. No hemoptysis. No fever or night sweats reported. Family history significant for lung cancer (father, diagnosed age 62). Previous chest X-ray from 6 months ago showed no significant abnormalities. Patient currently on ACE inhibitor for hypertension - consider ACE inhibitor-induced cough in differential. Weight loss of 5kg over past 2 months noted. Rule out pulmonary pathology including malignancy given risk factors.`;
 
@@ -310,9 +308,12 @@ export function ReportingPage() {
               {showEnglishTranslation && (
                 <div>
                   <label className="field-label text-blue-600 dark:text-blue-400">Study Protocol (EN)</label>
-                  <div className="report-textarea bg-blue-500/5 dark:bg-blue-500/10 border-blue-500/20">
-                    <p className="text-sm">{englishTranslation.protocol}</p>
-                  </div>
+                  <textarea
+                    className="report-textarea bg-blue-500/5 dark:bg-blue-500/10 border-blue-500/20"
+                    value={englishProtocol}
+                    onChange={(e) => setEnglishProtocol(e.target.value)}
+                    readOnly={study.status === 'finalized' || study.status === 'delivered'}
+                  />
                 </div>
               )}
               {selectedPrior && !showEnglishTranslation && (
@@ -340,9 +341,12 @@ export function ReportingPage() {
               {showEnglishTranslation && (
                 <div>
                   <label className="field-label text-blue-600 dark:text-blue-400">Findings (EN)</label>
-                  <div className="report-textarea bg-blue-500/5 dark:bg-blue-500/10 border-blue-500/20">
-                    <p className="text-sm">{englishTranslation.findings}</p>
-                  </div>
+                  <textarea
+                    className="report-textarea bg-blue-500/5 dark:bg-blue-500/10 border-blue-500/20"
+                    value={englishFindings}
+                    onChange={(e) => setEnglishFindings(e.target.value)}
+                    readOnly={study.status === 'finalized' || study.status === 'delivered'}
+                  />
                 </div>
               )}
               {selectedPrior && !showEnglishTranslation && (
@@ -370,9 +374,12 @@ export function ReportingPage() {
               {showEnglishTranslation && (
                 <div>
                   <label className="field-label text-blue-600 dark:text-blue-400">Impression (EN)</label>
-                  <div className="report-textarea bg-blue-500/5 dark:bg-blue-500/10 border-blue-500/20">
-                    <p className="text-sm">{englishTranslation.impression}</p>
-                  </div>
+                  <textarea
+                    className="report-textarea bg-blue-500/5 dark:bg-blue-500/10 border-blue-500/20"
+                    value={englishImpression}
+                    onChange={(e) => setEnglishImpression(e.target.value)}
+                    readOnly={study.status === 'finalized' || study.status === 'delivered'}
+                  />
                 </div>
               )}
               {selectedPrior && !showEnglishTranslation && (
