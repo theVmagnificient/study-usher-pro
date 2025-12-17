@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
+import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
 import {
   LayoutDashboard,
@@ -15,6 +16,8 @@ import {
   ChevronRight,
   User,
   LogOut,
+  Moon,
+  Sun,
 } from "lucide-react";
 import type { UserRole } from "@/types/study";
 
@@ -51,8 +54,13 @@ const roleLabels: Record<UserRole, string> = {
 export function AppSidebar({ currentRole, onRoleChange }: AppSidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
+  const { theme, setTheme } = useTheme();
 
   const filteredItems = navItems.filter((item) => item.roles.includes(currentRole));
+
+  const toggleTheme = () => {
+    setTheme(theme === "dark" ? "light" : "dark");
+  };
 
   return (
     <aside
@@ -127,6 +135,24 @@ export function AppSidebar({ currentRole, onRoleChange }: AppSidebarProps) {
           })}
         </ul>
       </nav>
+
+      {/* Theme Toggle */}
+      <div className="px-3 py-2 border-t border-sidebar-border">
+        <button
+          onClick={toggleTheme}
+          className={cn(
+            "flex items-center gap-3 px-3 py-2 rounded text-sm transition-colors w-full",
+            "hover:bg-sidebar-accent text-sidebar-foreground/80 hover:text-sidebar-foreground"
+          )}
+        >
+          {theme === "dark" ? (
+            <Sun className="w-4 h-4 flex-shrink-0" />
+          ) : (
+            <Moon className="w-4 h-4 flex-shrink-0" />
+          )}
+          {!collapsed && <span>{theme === "dark" ? "Light Mode" : "Dark Mode"}</span>}
+        </button>
+      </div>
 
       {/* Footer */}
       <div className="border-t border-sidebar-border p-3">
