@@ -211,7 +211,7 @@ export function ReportingPage() {
             </div>
             
             {/* Study Protocol Row */}
-            <div className={cn("grid gap-6", selectedPrior ? "grid-cols-2" : "grid-cols-1")}>
+            <div className="grid grid-cols-2 gap-6">
               <div>
                 <label className="field-label">Study Protocol</label>
                 <textarea
@@ -233,7 +233,7 @@ export function ReportingPage() {
             </div>
 
             {/* Findings Row */}
-            <div className={cn("grid gap-6", selectedPrior ? "grid-cols-2" : "grid-cols-1")}>
+            <div className="grid grid-cols-2 gap-6">
               <div>
                 <label className="field-label">Findings</label>
                 <textarea
@@ -255,7 +255,7 @@ export function ReportingPage() {
             </div>
 
             {/* Impression Row */}
-            <div className={cn("grid gap-6", selectedPrior ? "grid-cols-2" : "grid-cols-1")}>
+            <div className="grid grid-cols-2 gap-6">
               <div>
                 <label className="field-label">Impression</label>
                 <textarea
@@ -277,7 +277,7 @@ export function ReportingPage() {
             </div>
 
             {/* Action Buttons Row */}
-            <div className={cn("grid gap-6", selectedPrior ? "grid-cols-2" : "grid-cols-1")}>
+            <div className="grid grid-cols-2 gap-6">
               <div className="flex items-center justify-between pt-4 border-t border-border">
                 {isValidator ? (
                   <div className="flex items-center gap-3">
