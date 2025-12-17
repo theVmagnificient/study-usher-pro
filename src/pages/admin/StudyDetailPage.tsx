@@ -1,5 +1,6 @@
+import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Download, UserPlus, History, Link2 } from "lucide-react";
+import { ArrowLeft, Download, UserPlus, History, Link2, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { UrgencyBadge } from "@/components/ui/UrgencyBadge";
@@ -8,10 +9,18 @@ import { getLinkedStudies } from "@/components/ui/LinkedStudiesBadge";
 import { mockStudies, mockPriorStudies, mockAuditLog } from "@/data/mockData";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import type { PriorStudy } from "@/types/study";
 
 export function StudyDetailPage() {
   const { studyId } = useParams();
   const navigate = useNavigate();
+  const [selectedPrior, setSelectedPrior] = useState<PriorStudy | null>(null);
 
   const study = mockStudies.find(s => s.id === studyId) || mockStudies[0];
   const linkedStudies = getLinkedStudies(study, mockStudies);
@@ -128,7 +137,15 @@ export function StudyDetailPage() {
                     <tr key={prior.id}>
                       <td className="text-sm font-medium">{prior.type}</td>
                       <td className="text-sm text-muted-foreground">{prior.date}</td>
-                      <td>
+                      <td className="flex items-center gap-2 justify-end">
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => setSelectedPrior(prior)}
+                        >
+                          <FileText className="w-4 h-4 mr-2" />
+                          Report
+                        </Button>
                         <Button variant="ghost" size="sm">
                           <Download className="w-4 h-4 mr-2" />
                           DICOM
@@ -230,6 +247,29 @@ export function StudyDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* Prior Report Dialog */}
+      <Dialog open={!!selectedPrior} onOpenChange={() => setSelectedPrior(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="w-5 h-5" />
+              Prior Report - {selectedPrior?.type}
+            </DialogTitle>
+            <p className="text-sm text-muted-foreground">{selectedPrior?.date}</p>
+          </DialogHeader>
+          <div className="space-y-4 mt-4">
+            <div>
+              <label className="section-header">Findings</label>
+              <div className="mt-2 p-4 bg-muted/50 rounded-lg">
+                <p className="text-sm whitespace-pre-wrap">
+                  {selectedPrior?.reportText || "No report text available"}
+                </p>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
