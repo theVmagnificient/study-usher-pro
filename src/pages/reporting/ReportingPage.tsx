@@ -33,6 +33,13 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Textarea } from "@/components/ui/textarea";
 import type { PriorStudy } from "@/types/study";
 
@@ -110,10 +117,33 @@ export function ReportingPage() {
           </div>
           <div className="flex items-center gap-4">
             <DeadlineTimer deadline={study.deadline} />
-            <Button variant="outline" size="sm">
-              <Download className="w-4 h-4 mr-2" />
-              DICOM
-            </Button>
+            {linkedStudies.length > 0 ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <Download className="w-4 h-4 mr-2" />
+                    DICOM
+                    <ChevronDown className="w-3 h-3 ml-1" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem>
+                    <Download className="w-4 h-4 mr-2" />
+                    Download {study.bodyArea} only
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem>
+                    <Download className="w-4 h-4 mr-2" />
+                    Download all ({linkedStudies.length + 1} body parts)
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Button variant="outline" size="sm">
+                <Download className="w-4 h-4 mr-2" />
+                DICOM
+              </Button>
+            )}
           </div>
         </div>
       </header>
