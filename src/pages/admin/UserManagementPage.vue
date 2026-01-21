@@ -1,18 +1,29 @@
 <template>
   <div>
     <PageHeader
-      title="User Management"
-      subtitle="Manage physicians and their assignments"
+      :title="t('userManagement.title')"
+      :subtitle="userStore.loading ? t('common.loading') : t('userManagement.subtitle', { count: userStore.users.length })"
     >
       <template #actions>
-        <Button>
+        <Button @click="handleNew">
           <Plus class="w-4 h-4 mr-2" />
-          Add Physician
+          {{ t('userManagement.addPhysician') }}
         </Button>
       </template>
     </PageHeader>
 
-    <div class="grid grid-cols-3 gap-6">
+    <!-- Loading State -->
+    <div v-if="userStore.loading" class="flex items-center justify-center p-8">
+      <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+    </div>
+
+    <!-- Error State -->
+    <div v-else-if="userStore.error" class="p-4 bg-red-50 text-red-600 rounded-md mb-6">
+      {{ userStore.error }}
+    </div>
+
+    <!-- Content -->
+    <div v-else class="grid grid-cols-3 gap-6">
       <!-- Physician List -->
       <div class="col-span-2">
         <div class="clinical-card overflow-hidden">
@@ -21,7 +32,7 @@
             <div class="relative">
               <Search class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
-                placeholder="Search by name or ID..."
+                :placeholder="t('userManagement.searchPlaceholder')"
                 :model-value="searchQuery"
                 @update:model-value="searchQuery = $event"
                 class="pl-9"
@@ -31,11 +42,11 @@
           <table class="data-table">
             <thead>
               <tr>
-                <th>Physician</th>
-                <th>Role</th>
-                <th>Contact</th>
-                <th>Modalities</th>
-                <th>Workload</th>
+                <th>{{ t('userManagement.headers.physician') }}</th>
+                <th>{{ t('userManagement.headers.role') }}</th>
+                <th>{{ t('userManagement.headers.contact') }}</th>
+                <th>{{ t('userManagement.headers.modalities') }}</th>
+                <th>{{ t('userManagement.headers.workload') }}</th>
                 <th></th>
               </tr>
             </thead>
@@ -52,7 +63,7 @@
                 <td>
                   <div class="font-medium text-sm">{{ physician.fullName }}</div>
                   <div class="text-xs text-muted-foreground">
-                    {{ physician.statistics.total.toLocaleString() }} studies completed
+                    {{ t('userManagement.studiesCompleted', { count: physician.statistics.total }) }}
                   </div>
                 </td>
                 <td @click.stop>
@@ -71,19 +82,19 @@
                       <SelectItem value="admin">
                         <div class="flex items-center gap-2">
                           <div class="w-2 h-2 rounded-full bg-destructive" />
-                          Admin
+                          {{ t('roles.admin') }}
                         </div>
                       </SelectItem>
                       <SelectItem value="reporting-radiologist">
                         <div class="flex items-center gap-2">
                           <div class="w-2 h-2 rounded-full bg-primary" />
-                          Reporting
+                          {{ t('roles.reportingRadiologist') }}
                         </div>
                       </SelectItem>
                       <SelectItem value="validating-radiologist">
                         <div class="flex items-center gap-2">
                           <div class="w-2 h-2 rounded-full bg-status-finalized" />
-                          Validating
+                          {{ t('roles.validatingRadiologist') }}
                         </div>
                       </SelectItem>
                     </SelectContent>
@@ -126,18 +137,27 @@
                       size="icon"
                       class="h-8 w-8"
                       @click="openSchedule(physician.id)"
-                      title="Manage Schedule"
+                      :title="t('userManagement.manageSchedule')"
                     >
                       <CalendarClock class="w-4 h-4" />
                     </Button>
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
+                    <Button
+                      variant="ghost"
+                      size="icon"
                       class="h-8 w-8"
                       @click="handleEdit(physician.id)"
-                      title="Edit Physician"
+                      :title="t('userManagement.editPhysician')"
                     >
                       <Edit2 class="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      class="h-8 w-8 text-destructive hover:text-destructive"
+                      @click="handleDelete(physician.id)"
+                      :title="t('userManagement.deletePhysician')"
+                    >
+                      <Trash2 class="w-4 h-4" />
                     </Button>
                   </div>
                 </td>
@@ -163,7 +183,7 @@
             <!-- Schedule -->
             <div>
               <div class="flex items-center justify-between">
-                <h4 class="section-header">Default Schedule</h4>
+                <h4 class="section-header">{{ t('userManagement.defaultSchedule') }}</h4>
                 <Button
                   variant="ghost"
                   size="sm"
@@ -171,7 +191,7 @@
                   @click="openSchedule(selected.id)"
                 >
                   <CalendarClock class="w-3 h-3 mr-1" />
-                  Manage
+                  {{ t('userManagement.manage') }}
                 </Button>
               </div>
               <div class="space-y-2">
@@ -188,7 +208,7 @@
 
             <!-- Body Areas -->
             <div>
-              <h4 class="section-header">Body Areas</h4>
+              <h4 class="section-header">{{ t('userManagement.bodyAreas') }}</h4>
               <div class="flex flex-wrap gap-1">
                 <Badge v-for="area in selected.supportedBodyAreas" :key="area" variant="outline" class="text-xs">{{ area }}</Badge>
               </div>
@@ -196,7 +216,7 @@
 
             <!-- Statistics -->
             <div>
-              <h4 class="section-header">Statistics by Modality</h4>
+              <h4 class="section-header">{{ t('userManagement.statisticsByModality') }}</h4>
               <div class="space-y-2">
                 <div
                   v-for="[modality, count] in Object.entries(selected.statistics.byModality)
@@ -213,37 +233,110 @@
           </div>
         </div>
         <div v-else class="clinical-card p-8 text-center text-muted-foreground">
-          <p class="text-sm">Select a physician to view details</p>
+          <p class="text-sm">{{ t('userManagement.selectPhysician') }}</p>
         </div>
       </div>
     </div>
+
+    <!-- Edit/Create Physician Dialog -->
+    <Dialog :open="isDialogOpen" @update:open="isDialogOpen = $event">
+      <DialogContent class="sm:max-w-[500px]">
+        <DialogHeader>
+          <DialogTitle>{{ editingPhysician ? t('userManagement.editDialog.titleEdit') : t('userManagement.editDialog.titleAdd') }}</DialogTitle>
+        </DialogHeader>
+        <div class="grid gap-4 py-4">
+          <div class="grid grid-cols-2 gap-4">
+            <div class="grid gap-2">
+              <Label>{{ t('userManagement.editDialog.firstName') }}</Label>
+              <Input v-model="formData.firstName" :placeholder="t('userManagement.editDialog.firstNamePlaceholder')" />
+            </div>
+            <div class="grid gap-2">
+              <Label>{{ t('userManagement.editDialog.lastName') }}</Label>
+              <Input v-model="formData.lastName" :placeholder="t('userManagement.editDialog.lastNamePlaceholder')" />
+            </div>
+          </div>
+          <div class="grid gap-2">
+            <Label>{{ t('userManagement.editDialog.email') }}</Label>
+            <Input v-model="formData.email" type="email" :placeholder="t('userManagement.editDialog.emailPlaceholder')" />
+          </div>
+          <div class="grid gap-2">
+            <Label>{{ t('userManagement.editDialog.phone') }}</Label>
+            <Input v-model="formData.phone" :placeholder="t('userManagement.editDialog.phonePlaceholder')" />
+          </div>
+          <div class="grid gap-2">
+            <Label>{{ t('userManagement.editDialog.role') }}</Label>
+            <Select v-model="formData.role">
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="admin">{{ t('roles.admin') }}</SelectItem>
+                <SelectItem value="reporting-radiologist">{{ t('roles.reportingRadiologist') }}</SelectItem>
+                <SelectItem value="validating-radiologist">{{ t('roles.validatingRadiologist') }}</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" @click="isDialogOpen = false">{{ t('common.cancel') }}</Button>
+          <Button @click="handleSave">{{ editingPhysician ? t('userManagement.editDialog.update') : t('userManagement.editDialog.create') }}</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
+    <!-- Delete Confirmation Dialog -->
+    <Dialog :open="isDeleteDialogOpen" @update:open="isDeleteDialogOpen = $event">
+      <DialogContent class="sm:max-w-[400px]">
+        <DialogHeader>
+          <DialogTitle>{{ t('userManagement.deleteDialog.title') }}</DialogTitle>
+        </DialogHeader>
+        <div class="py-4">
+          <p class="text-sm text-muted-foreground">
+            {{ t('userManagement.deleteDialog.message') }}
+          </p>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" @click="isDeleteDialogOpen = false">{{ t('common.cancel') }}</Button>
+          <Button variant="destructive" @click="confirmDelete">{{ t('userManagement.deleteDialog.delete') }}</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { Plus, Edit2, Calendar, Clock, CalendarClock, Shield, Search } from 'lucide-vue-next'
+import { useI18n } from 'vue-i18n'
+import { Plus, Edit2, Calendar, Clock, CalendarClock, Shield, Search, Trash2 } from 'lucide-vue-next'
 import PageHeader from '@/components/layout/PageHeader.vue'
 import Button from '@/components/ui/button.vue'
 import Input from '@/components/ui/input.vue'
-import { mockPhysicians } from '@/data/mockData'
+import Label from '@/components/ui/label.vue'
+import { useUserStore } from '@/stores/userStore'
 import Badge from '@/components/ui/badge.vue'
 import Select from '@/components/ui/select.vue'
 import SelectTrigger from '@/components/ui/SelectTrigger.vue'
 import SelectContent from '@/components/ui/SelectContent.vue'
 import SelectValue from '@/components/ui/SelectValue.vue'
 import SelectItem from '@/components/ui/SelectItem.vue'
+import Dialog from '@/components/ui/dialog.vue'
+import DialogContent from '@/components/ui/DialogContent.vue'
+import DialogHeader from '@/components/ui/DialogHeader.vue'
+import DialogTitle from '@/components/ui/DialogTitle.vue'
+import DialogFooter from '@/components/ui/DialogFooter.vue'
 import { cn } from '@/lib/utils'
 import type { UserRole, Physician } from '@/types/study'
 
 const router = useRouter()
+const userStore = useUserStore()
+const { t } = useI18n()
 
-const roleLabels: Record<UserRole, string> = {
-  admin: "Admin",
-  "reporting-radiologist": "Reporting",
-  "validating-radiologist": "Validating",
-}
+const roleLabels = computed(() => ({
+  admin: t('roles.admin'),
+  "reporting-radiologist": t('roles.reportingRadiologist'),
+  "validating-radiologist": t('roles.validatingRadiologist'),
+}))
 
 const roleBadgeColors: Record<UserRole, string> = {
   admin: "bg-destructive/10 text-destructive border-destructive/20",
@@ -252,33 +345,117 @@ const roleBadgeColors: Record<UserRole, string> = {
 }
 
 const selectedPhysician = ref<string | null>(null)
-const physicians = ref<Physician[]>(mockPhysicians)
 const searchQuery = ref("")
+const isDialogOpen = ref(false)
+const isDeleteDialogOpen = ref(false)
+const editingPhysician = ref<string | null>(null)
+const deletingPhysician = ref<string | null>(null)
+
+const formData = ref({
+  firstName: '',
+  lastName: '',
+  email: '',
+  phone: '',
+  role: 'reporting-radiologist' as UserRole
+})
 
 const filteredPhysicians = computed(() => {
   const query = searchQuery.value.toLowerCase()
-  return physicians.value.filter(p =>
+  return userStore.users.filter(p =>
     p.fullName.toLowerCase().includes(query) || p.id.toLowerCase().includes(query)
   )
 })
 
 const selected = computed(() =>
-  physicians.value.find(p => p.id === selectedPhysician.value)
+  userStore.users.find(p => p.id === selectedPhysician.value)
 )
 
-const handleRoleChange = (physicianId: string, newRole: UserRole) => {
-  physicians.value = physicians.value.map(p =>
-    p.id === physicianId ? { ...p, role: newRole } : p
-  )
+const handleRoleChange = async (physicianId: string, newRole: UserRole) => {
+  const physician = userStore.users.find(p => p.id === physicianId)
+  if (physician) {
+    const userId = parseInt(physician.id.split('-')[1])
+    await userStore.updateUser(userId, { role: newRole })
+  }
 }
 
 const openSchedule = (physicianId: string) => {
   router.push(`/schedule/${physicianId}`)
 }
 
-const handleEdit = (physicianId: string) => {
-  // TODO: Implement edit physician functionality
-  console.log('Edit physician:', physicianId)
-  // This could open a dialog or navigate to an edit page
+const handleNew = () => {
+  editingPhysician.value = null
+  formData.value = {
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    role: 'reporting-radiologist'
+  }
+  isDialogOpen.value = true
 }
+
+const handleEdit = (physicianId: string) => {
+  const physician = userStore.users.find(p => p.id === physicianId)
+  if (physician) {
+    editingPhysician.value = physicianId
+    const [firstName, ...lastNameParts] = physician.fullName.split(' ')
+    formData.value = {
+      firstName: firstName || '',
+      lastName: lastNameParts.join(' ') || '',
+      email: physician.email || '',
+      phone: physician.phone || '',
+      role: physician.role
+    }
+    isDialogOpen.value = true
+  }
+}
+
+const handleDelete = (physicianId: string) => {
+  deletingPhysician.value = physicianId
+  isDeleteDialogOpen.value = true
+}
+
+const handleSave = async () => {
+  if (editingPhysician.value) {
+    // Update existing physician
+    const physician = userStore.users.find(p => p.id === editingPhysician.value)
+    if (physician) {
+      const userId = parseInt(physician.id.split('-')[1])
+      await userStore.updateUser(userId, {
+        firstName: formData.value.firstName,
+        lastName: formData.value.lastName,
+        email: formData.value.email,
+        phone: formData.value.phone,
+        role: formData.value.role
+      })
+    }
+  } else {
+    // Create new physician
+    await userStore.createUser({
+      firstName: formData.value.firstName,
+      lastName: formData.value.lastName,
+      email: formData.value.email,
+      password: 'ChangeMe123!',
+      phone: formData.value.phone,
+      role: formData.value.role
+    })
+  }
+  isDialogOpen.value = false
+}
+
+const confirmDelete = async () => {
+  if (deletingPhysician.value) {
+    const physician = userStore.users.find(p => p.id === deletingPhysician.value)
+    if (physician) {
+      const userId = parseInt(physician.id.split('-')[1])
+      await userStore.deleteUser(userId)
+    }
+  }
+  isDeleteDialogOpen.value = false
+  deletingPhysician.value = null
+}
+
+onMounted(async () => {
+  await userStore.fetchUsers()
+})
 </script>

@@ -1,5 +1,8 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { useAuthStore } from '@/stores/authStore'
+import type { UserRole } from '@/types/study'
 import AppLayout from '@/components/layout/AppLayout.vue'
+import LoginPage from '@/pages/LoginPage.vue'
 import NotFound from '@/pages/NotFound.vue'
 
 // Admin Pages
@@ -20,14 +23,28 @@ import PhysicianProfilePage from '@/pages/physician/PhysicianProfilePage.vue'
 // Reporting
 import ReportingPage from '@/pages/reporting/ReportingPage.vue'
 
+declare module 'vue-router' {
+  interface RouteMeta {
+    requiresAuth?: boolean
+    allowedRoles?: UserRole[]
+  }
+}
+
 const routes = [
   {
-    path: '/',
-    redirect: '/studies'
-  } as any,
+    path: '/login',
+    name: 'Login',
+    component: LoginPage,
+    meta: { requiresAuth: false }
+  },
   {
-    path: '/studies',
+    path: '/',
+    redirect: '/tasks'
+  },
+  {
+    path: '/tasks',
     component: AppLayout,
+    meta: { allowedRoles: ['admin'] },
     children: [
       {
         path: '',
@@ -36,8 +53,9 @@ const routes = [
     ]
   },
   {
-    path: '/study/:studyId',
+    path: '/task/:taskId',
     component: AppLayout,
+    meta: { allowedRoles: ['admin'] },
     children: [
       {
         path: '',
@@ -48,6 +66,7 @@ const routes = [
   {
     path: '/task-types',
     component: AppLayout,
+    meta: { allowedRoles: ['admin'] },
     children: [
       {
         path: '',
@@ -58,6 +77,7 @@ const routes = [
   {
     path: '/users',
     component: AppLayout,
+    meta: { allowedRoles: ['admin'] },
     children: [
       {
         path: '',
@@ -68,6 +88,7 @@ const routes = [
   {
     path: '/schedule/:physicianId',
     component: AppLayout,
+    meta: { allowedRoles: ['admin'] },
     children: [
       {
         path: '',
@@ -78,6 +99,7 @@ const routes = [
   {
     path: '/audit',
     component: AppLayout,
+    meta: { allowedRoles: ['admin'] },
     children: [
       {
         path: '',
@@ -88,6 +110,7 @@ const routes = [
   {
     path: '/sla',
     component: AppLayout,
+    meta: { allowedRoles: ['admin'] },
     children: [
       {
         path: '',
@@ -98,6 +121,7 @@ const routes = [
   {
     path: '/workforce',
     component: AppLayout,
+    meta: { allowedRoles: ['admin'] },
     children: [
       {
         path: '',
@@ -108,6 +132,7 @@ const routes = [
   {
     path: '/queue',
     component: AppLayout,
+    meta: { allowedRoles: ['admin', 'reporting-radiologist'] },
     children: [
       {
         path: '',
@@ -118,6 +143,7 @@ const routes = [
   {
     path: '/validation',
     component: AppLayout,
+    meta: { allowedRoles: ['admin', 'validating-radiologist'] },
     children: [
       {
         path: '',
@@ -128,6 +154,7 @@ const routes = [
   {
     path: '/profile',
     component: AppLayout,
+    meta: { allowedRoles: ['admin', 'reporting-radiologist', 'validating-radiologist'] },
     children: [
       {
         path: '',
@@ -136,12 +163,14 @@ const routes = [
     ]
   },
   {
-    path: '/report/:studyId',
-    component: ReportingPage
+    path: '/report/:taskId',
+    component: ReportingPage,
+    meta: { allowedRoles: ['admin', 'reporting-radiologist', 'validating-radiologist'] }
   },
   {
     path: '/:pathMatch(.*)*',
-    component: NotFound
+    component: NotFound,
+    meta: { requiresAuth: false }
   }
 ]
 
@@ -149,6 +178,62 @@ const router = createRouter({
   history: createWebHistory(),
   routes
 })
+
+// Navigation guard for authentication and authorization
+router.beforeEach((to, from, next) => {
+  const authStore = useAuthStore()
+
+  // Check if route requires authentication (default is true unless explicitly false)
+  const requiresAuth = to.meta.requiresAuth !== false
+
+  if (!requiresAuth) {
+    // Public route, allow access
+    next()
+    return
+  }
+
+  // Check if user is authenticated
+  if (!authStore.isAuthenticated) {
+    // Save the intended destination
+    next({
+      path: '/login',
+      query: { redirect: to.fullPath }
+    })
+    return
+  }
+
+  // Check role-based access
+  const allowedRoles = to.meta.allowedRoles
+
+  if (allowedRoles && allowedRoles.length > 0) {
+    const userRole = authStore.role
+
+    if (!userRole || !allowedRoles.includes(userRole)) {
+      // User doesn't have permission, redirect to their default page
+      const defaultPath = getDefaultPathForRole(userRole)
+      next(defaultPath)
+      return
+    }
+  }
+
+  // User is authenticated and authorized
+  next()
+})
+
+function getDefaultPathForRole(role: UserRole | null): string {
+  if (!role) return '/login'
+
+  switch (role) {
+    case 'admin':
+      return '/tasks'
+    case 'reporting-radiologist':
+      return '/queue'
+    case 'validating-radiologist':
+      return '/validation'
+    default:
+      return '/login'
+  }
+}
 
 export default router
 

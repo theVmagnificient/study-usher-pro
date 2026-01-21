@@ -1,24 +1,35 @@
 <template>
   <div>
     <PageHeader
-      title="Audit Log"
-      subtitle="Complete history of all study status changes"
+      :title="t('auditLog.title')"
+      :subtitle="auditStore.loading ? t('common.loading') : t('auditLog.subtitle', { count: auditStore.auditLog.length })"
     />
 
-    <div class="clinical-card overflow-hidden">
+    <!-- Loading State -->
+    <div v-if="auditStore.loading" class="flex items-center justify-center p-8">
+      <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+    </div>
+
+    <!-- Error State -->
+    <div v-else-if="auditStore.error" class="p-4 bg-red-50 text-red-600 rounded-md mb-6">
+      {{ auditStore.error }}
+    </div>
+
+    <!-- Content -->
+    <div v-else class="clinical-card overflow-hidden">
       <table class="data-table">
         <thead>
           <tr>
-            <th>Timestamp</th>
-            <th>Study ID</th>
-            <th>Action</th>
-            <th>Status Change</th>
-            <th>User</th>
-            <th>Comment</th>
+            <th>{{ t('auditLog.headers.timestamp') }}</th>
+            <th>{{ t('auditLog.headers.studyId') }}</th>
+            <th>{{ t('auditLog.headers.action') }}</th>
+            <th>{{ t('auditLog.headers.statusChange') }}</th>
+            <th>{{ t('auditLog.headers.user') }}</th>
+            <th>{{ t('auditLog.headers.comment') }}</th>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="entry in mockAuditLog" :key="entry.id">
+          <tr v-for="entry in auditStore.auditLog" :key="entry.id">
             <td class="text-sm text-muted-foreground whitespace-nowrap">
               {{ format(new Date(entry.timestamp), "MMM dd, yyyy HH:mm") }}
             </td>
@@ -46,9 +57,18 @@
 </template>
 
 <script setup lang="ts">
+import { onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { format } from 'date-fns'
 import { MessageSquare } from 'lucide-vue-next'
 import PageHeader from '@/components/layout/PageHeader.vue'
 import StatusBadge from '@/components/ui/StatusBadge.vue'
-import { mockAuditLog } from '@/data/mockData'
+import { useAuditStore } from '@/stores/auditStore'
+
+const { t } = useI18n()
+const auditStore = useAuditStore()
+
+onMounted(async () => {
+  await auditStore.fetchAuditLog()
+})
 </script>

@@ -7,6 +7,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { AlertTriangle, Zap, Clock } from 'lucide-vue-next'
 import { cn } from '@/lib/utils'
 import type { Urgency } from '@/types/study'
@@ -17,13 +18,21 @@ interface Props {
 }
 
 const props = defineProps<Props>()
+const { t } = useI18n()
 
-const urgencyConfig: Record<Urgency, { label: string; className: string; Icon: any }> = {
-  'stat': { label: 'STAT', className: 'urgency-stat', Icon: Zap },
-  'urgent': { label: 'Urgent', className: 'urgency-urgent', Icon: AlertTriangle },
-  'routine': { label: 'Routine', className: 'urgency-routine', Icon: Clock },
+const urgencyMap: Record<Urgency, { key: string; className: string; Icon: any }> = {
+  'stat': { key: 'urgency.stat', className: 'urgency-stat', Icon: Zap },
+  'urgent': { key: 'urgency.urgent', className: 'urgency-urgent', Icon: AlertTriangle },
+  'routine': { key: 'urgency.routine', className: 'urgency-routine', Icon: Clock },
 }
 
-const config = computed(() => urgencyConfig[props.urgency])
+const config = computed(() => {
+  const mapping = urgencyMap[props.urgency]
+  return {
+    label: t(mapping.key),
+    className: mapping.className,
+    Icon: mapping.Icon
+  }
+})
 </script>
 

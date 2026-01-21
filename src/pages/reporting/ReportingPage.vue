@@ -1,5 +1,17 @@
 <template>
   <div class="min-h-screen bg-background">
+    <!-- Loading State -->
+    <div v-if="taskStore.loading" class="flex items-center justify-center p-8">
+      <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+    </div>
+
+    <!-- Error State -->
+    <div v-else-if="taskStore.error" class="p-4 bg-red-50 text-red-600 rounded-md m-6">
+      {{ taskStore.error }}
+    </div>
+
+    <!-- Content -->
+    <div v-else-if="study">
     <!-- Header Bar -->
     <header class="sticky top-0 z-10 bg-card border-b border-border px-4 py-3">
       <div class="flex items-center justify-between">
@@ -26,23 +38,23 @@
             <template #trigger>
               <Button variant="outline" size="sm">
                 <Download class="w-4 h-4 mr-2" />
-                DICOM
+                {{ t('reporting.dicom') }}
                 <ChevronDown class="w-3 h-3 ml-1" />
               </Button>
             </template>
             <DropdownMenuItem>
               <Download class="w-4 h-4 mr-2" />
-              Download {{ study.bodyArea }} only
+              {{ t('reporting.downloadBodyArea', { area: study.bodyArea }) }}
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem>
               <Download class="w-4 h-4 mr-2" />
-              Download all ({{ linkedStudies.length + 1 }} body parts)
+              {{ t('reporting.downloadAll', { count: linkedStudies.length + 1 }) }}
             </DropdownMenuItem>
           </DropdownMenu>
           <Button v-else variant="outline" size="sm">
             <Download class="w-4 h-4 mr-2" />
-            DICOM
+            {{ t('reporting.dicom') }}
           </Button>
         </div>
       </div>
@@ -57,9 +69,9 @@
         <div class="clinical-card-header">
           <h3 class="text-sm font-semibold flex items-center gap-2 text-foreground">
             <MessageCircle class="w-4 h-4 text-muted-foreground" />
-            Comments
+            {{ t('reporting.comments') }}
             <span class="ml-1 text-xs font-normal text-muted-foreground">
-              ({{ study.validatorComments.length }} comment{{ study.validatorComments.length !== 1 ? 's' : '' }})
+              ({{ t('reporting.commentCount', { count: study.validatorComments.length }) }})
             </span>
           </h3>
           <ChevronUp v-if="commentsExpanded" class="w-4 h-4 text-muted-foreground" />
@@ -104,7 +116,7 @@
         <div class="clinical-card-header">
           <h3 class="text-sm font-semibold flex items-center gap-2">
             <FileText class="w-4 h-4 text-primary" />
-            Clinical Notes
+            {{ t('reporting.clinicalNotes') }}
           </h3>
           <ChevronUp v-if="notesExpanded" class="w-4 h-4 text-muted-foreground" />
           <ChevronDown v-else class="w-4 h-4 text-muted-foreground" />
@@ -122,7 +134,7 @@
         <div class="clinical-card-header">
           <h3 class="text-sm font-semibold flex items-center gap-2">
             <MessageSquare class="w-4 h-4 text-muted-foreground" />
-            Technical Notes
+            {{ t('reporting.technicalNotes') }}
           </h3>
           <ChevronUp v-if="notesExpanded" class="w-4 h-4 text-muted-foreground" />
           <ChevronDown v-else class="w-4 h-4 text-muted-foreground" />
@@ -142,16 +154,16 @@
           <!-- Headers Row -->
           <div class="grid grid-cols-2 gap-6">
             <div class="flex items-center gap-2">
-              <span class="text-sm font-semibold text-primary">Current Report</span>
+              <span class="text-sm font-semibold text-primary">{{ t('reporting.currentReport') }}</span>
               <span class="text-xs text-muted-foreground font-mono">{{ study.id }}</span>
             </div>
             <div v-if="selectedPrior || showEnglishTranslation" class="flex items-center justify-between">
               <div class="flex items-center gap-2">
                 <Languages v-if="showEnglishTranslation" class="w-4 h-4 text-blue-500" />
                 <History v-else class="w-4 h-4 text-muted-foreground" />
-                <span v-if="showEnglishTranslation" class="text-sm font-semibold text-blue-600 dark:text-blue-400">English Translation</span>
-                <span v-else class="text-sm font-semibold text-muted-foreground">Prior Report</span>
-                <span v-if="showEnglishTranslation" class="text-xs text-muted-foreground">Auto-generated</span>
+                <span v-if="showEnglishTranslation" class="text-sm font-semibold text-blue-600 dark:text-blue-400">{{ t('reporting.englishTranslation') }}</span>
+                <span v-else class="text-sm font-semibold text-muted-foreground">{{ t('reporting.priorReport') }}</span>
+                <span v-if="showEnglishTranslation" class="text-xs text-muted-foreground">{{ t('reporting.manualTranslation') }}</span>
                 <span v-else class="text-xs text-muted-foreground">{{ selectedPrior?.type }} • {{ selectedPrior?.date }}</span>
               </div>
               <Button variant="ghost" size="icon" @click="showEnglishTranslation ? showEnglishTranslation = false : selectedPrior = null">
@@ -163,26 +175,32 @@
           <!-- Study Protocol Row -->
           <div class="grid grid-cols-2 gap-6">
             <div>
-              <label class="field-label">Study Protocol</label>
+              <label class="field-label">{{ t('reporting.protocol') }}</label>
               <Textarea
                 v-model="protocol"
                 class="report-textarea"
-                placeholder="Describe the imaging technique and protocol used..."
+                :placeholder="t('reporting.protocolPlaceholder')"
                 :readonly="isValidator || study.status === 'finalized' || study.status === 'delivered'"
               />
             </div>
             <div v-if="showEnglishTranslation">
-              <label class="field-label text-blue-600 dark:text-blue-400">Study Protocol (EN)</label>
+              <label class="field-label text-blue-600 dark:text-blue-400">
+                {{ t('reporting.protocolEn') }}
+                <span class="ml-2 text-xs font-normal text-muted-foreground">{{ t('reporting.protocolEnNote') }}</span>
+              </label>
               <Textarea
                 v-model="englishProtocol"
                 class="report-textarea bg-blue-500/5 dark:bg-blue-500/10 border-blue-500/20"
+                :placeholder="t('reporting.protocolEnPlaceholder')"
                 :readonly="study.status === 'finalized' || study.status === 'delivered'"
               />
             </div>
             <div v-else-if="selectedPrior">
-              <label class="field-label text-muted-foreground">Study Protocol</label>
-              <div class="report-textarea bg-muted/50">
-                <p class="text-sm text-muted-foreground italic">Protocol not available for prior studies</p>
+              <label class="field-label text-muted-foreground">{{ t('reporting.protocol') }}</label>
+              <div class="report-textarea bg-muted/50 space-y-2">
+                <p v-if="selectedPrior.protocolEn" class="text-base font-medium">{{ selectedPrior.protocolEn }}</p>
+                <p v-if="selectedPrior.protocol" class="text-xs text-muted-foreground">{{ selectedPrior.protocol }}</p>
+                <p v-if="!selectedPrior.protocolEn && !selectedPrior.protocol" class="text-sm text-muted-foreground italic">{{ t('reporting.protocolNotAvailable') }}</p>
               </div>
             </div>
           </div>
@@ -190,26 +208,33 @@
           <!-- Findings Row -->
           <div class="grid grid-cols-2 gap-6">
             <div>
-              <label class="field-label">Findings</label>
+              <label class="field-label">{{ t('reporting.findings') }}</label>
               <Textarea
                 v-model="findings"
                 class="report-textarea"
-                placeholder="Document all imaging findings in detail..."
+                :placeholder="t('reporting.findingsPlaceholder')"
                 :readonly="isValidator || study.status === 'finalized' || study.status === 'delivered'"
               />
             </div>
             <div v-if="showEnglishTranslation">
-              <label class="field-label text-blue-600 dark:text-blue-400">Findings (EN)</label>
+              <label class="field-label text-blue-600 dark:text-blue-400">
+                {{ t('reporting.findingsEn') }}
+                <span class="ml-2 text-xs font-normal text-muted-foreground">{{ t('reporting.protocolEnNote') }}</span>
+              </label>
               <Textarea
                 v-model="englishFindings"
                 class="report-textarea bg-blue-500/5 dark:bg-blue-500/10 border-blue-500/20"
+                :placeholder="t('reporting.findingsEnPlaceholder')"
                 :readonly="study.status === 'finalized' || study.status === 'delivered'"
               />
             </div>
             <div v-else-if="selectedPrior">
-              <label class="field-label text-muted-foreground">Findings</label>
-              <div class="report-textarea bg-muted/50">
-                <p class="text-sm">{{ selectedPrior.reportText }}</p>
+              <label class="field-label text-muted-foreground">{{ t('reporting.findings') }}</label>
+              <div class="report-textarea bg-muted/50 space-y-2">
+                <p v-if="selectedPrior.findingsEn" class="text-base font-medium">{{ selectedPrior.findingsEn }}</p>
+                <p v-if="selectedPrior.findings" class="text-xs text-muted-foreground">{{ selectedPrior.findings }}</p>
+                <p v-else-if="selectedPrior.reportText && !selectedPrior.findings" class="text-xs text-muted-foreground">{{ selectedPrior.reportText }}</p>
+                <p v-if="!selectedPrior.findingsEn && !selectedPrior.findings && !selectedPrior.reportText" class="text-sm text-muted-foreground italic">{{ t('reporting.findingsNotAvailable') }}</p>
               </div>
             </div>
           </div>
@@ -217,26 +242,32 @@
           <!-- Impression Row -->
           <div class="grid grid-cols-2 gap-6">
             <div>
-              <label class="field-label">Impression</label>
+              <label class="field-label">{{ t('reporting.impression') }}</label>
               <Textarea
                 v-model="impression"
                 class="report-textarea"
-                placeholder="Provide a summary interpretation and recommendations..."
+                :placeholder="t('reporting.impressionPlaceholder')"
                 :readonly="isValidator || study.status === 'finalized' || study.status === 'delivered'"
               />
             </div>
             <div v-if="showEnglishTranslation">
-              <label class="field-label text-blue-600 dark:text-blue-400">Impression (EN)</label>
+              <label class="field-label text-blue-600 dark:text-blue-400">
+                {{ t('reporting.impressionEn') }}
+                <span class="ml-2 text-xs font-normal text-muted-foreground">{{ t('reporting.protocolEnNote') }}</span>
+              </label>
               <Textarea
                 v-model="englishImpression"
                 class="report-textarea bg-blue-500/5 dark:bg-blue-500/10 border-blue-500/20"
+                :placeholder="t('reporting.impressionEnPlaceholder')"
                 :readonly="study.status === 'finalized' || study.status === 'delivered'"
               />
             </div>
             <div v-else-if="selectedPrior">
-              <label class="field-label text-muted-foreground">Impression</label>
-              <div class="report-textarea bg-muted/50">
-                <p class="text-sm text-muted-foreground italic">See findings above</p>
+              <label class="field-label text-muted-foreground">{{ t('reporting.impression') }}</label>
+              <div class="report-textarea bg-muted/50 space-y-2">
+                <p v-if="selectedPrior.impressionEn" class="text-base font-medium">{{ selectedPrior.impressionEn }}</p>
+                <p v-if="selectedPrior.impression" class="text-xs text-muted-foreground">{{ selectedPrior.impression }}</p>
+                <p v-if="!selectedPrior.impressionEn && !selectedPrior.impression" class="text-sm text-muted-foreground italic">{{ t('reporting.impressionNotAvailable') }}</p>
               </div>
             </div>
           </div>
@@ -246,15 +277,15 @@
             <div class="clinical-card-header">
               <h3 class="text-sm font-semibold flex items-center gap-2 text-foreground">
                 <MessageCircle class="w-4 h-4 text-amber-600 dark:text-amber-400" />
-                Add Validator Comment
+                {{ t('reporting.addValidatorComment') }}
               </h3>
-              <span class="text-xs text-muted-foreground">Optional feedback for the reporting radiologist</span>
+              <span class="text-xs text-muted-foreground">{{ t('reporting.validatorCommentNote') }}</span>
             </div>
             <div class="clinical-card-body">
               <Textarea
                 v-model="validatorComment"
                 class="report-textarea bg-background"
-                placeholder="Leave a comment about the report quality, suggestions for improvement, or positive feedback..."
+                :placeholder="t('reporting.validatorCommentPlaceholder')"
                 :rows="3"
               />
             </div>
@@ -269,33 +300,33 @@
                   :disabled="!validatorComment.trim()"
                 >
                   <RotateCcw class="w-4 h-4 mr-2" />
-                  Return for Revision
+                  {{ t('reporting.returnForRevision') }}
                 </Button>
                 <Button @click="handleApprove">
                   <CheckCircle class="w-4 h-4 mr-2" />
-                  Finalize Report
+                  {{ t('reporting.finalizeReport') }}
                 </Button>
               </div>
               <div v-else class="flex items-center gap-3">
                 <Button variant="outline" @click="handleSaveDraft">
                   <Save class="w-4 h-4 mr-2" />
-                  Save Draft
+                  {{ t('reporting.saveDraft') }}
                 </Button>
-                <Button @click="showSubmitDialog = true">
+                <Button @click="handleOpenSubmitDialog">
                   <Send class="w-4 h-4 mr-2" />
-                  Submit for Validation
+                  {{ t('reporting.submitForValidation') }}
                 </Button>
               </div>
               <p class="text-xs text-muted-foreground">
-                {{ study.status === 'finalized' || study.status === 'delivered' 
-                  ? 'This report is finalized and cannot be edited'
-                  : 'Changes are not auto-saved' }}
+                {{ study.status === 'finalized' || study.status === 'delivered'
+                  ? t('reporting.finalizedNote')
+                  : t('reporting.notAutoSaved') }}
               </p>
             </div>
             <div v-if="selectedPrior || showEnglishTranslation" class="pt-4 border-t border-border">
               <Button v-if="selectedPrior" variant="outline" size="sm">
                 <Download class="w-4 h-4 mr-2" />
-                Download DICOM
+                {{ t('common.download') }} {{ t('reporting.dicom') }}
               </Button>
             </div>
           </div>
@@ -309,9 +340,9 @@
           <div class="clinical-card-header">
             <h3 class="text-sm font-semibold flex items-center gap-2">
               <Link2 class="w-4 h-4 text-primary" />
-              Linked Body Parts
+              {{ t('reporting.linkedBodyParts') }}
             </h3>
-            <span class="text-xs text-muted-foreground">{{ linkedStudies.length + 1 }} zones</span>
+            <span class="text-xs text-muted-foreground">{{ t('reporting.zones', { count: linkedStudies.length + 1 }) }}</span>
           </div>
           <div class="divide-y divide-border">
             <div class="p-3 bg-primary/10">
@@ -320,7 +351,7 @@
                   <p class="text-sm font-medium">{{ study.bodyArea }}</p>
                   <p class="text-xs text-muted-foreground font-mono">{{ study.id }}</p>
                 </div>
-                <span class="text-xs px-2 py-0.5 rounded bg-primary/20 text-primary font-medium">Current</span>
+                <span class="text-xs px-2 py-0.5 rounded bg-primary/20 text-primary font-medium">{{ t('reporting.current') }}</span>
               </div>
             </div>
             <button
@@ -348,11 +379,11 @@
         </div>
 
         <!-- English Translation Toggle -->
-        <div v-if="isValidator" class="clinical-card border-blue-500/30 bg-blue-500/5 dark:bg-blue-500/10">
+        <div class="clinical-card border-blue-500/30 bg-blue-500/5 dark:bg-blue-500/10">
           <div class="clinical-card-header">
             <h3 class="text-sm font-semibold flex items-center gap-2">
               <Languages class="w-4 h-4 text-blue-500" />
-              Translation
+              {{ t('reporting.translation') }}
             </h3>
           </div>
           <button
@@ -365,10 +396,10 @@
             )"
           >
             <div>
-              <p class="text-sm font-medium">English Version</p>
-              <p class="text-xs text-muted-foreground">Auto-generated from Russian</p>
+              <p class="text-sm font-medium">{{ t('reporting.englishVersion') }}</p>
+              <p class="text-xs text-muted-foreground">{{ t('reporting.manualTranslationRequired') }}</p>
             </div>
-            <span v-if="showEnglishTranslation" class="text-xs text-blue-600 dark:text-blue-400 font-medium">Viewing</span>
+            <span v-if="showEnglishTranslation" class="text-xs text-blue-600 dark:text-blue-400 font-medium">{{ t('reporting.viewing') }}</span>
             <ChevronRight v-else class="w-4 h-4 text-muted-foreground" />
           </button>
         </div>
@@ -376,12 +407,12 @@
         <!-- Prior Studies -->
         <div v-if="study.hasPriors" class="clinical-card">
           <div class="clinical-card-header">
-            <h3 class="text-sm font-semibold">Prior Studies</h3>
-            <span class="text-xs text-muted-foreground">{{ mockPriorStudies.length }}</span>
+            <h3 class="text-sm font-semibold">{{ t('reporting.priorStudies') }}</h3>
+            <span class="text-xs text-muted-foreground">{{ priorStudies.length }}</span>
           </div>
           <div class="divide-y divide-border">
             <button
-              v-for="prior in mockPriorStudies"
+              v-for="prior in priorStudies"
               :key="prior.id"
               @click="handlePriorClick(prior)"
               :class="cn(
@@ -395,7 +426,7 @@
                 <p class="text-sm font-medium">{{ prior.type }}</p>
                 <p class="text-xs text-muted-foreground">{{ prior.date }}</p>
               </div>
-              <span v-if="selectedPrior?.id === prior.id" class="text-xs text-primary font-medium">Viewing</span>
+              <span v-if="selectedPrior?.id === prior.id" class="text-xs text-primary font-medium">{{ t('reporting.viewing') }}</span>
               <ChevronRight v-else class="w-4 h-4 text-muted-foreground" />
             </button>
           </div>
@@ -411,54 +442,54 @@
       >
         <div class="flex items-center gap-2">
           <User class="w-4 h-4 text-primary" />
-          <span class="text-sm font-semibold">Patient Summary</span>
+          <span class="text-sm font-semibold">{{ t('reporting.patientSummary') }}</span>
           <span class="text-xs text-muted-foreground">{{ study.patientId }}</span>
         </div>
         <ChevronDown v-if="summaryExpanded" class="w-4 h-4 text-muted-foreground" />
         <ChevronUp v-else class="w-4 h-4 text-muted-foreground" />
       </button>
-      
+
       <div v-if="summaryExpanded" class="p-4 space-y-4 max-h-[400px] overflow-y-auto">
         <div>
-          <h4 class="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Demographics</h4>
+          <h4 class="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">{{ t('reporting.demographics') }}</h4>
           <div class="grid grid-cols-2 gap-2 text-sm">
             <div>
-              <span class="text-muted-foreground">Sex:</span>
-              <span class="ml-1 font-medium">{{ study.sex === 'M' ? 'Male' : 'Female' }}</span>
+              <span class="text-muted-foreground">{{ t('reporting.sex') }}</span>
+              <span class="ml-1 font-medium">{{ study.sex === 'M' ? t('reporting.male') : t('reporting.female') }}</span>
             </div>
             <div>
-              <span class="text-muted-foreground">Age:</span>
-              <span class="ml-1 font-medium">{{ study.age }} years</span>
+              <span class="text-muted-foreground">{{ t('reporting.age') }}</span>
+              <span class="ml-1 font-medium">{{ study.age }} {{ t('reporting.years') }}</span>
             </div>
           </div>
         </div>
         <div>
-          <h4 class="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Current Study</h4>
+          <h4 class="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">{{ t('reporting.currentStudy') }}</h4>
           <div class="text-sm space-y-1">
-            <p><span class="text-muted-foreground">Type:</span> <span class="font-medium">{{ study.modality }} {{ study.bodyArea }}</span></p>
-            <p><span class="text-muted-foreground">Client:</span> <span class="font-medium">{{ study.clientName }}</span></p>
+            <p><span class="text-muted-foreground">{{ t('reporting.type') }}</span> <span class="font-medium">{{ study.modality }} {{ study.bodyArea }}</span></p>
+            <p><span class="text-muted-foreground">{{ t('reporting.client') }}</span> <span class="font-medium">{{ study.clientName }}</span></p>
           </div>
         </div>
         <div>
-          <h4 class="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Clinical History</h4>
+          <h4 class="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">{{ t('reporting.clinicalHistory') }}</h4>
           <p class="text-sm">Persistent cough for 3 weeks. History of smoking (20 pack-years). Rule out pulmonary pathology.</p>
         </div>
-        <div v-if="study.hasPriors">
+        <div v-if="study.hasPriors && priorStudies.length > 0">
           <h4 class="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
-            Prior Imaging ({{ mockPriorStudies.length }})
+            {{ t('reporting.priorImaging', { count: priorStudies.length }) }}
           </h4>
           <div class="space-y-2">
-            <div v-for="prior in mockPriorStudies" :key="prior.id" class="text-sm p-2 bg-muted/50 rounded">
+            <div v-for="prior in priorStudies" :key="prior.id" class="text-sm p-2 bg-muted/50 rounded">
               <div class="flex justify-between items-center mb-1">
                 <span class="font-medium">{{ prior.type }}</span>
                 <span class="text-xs text-muted-foreground">{{ prior.date }}</span>
               </div>
-              <p class="text-xs text-muted-foreground line-clamp-2">{{ prior.reportText }}</p>
+              <p class="text-xs text-muted-foreground line-clamp-2">{{ prior.reportText || prior.findings || 'No report text available' }}</p>
             </div>
           </div>
         </div>
         <div>
-          <h4 class="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Key Points</h4>
+          <h4 class="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">{{ t('reporting.keyPoints') }}</h4>
           <ul class="text-sm space-y-1">
             <li class="flex items-start gap-2">
               <span class="text-primary">•</span>
@@ -481,32 +512,35 @@
     <Dialog v-model:open="showSubmitDialog">
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Submit for Validation</DialogTitle>
+          <DialogTitle>{{ t('reporting.submitDialog.title') }}</DialogTitle>
           <DialogDescription>
-            Are you sure you want to submit this report for validation? 
-            You will not be able to edit the report after it has been finalized by the validator.
+            {{ t('reporting.submitDialog.description') }}
           </DialogDescription>
         </DialogHeader>
+
         <div class="p-4 bg-muted/50 rounded-md">
           <div class="flex items-start gap-2">
             <AlertTriangle class="w-4 h-4 text-urgency-urgent flex-shrink-0 mt-0.5" />
             <p class="text-sm text-muted-foreground">
-              Please verify you have addressed all relevant body areas and prior studies before submitting.
+              {{ t('reporting.submitDialog.warning') }}
             </p>
           </div>
         </div>
+
         <DialogFooter>
-          <Button variant="outline" @click="showSubmitDialog = false">Cancel</Button>
-          <Button @click="handleSubmit">Confirm Submission</Button>
+          <Button variant="outline" @click="showSubmitDialog = false">{{ t('common.cancel') }}</Button>
+          <Button @click="handleSubmit">{{ t('reporting.submitDialog.confirmSubmission') }}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import {
   ArrowLeft,
   Download,
@@ -531,7 +565,8 @@ import Button from '@/components/ui/button.vue'
 import StatusBadge from '@/components/ui/StatusBadge.vue'
 import UrgencyBadge from '@/components/ui/UrgencyBadge.vue'
 import DeadlineTimer from '@/components/ui/DeadlineTimer.vue'
-import { mockStudies, mockPriorStudies } from '@/data/mockData'
+import { useTaskStore } from '@/stores/taskStore'
+import { useAuthStore } from '@/stores/authStore'
 import { getLinkedStudies } from '@/utils/linkedStudies'
 import { cn } from '@/lib/utils'
 import Dialog from '@/components/ui/dialog.vue'
@@ -548,13 +583,78 @@ import type { PriorStudy } from '@/types/study'
 
 const route = useRoute()
 const router = useRouter()
+const { t } = useI18n()
+const taskStore = useTaskStore()
 
-const study = computed(() => mockStudies.find(s => s.id === route.params.studyId) || mockStudies[0])
-const linkedStudies = computed(() => getLinkedStudies(study.value, mockStudies))
+const study = computed(() => {
+  // Always prefer currentTask for the current route since it has full data
+  const taskId = route.params.taskId as string
 
-const protocol = ref("Non-contrast CT of the chest was performed using standard departmental protocol.")
-const findings = ref("")
-const impression = ref("")
+  // If currentTask matches the route, use it (it has full report data)
+  if (taskStore.currentTask?.id === taskId) {
+    console.log('study computed: using currentTask', {
+      routeTaskId: taskId,
+      currentTaskId: taskStore.currentTask?.id,
+      hasReport: !!taskStore.currentTask?.report
+    })
+    return taskStore.currentTask
+  }
+
+  // Otherwise, return null to show loading state until currentTask is fetched
+  // We don't want to use the lightweight list data because it lacks report details
+  console.log('study computed: waiting for currentTask to load', {
+    routeTaskId: taskId,
+    currentTaskId: taskStore.currentTask?.id
+  })
+  return null
+})
+const linkedStudies = computed(() =>
+  study.value ? getLinkedStudies(study.value, taskStore.myReportingTasks) : []
+)
+
+// Get prior studies from the study data
+const priorStudies = computed(() => study.value?.priorStudies || [])
+
+// Initialize report fields from study data
+const protocol = computed({
+  get: () => {
+    const value = study.value?.report?.protocol || ''
+    console.log('protocol computed get:', {hasStudy: !!study.value, hasReport: !!study.value?.report, protocol: value})
+    return value
+  },
+  set: (value) => {
+    if (taskStore.currentTask) {
+      if (!taskStore.currentTask.report) {
+        taskStore.currentTask.report = {}
+      }
+      taskStore.currentTask.report.protocol = value
+    }
+  }
+})
+
+const findings = computed({
+  get: () => study.value?.report?.findings || '',
+  set: (value) => {
+    if (taskStore.currentTask) {
+      if (!taskStore.currentTask.report) {
+        taskStore.currentTask.report = {}
+      }
+      taskStore.currentTask.report.findings = value
+    }
+  }
+})
+
+const impression = computed({
+  get: () => study.value?.report?.impression || '',
+  set: (value) => {
+    if (taskStore.currentTask) {
+      if (!taskStore.currentTask.report) {
+        taskStore.currentTask.report = {}
+      }
+      taskStore.currentTask.report.impression = value
+    }
+  }
+})
 const showSubmitDialog = ref(false)
 const selectedPrior = ref<PriorStudy | null>(null)
 const showEnglishTranslation = ref(false)
@@ -562,17 +662,51 @@ const summaryExpanded = ref(true)
 const notesExpanded = ref(false)
 const validatorComment = ref("")
 const commentsExpanded = ref(true)
+const availableValidators = ref<any[]>([])
+const selectedValidatorId = ref<number | null>(null)
 
-const englishProtocol = ref("Non-contrast CT of the chest was performed using standard departmental protocol. Slice thickness 1.5mm with iterative reconstruction.")
-const englishFindings = ref("The lungs are clear bilaterally without evidence of consolidation, masses, or nodules. No pleural effusion identified. The mediastinal structures are within normal limits. Heart size is normal. No lymphadenopathy. The visualized portions of the upper abdomen are unremarkable.")
-const englishImpression = ref("Normal chest CT examination. No acute cardiopulmonary process identified. Follow-up imaging is not indicated based on current findings.")
+const englishProtocol = computed({
+  get: () => study.value?.report?.protocolEn || '',
+  set: (value) => {
+    if (taskStore.currentTask) {
+      if (!taskStore.currentTask.report) {
+        taskStore.currentTask.report = {}
+      }
+      taskStore.currentTask.report.protocolEn = value
+    }
+  }
+})
+
+const englishFindings = computed({
+  get: () => study.value?.report?.findingsEn || '',
+  set: (value) => {
+    if (taskStore.currentTask) {
+      if (!taskStore.currentTask.report) {
+        taskStore.currentTask.report = {}
+      }
+      taskStore.currentTask.report.findingsEn = value
+    }
+  }
+})
+
+const englishImpression = computed({
+  get: () => study.value?.report?.impressionEn || '',
+  set: (value) => {
+    if (taskStore.currentTask) {
+      if (!taskStore.currentTask.report) {
+        taskStore.currentTask.report = {}
+      }
+      taskStore.currentTask.report.impressionEn = value
+    }
+  }
+})
 
 const clinicalNotesText = `Patient presents with persistent cough for 3 weeks, productive of yellowish sputum. History of smoking (20 pack-years), quit 2 years ago. Reports occasional dyspnea on exertion and mild chest discomfort. No hemoptysis. No fever or night sweats reported. Family history significant for lung cancer (father, diagnosed age 62). Previous chest X-ray from 6 months ago showed no significant abnormalities. Patient currently on ACE inhibitor for hypertension - consider ACE inhibitor-induced cough in differential. Weight loss of 5kg over past 2 months noted. Rule out pulmonary pathology including malignancy given risk factors.`
 
 const technicalNotesText = `Study performed on Siemens SOMATOM Definition Edge (128-slice). Acquisition parameters: Slice thickness 1.5mm, reconstruction interval 1.0mm. kVp: 120, mAs: 180 (with tube current modulation enabled). Non-contrast examination per protocol. Pitch factor: 1.2. Scan range from lung apices to adrenal glands. Iterative reconstruction (SAFIRE strength 3) applied. Motion artifact present at lung bases - limited evaluation of lower lobes, recommend clinical correlation if persistent symptoms. Streak artifact from patient arms noted but does not significantly impact diagnostic quality. Total DLP: 385 mGy·cm. Effective dose estimate: 5.4 mSv. Images reviewed on Syngo.via workstation.`
 
-const isValidator = computed(() => ['draft-ready', 'under-validation'].includes(study.value.status))
-const isReturned = computed(() => study.value.status === 'returned')
+const authStore = useAuthStore()
+const isValidator = computed(() => authStore.role === 'validating-radiologist')
 
 const sortedComments = computed(() => {
   if (!study.value.validatorComments) return []
@@ -582,18 +716,109 @@ const sortedComments = computed(() => {
 })
 
 const handleBack = () => router.go(-1)
-const handleSaveDraft = () => {
-  // Visual feedback only
+
+const handleOpenSubmitDialog = async () => {
+  showSubmitDialog.value = true
 }
-const handleSubmit = () => {
-  showSubmitDialog.value = false
-  router.go(-1)
+
+const handleSaveDraft = async () => {
+  if (!study.value) return
+
+  try {
+    // Handle workflow transitions before saving
+    if (study.value.status === 'new') {
+      await taskStore.takeTask(study.value.id)
+      await taskStore.fetchTaskByStudyId(study.value.id)  // Reload to get updated status
+      await taskStore.startTask(study.value.id)
+      await taskStore.fetchTaskByStudyId(study.value.id)  // Reload again
+    } else if (study.value.status === 'assigned') {
+      await taskStore.startTask(study.value.id)
+      await taskStore.fetchTaskByStudyId(study.value.id)
+    } else if (study.value.status === 'returned') {
+      await taskStore.startTask(study.value.id)
+      await taskStore.fetchTaskByStudyId(study.value.id)
+    }
+
+    const reportData = {
+      protocol: protocol.value,
+      findings: findings.value,
+      impression: impression.value,
+      protocol_en: englishProtocol.value,
+      findings_en: englishFindings.value,
+      impression_en: englishImpression.value,
+    }
+
+    await taskStore.submitReport(study.value.id, reportData)
+  } catch (error) {
+    console.error('Failed to save draft:', error)
+  }
 }
-const handleApprove = () => {
-  router.go(-1)
+
+const handleSubmit = async () => {
+  if (!study.value) return
+
+  try {
+    // If task is draft-ready, mark as translated (admin will assign validator)
+    if (study.value.status === 'draft-ready') {
+      await taskStore.markTaskTranslated(study.value.id)
+      showSubmitDialog.value = false
+      router.go(-1)
+      return
+    }
+
+    // Handle workflow transitions before submitting
+    if (study.value.status === 'new') {
+      await taskStore.takeTask(study.value.id)
+      await taskStore.fetchTaskByStudyId(study.value.id)  // Reload to get updated status
+      await taskStore.startTask(study.value.id)
+      await taskStore.fetchTaskByStudyId(study.value.id)  // Reload again
+    } else if (study.value.status === 'assigned') {
+      await taskStore.startTask(study.value.id)
+      await taskStore.fetchTaskByStudyId(study.value.id)
+    } else if (study.value.status === 'returned') {
+      await taskStore.startTask(study.value.id)
+      await taskStore.fetchTaskByStudyId(study.value.id)
+    }
+
+    const reportData = {
+      protocol: protocol.value,
+      findings: findings.value,
+      impression: impression.value,
+      protocol_en: englishProtocol.value,
+      findings_en: englishFindings.value,
+      impression_en: englishImpression.value,
+    }
+
+    await taskStore.submitReport(study.value.id, reportData)
+    showSubmitDialog.value = false
+    router.go(-1)
+  } catch (error) {
+    console.error('Failed to submit report:', error)
+  }
 }
-const handleReturn = () => {
-  router.go(-1)
+
+const handleApprove = async () => {
+  if (!study.value) return
+
+  try {
+    // Use taskId directly instead of parsing study ID
+    await taskStore.finalizeTask(study.value.id)
+    router.go(-1)
+  } catch (error) {
+    console.error('Failed to finalize task:', error)
+  }
+}
+
+const handleReturn = async () => {
+  if (!study.value || !validatorComment.value.trim()) return
+
+  try {
+    // Use taskId directly instead of parsing study ID
+    await taskStore.returnForRevision(study.value.id, validatorComment.value)
+    router.go(-1)
+  } catch (error) {
+    console.error('Failed to return task for revision:', error)
+  }
 }
 const handlePriorClick = (prior: PriorStudy) => {
   selectedPrior.value = selectedPrior.value?.id === prior.id ? null : prior
@@ -609,4 +834,36 @@ const formatTime = (timestamp: string) => {
   const date = new Date(timestamp)
   return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
 }
+
+onMounted(async () => {
+  const taskId = route.params.taskId as string
+  await taskStore.fetchTaskByStudyId(taskId)
+
+  // Auto-start validation if validator opens an assigned_for_validation task
+  if (isValidator.value && study.value?.status === 'assigned-for-validation') {
+    try {
+      await taskStore.startValidationTask(taskId)
+      await taskStore.fetchTaskByStudyId(taskId)
+    } catch (error) {
+      console.error('Failed to auto-start validation:', error)
+    }
+  }
+})
+
+// Watch for route changes to refetch task data when navigating between tasks
+watch(() => route.params.taskId, async (newTaskId) => {
+  if (newTaskId) {
+    await taskStore.fetchTaskByStudyId(newTaskId as string)
+
+    // Auto-start validation if validator opens an assigned_for_validation task
+    if (isValidator.value && study.value?.status === 'assigned-for-validation') {
+      try {
+        await taskStore.startValidationTask(newTaskId as string)
+        await taskStore.fetchTaskByStudyId(newTaskId as string)
+      } catch (error) {
+        console.error('Failed to auto-start validation:', error)
+      }
+    }
+  }
+})
 </script>

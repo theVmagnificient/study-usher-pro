@@ -22,20 +22,14 @@
       </button>
     </div>
 
-    <!-- Role Selector -->
+    <!-- Role Display (Read-only) -->
     <div v-if="!collapsed" class="px-3 py-3 border-b border-sidebar-border">
       <label class="text-[10px] uppercase tracking-wider text-sidebar-foreground/60 block mb-1.5">
         {{ t('sidebar.activeRole') }}
       </label>
-      <select
-        :value="currentRole"
-        @change="(e) => $emit('roleChange', (e.target as HTMLSelectElement).value)"
-        class="w-full text-xs bg-sidebar-accent text-sidebar-foreground border-0 rounded px-2 py-1.5 focus:ring-1 focus:ring-sidebar-ring outline-none"
-      >
-        <option value="admin">{{ t('roles.admin') }}</option>
-        <option value="reporting-radiologist">{{ t('roles.reportingRadiologist') }}</option>
-        <option value="validating-radiologist">{{ t('roles.validatingRadiologist') }}</option>
-      </select>
+      <div class="w-full text-xs bg-sidebar-accent text-sidebar-foreground rounded px-2 py-1.5">
+        {{ currentRole ? roleLabels[currentRole] : '' }}
+      </div>
     </div>
 
     <!-- Navigation -->
@@ -85,16 +79,16 @@
           <User class="w-4 h-4" />
         </div>
         <div class="flex-1 min-w-0">
-          <p class="text-sm font-medium truncate">Dr. Smith</p>
+          <p class="text-sm font-medium truncate">{{ authStore.fullName }}</p>
           <p class="text-[10px] text-sidebar-foreground/60 truncate">
-            {{ roleLabels[currentRole] }}
+            {{ currentRole ? roleLabels[currentRole] : '' }}
           </p>
         </div>
-        <button class="p-1.5 rounded hover:bg-sidebar-accent transition-colors">
+        <button @click="handleLogout" class="p-1.5 rounded hover:bg-sidebar-accent transition-colors">
           <LogOut class="w-4 h-4" />
         </button>
       </div>
-      <button v-else class="w-full p-2 rounded hover:bg-sidebar-accent transition-colors flex justify-center">
+      <button v-else @click="handleLogout" class="w-full p-2 rounded hover:bg-sidebar-accent transition-colors flex justify-center">
         <LogOut class="w-4 h-4" />
       </button>
     </div>
@@ -103,9 +97,10 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAppStore } from '@/stores/app'
+import { useAuthStore } from '@/stores/authStore'
 import {
   LayoutDashboard,
   FileText,
@@ -135,7 +130,7 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { labelKey: 'nav.studyList', path: '/studies', icon: FileText, roles: ['admin'] },
+  { labelKey: 'nav.studyList', path: '/tasks', icon: FileText, roles: ['admin'] },
   { labelKey: 'nav.taskTypes', path: '/task-types', icon: FolderCog, roles: ['admin'] },
   { labelKey: 'nav.userManagement', path: '/users', icon: Users, roles: ['admin'] },
   { labelKey: 'nav.workforceCapacity', path: '/workforce', icon: CalendarDays, roles: ['admin'] },
@@ -146,34 +141,36 @@ const navItems: NavItem[] = [
   { labelKey: 'nav.myProfile', path: '/profile', icon: User, roles: ['reporting-radiologist', 'validating-radiologist'] },
 ]
 
-interface Props {
-  currentRole: UserRole
-}
-
-const props = defineProps<Props>()
-const emit = defineEmits<{
-  roleChange: [role: UserRole]
-}>()
-
 const route = useRoute()
+const router = useRouter()
 const { t } = useI18n()
 const appStore = useAppStore()
+const authStore = useAuthStore()
 
 const collapsed = ref(false)
 const isDark = computed(() => appStore.isDark)
+const currentRole = computed(() => authStore.role)
 
-const filteredItems = computed(() => navItems.filter((item) => item.roles.includes(props.currentRole)))
+const filteredItems = computed(() => {
+  if (!currentRole.value) return []
+  return navItems.filter((item) => item.roles.includes(currentRole.value!))
+})
 
-const roleLabels: Record<UserRole, string> = {
+const roleLabels = computed(() => ({
   admin: t('roles.admin'),
   'reporting-radiologist': t('roles.reportingRadiologist'),
   'validating-radiologist': t('roles.validatingRadiologist'),
-}
+}))
 
 const isActive = (path: string) => route.path === path
 
 const toggleTheme = () => {
   appStore.toggleTheme()
+}
+
+const handleLogout = () => {
+  authStore.logout()
+  router.push('/login')
 }
 </script>
 

@@ -1,8 +1,10 @@
-export type StudyStatus = 
+export type StudyStatus =
   | 'new'
   | 'assigned'
   | 'in-progress'
   | 'draft-ready'
+  | 'translated'
+  | 'assigned-for-validation'
   | 'under-validation'
   | 'returned'
   | 'finalized'
@@ -27,6 +29,7 @@ export type UserRole = 'admin' | 'reporting-radiologist' | 'validating-radiologi
 
 export interface Study {
   id: string;
+  taskId: number;
   patientId: string;
   clientName: string;
   status: StudyStatus;
@@ -38,12 +41,22 @@ export interface Study {
   deadline: string;
   hasPriors: boolean;
   priorCount?: number;
+  priorStudies?: PriorStudy[];
   sex: 'M' | 'F';
   age: number;
   /** Group ID for multi-zone studies (same patient, multiple body areas) */
   linkedStudyGroup?: string;
   /** Validator comments on the report quality/impressions */
   validatorComments?: ValidatorComment[];
+  /** Current report content */
+  report?: {
+    protocol?: string;
+    protocolEn?: string;
+    findings?: string;
+    findingsEn?: string;
+    impression?: string;
+    impressionEn?: string;
+  };
 }
 
 export interface ValidatorComment {
@@ -92,6 +105,12 @@ export interface PriorStudy {
   id: string;
   type: string;
   date: string;
+  protocol?: string;
+  protocolEn?: string;
+  findings?: string;
+  findingsEn?: string;
+  impression?: string;
+  impressionEn?: string;
   reportText?: string;
 }
 

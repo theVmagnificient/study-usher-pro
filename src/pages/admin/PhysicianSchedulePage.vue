@@ -1,8 +1,19 @@
 <template>
-  <div v-if="!physician" class="p-8 text-center">
-    <p class="text-muted-foreground">Physician not found</p>
+  <!-- Loading State -->
+  <div v-if="userStore.loading" class="flex items-center justify-center p-8">
+    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+  </div>
+
+  <!-- Error State -->
+  <div v-else-if="userStore.error" class="p-4 bg-red-50 text-red-600 rounded-md mb-6">
+    {{ userStore.error }}
+  </div>
+
+  <!-- Not Found -->
+  <div v-else-if="!physician" class="p-8 text-center">
+    <p class="text-muted-foreground">{{ t('userManagement.editPhysician') }}</p>
     <Button variant="outline" @click="router.push('/users')" class="mt-4">
-      Back to Users
+      {{ t('nav.userManagement') }}
     </Button>
   </div>
   <div v-else>
@@ -12,10 +23,10 @@
       </Button>
       <div class="flex-1">
         <h1 class="text-xl font-semibold">{{ physician.fullName }}</h1>
-        <p class="text-sm text-muted-foreground">Schedule Management</p>
+        <p class="text-sm text-muted-foreground">{{ t('profile.manageSchedule') }}</p>
       </div>
       <Button variant="outline">
-        Save Changes
+        {{ t('common.save') }}
       </Button>
     </div>
 
@@ -58,13 +69,13 @@
               <!-- Date Label -->
               <div class="w-32 p-3 border-r border-border bg-muted/30">
                 <div class="text-sm font-medium">{{ format(date, "dd.MM") }}</div>
-                <div class="text-xs text-muted-foreground">{{ DAY_NAMES[date.getDay()] }}</div>
+                <div class="text-xs text-muted-foreground">{{ DAY_NAMES.value[date.getDay()] }}</div>
                 <button
                   v-if="schedule[format(date, 'yyyy-MM-dd')] !== undefined"
                   @click="resetDayToDefault(date)"
                   class="text-xs text-primary hover:underline mt-1"
                 >
-                  Reset
+                  {{ t('common.cancel') }}
                 </button>
               </div>
               
@@ -111,21 +122,32 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-vue-next'
 import { format, startOfWeek, addDays, addWeeks, subWeeks, isSameDay } from 'date-fns'
 import Button from '@/components/ui/button.vue'
-import { mockPhysicians } from '@/data/mockData'
+import { useUserStore } from '@/stores/userStore'
 import { cn } from '@/lib/utils'
 
 const route = useRoute()
 const router = useRouter()
+const { t } = useI18n()
+const userStore = useUserStore()
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i)
-const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+const DAY_NAMES = computed(() => [
+  t('workforce.calendar.sunday'),
+  t('workforce.calendar.monday'),
+  t('workforce.calendar.tuesday'),
+  t('workforce.calendar.wednesday'),
+  t('workforce.calendar.thursday'),
+  t('workforce.calendar.friday'),
+  t('workforce.calendar.saturday')
+])
 
-const physician = computed(() => mockPhysicians.find(p => p.id === route.params.physicianId))
+const physician = computed(() => userStore.users.find(p => p.id === route.params.physicianId))
 
 const currentWeekStart = ref(startOfWeek(new Date(), { weekStartsOn: 1 }))
 
@@ -151,7 +173,7 @@ const weekDays = computed(() => {
 
 const isDefaultWorkingHour = (date: Date, hour: number) => {
   if (!physician.value) return false
-  const dayName = DAY_NAMES[date.getDay()]
+  const dayName = DAY_NAMES.value[date.getDay()]
   const isWorkingDay = physician.value.schedule.days.includes(dayName)
   if (!isWorkingDay) return false
   
@@ -201,4 +223,8 @@ const resetDayToDefault = (date: Date) => {
   delete newSchedule[dateKey]
   schedule.value = newSchedule
 }
+
+onMounted(async () => {
+  await userStore.fetchUsers()
+})
 </script>
