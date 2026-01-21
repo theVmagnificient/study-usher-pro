@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { studyService } from '@/services/studyService'
 import apiClient from '@/lib/api/client'
-import { lookupCache } from '@/lib/cache/lookupCache'
+import { lookupCache } from '@/lib/lookup/lookupCache'
 import type { PaginatedResponse, Study as BackendStudy, Task, ClientType, Client, User } from '@/types/api'
 
 

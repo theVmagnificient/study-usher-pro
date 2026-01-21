@@ -2,7 +2,7 @@ import apiClient from '@/lib/api/client'
 import type { AuditLogEntry } from '@/types/study'
 import type { PaginatedResponse, TaskEvent, TaskEventWithEmbedded, User, WorkforceStats, SLAStats } from '@/types/api'
 import { mapTaskEventToAuditLog } from '@/lib/mappers/auditMapper'
-import { lookupCache } from '@/lib/cache/lookupCache'
+import { lookupCache } from '@/lib/lookup/lookupCache'
 import type { PaginatedResult } from './studyService'
 
 

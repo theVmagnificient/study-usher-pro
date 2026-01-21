@@ -12,7 +12,7 @@ import type {
   PriorStudy,
 } from '@/types/api'
 import { mapTaskToStudy } from '@/lib/mappers/taskMapper'
-import { lookupCache } from '@/lib/cache/lookupCache'
+import { lookupCache } from '@/lib/lookup/lookupCache'
 import { requestDeduplicator, createRequestKey } from '@/lib/utils/requestDeduplication'
 
 

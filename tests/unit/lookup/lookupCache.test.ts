@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
-import { lookupCache } from '@/lib/cache/lookupCache'
+import { lookupCache } from '@/lib/lookup/lookupCache'
 import type { User, Client, ClientType } from '@/types/api'
 
 describe('LookupCache', () => {

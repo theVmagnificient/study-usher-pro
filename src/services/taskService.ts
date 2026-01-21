@@ -3,7 +3,7 @@ import type { Study } from '@/types/study'
 import type { Task, TaskWithEmbedded, Study as BackendStudy, ClientType, Client, User, Report, UserWithDetails, TaskDetail, TaskEvent, PriorStudy as BackendPriorStudy } from '@/types/api'
 import { mapTaskToStudy } from '@/lib/mappers/taskMapper'
 import { mapReportSubmit, type ReportSubmitData } from '@/lib/mappers/reportMapper'
-import { lookupCache } from '@/lib/cache/lookupCache'
+import { lookupCache } from '@/lib/lookup/lookupCache'
 import { parseStudyId } from '@/lib/mappers/utils'
 
 
