@@ -4,6 +4,7 @@ import type {
   PaginatedResponse,
   Study as BackendStudy,
   Task,
+  TaskWithEmbedded,
   ClientType,
   Client,
   User,
@@ -153,8 +154,8 @@ export const studyService = {
   async _fetchTasksBulk(studyIds: number[]): Promise<Map<number, Task>> {
     try {
       // Fetch all tasks for the given study IDs in one request
-      // The API might limit per_page, so we use a high value
-      const response = await apiClient.get<PaginatedResponse<Task>>('/api/v1/admin/tasks', {
+      // The API now returns TaskWithEmbedded which includes embedded client types and users
+      const response = await apiClient.get<PaginatedResponse<TaskWithEmbedded>>('/api/v1/admin/tasks', {
         params: { per_page: 100 }
       })
 
@@ -164,7 +165,44 @@ export const studyService = {
           // Only add if we don't already have a task for this study
           // (tasks are returned newest first, so first match is the latest task)
           if (!tasksMap.has(task.study_id)) {
-            tasksMap.set(task.study_id, task)
+            // Populate cache with embedded data to avoid additional API calls
+            if (task.client_type) {
+              lookupCache.setClientType({
+                id: task.client_type.id,
+                modality: task.client_type.modality,
+                body_area: task.client_type.body_area,
+                expected_tat_hours: task.client_type.expected_tat_hours,
+                client_id: task.study?.client_id || 0,
+                price: 0,
+                payout: 0,
+                created_at: '',
+                updated_at: '',
+              })
+            }
+
+            if (task.reporting_radiologist) {
+              lookupCache.setUser({
+                id: task.reporting_radiologist.id,
+                first_name: task.reporting_radiologist.first_name,
+                last_name: task.reporting_radiologist.last_name,
+                email: task.reporting_radiologist.email,
+                created_at: '',
+                updated_at: '',
+              })
+            }
+
+            if (task.validating_radiologist) {
+              lookupCache.setUser({
+                id: task.validating_radiologist.id,
+                first_name: task.validating_radiologist.first_name,
+                last_name: task.validating_radiologist.last_name,
+                email: task.validating_radiologist.email,
+                created_at: '',
+                updated_at: '',
+              })
+            }
+
+            tasksMap.set(task.study_id, task as Task)
           }
         }
       })

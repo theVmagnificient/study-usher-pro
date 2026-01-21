@@ -202,3 +202,68 @@ export interface PriorStudy {
   accession_number: string
   report: PriorStudyReport | null
 }
+
+// Embedded types for optimized API responses
+
+export interface StudyEmbedded {
+  patient_id: string
+  patient_age: number
+  patient_sex: PatientSex
+  description: string
+  study_datetime: string
+  client_id: number
+  client_type_id: number
+}
+
+export interface ClientTypeEmbedded {
+  id: number
+  modality: Modality
+  body_area: BodyArea
+  expected_tat_hours: number
+}
+
+export interface UserEmbedded {
+  id: number
+  first_name: string
+  last_name: string
+  email: string
+}
+
+export interface TaskWithEmbedded extends Task {
+  study?: StudyEmbedded
+  client_type?: ClientTypeEmbedded
+  reporting_radiologist?: UserEmbedded | null
+  validating_radiologist?: UserEmbedded | null
+  validator_comments_count?: number
+}
+
+export interface TaskEventWithEmbedded extends TaskEvent {
+  study_id?: number
+  user?: UserEmbedded | null
+}
+
+export interface UserProfileWithDetails {
+  user_id: number
+  specialization: string | null
+  role: string | null
+  schedule_slots: ScheduleSlotEmbedded[]
+  statistics: {
+    user_id: number
+    total_tasks: number
+    tasks_this_month: number
+    tasks_last_month: number
+    tasks_by_modality: Record<string, number>
+    tasks_by_body_area: Record<string, number>
+    monthly_tasks_by_modality: Record<string, number>
+    monthly_tasks_by_body_area: Record<string, number>
+    average_completion_time_hours: number
+    tasks_completed_per_day: Array<{ day: string; value: number }>
+  }
+}
+
+export interface TaskDetail {
+  task: TaskWithEmbedded
+  validator_comments: TaskEvent[]
+  prior_studies: PriorStudy[]
+  latest_report: Report | null
+}

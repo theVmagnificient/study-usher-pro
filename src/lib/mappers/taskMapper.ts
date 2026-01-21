@@ -82,6 +82,10 @@ export function mapTaskToStudy(ctx: TaskToStudyContext): Study {
     isCritical: false,
   }))
 
+  // Get validator comments count from embedded data if available, otherwise use array length
+  const taskWithEmbedded = task as import('@/types/api').TaskWithEmbedded
+  const validatorCommentsCount = taskWithEmbedded.validator_comments_count ?? validatorComments?.length ?? 0
+
   // Map prior studies from backend format to frontend format
   const mappedPriorStudies = priorStudies?.map(mapPriorStudy)
 
@@ -125,6 +129,7 @@ export function mapTaskToStudy(ctx: TaskToStudyContext): Study {
     age: study.patient_age,
     description: study.description,
     accessionNumber: study.accession_number,
+    validatorCommentsCount,
     validatorComments,
     report,
   }

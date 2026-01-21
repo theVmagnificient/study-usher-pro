@@ -1,6 +1,6 @@
 import apiClient from '@/lib/api/client'
 import type { AuditLogEntry } from '@/types/study'
-import type { PaginatedResponse, TaskEvent, User, WorkforceStats, SLAStats } from '@/types/api'
+import type { PaginatedResponse, TaskEvent, TaskEventWithEmbedded, User, WorkforceStats, SLAStats } from '@/types/api'
 import { mapTaskEventToAuditLog } from '@/lib/mappers/auditMapper'
 import { lookupCache } from '@/lib/cache/lookupCache'
 import type { PaginatedResult } from './studyService'
@@ -72,32 +72,46 @@ export const auditService = {
       }
 
 
-      const response = await apiClient.get<PaginatedResponse<TaskEvent>>('/api/v1/admin/audit', {
+      const response = await apiClient.get<PaginatedResponse<TaskEventWithEmbedded>>('/api/v1/admin/audit', {
         params,
       })
 
       const taskEvents = response.data.items
 
-
       const auditEntries: AuditLogEntry[] = []
 
+      // Check if backend provides embedded data
+      const hasEmbeddedData = taskEvents.length > 0 && taskEvents[0].study_id !== undefined
 
-      const taskIds = [...new Set(taskEvents.map(e => e.task_id))]
+      // If no embedded data, fall back to fetching (backward compatibility)
       const taskToStudyMap = new Map<number, number>()
+      if (!hasEmbeddedData) {
+        const taskIds = [...new Set(taskEvents.map(e => e.task_id))]
 
-      for (const taskId of taskIds) {
-        try {
-          const taskResponse = await apiClient.get<import('@/types/api').Task>(`/api/v1/admin/tasks/${taskId}`)
-          taskToStudyMap.set(taskId, taskResponse.data.study_id)
-        } catch (error) {
-          console.warn(`Failed to fetch task ${taskId}:`, error)
+        for (const taskId of taskIds) {
+          try {
+            const taskResponse = await apiClient.get<import('@/types/api').Task>(`/api/v1/admin/tasks/${taskId}`)
+            taskToStudyMap.set(taskId, taskResponse.data.study_id)
+          } catch (error) {
+            console.warn(`Failed to fetch task ${taskId}:`, error)
+          }
         }
       }
 
       for (const taskEvent of taskEvents) {
-
         let user: User | undefined
-        if (taskEvent.user_id) {
+
+        // Check if we have embedded user data
+        if (taskEvent.user) {
+          // Use embedded user data - no API call needed!
+          user = {
+            ...taskEvent.user,
+            created_at: '',
+            updated_at: '',
+          }
+          lookupCache.setUser(user)
+        } else if (taskEvent.user_id) {
+          // Fallback: check cache or fetch
           user = lookupCache.getUser(taskEvent.user_id)
           if (!user) {
             try {
@@ -112,9 +126,8 @@ export const auditService = {
           }
         }
 
-
-        const studyId = taskToStudyMap.get(taskEvent.task_id) || taskEvent.task_id
-
+        // Use embedded study_id if available, otherwise use fetched mapping
+        const studyId = taskEvent.study_id || taskToStudyMap.get(taskEvent.task_id) || taskEvent.task_id
 
         const auditEntry = mapTaskEventToAuditLog({
           taskEvent,

@@ -46,6 +46,8 @@ export interface Study {
   age: number;
   /** Group ID for multi-zone studies (same patient, multiple body areas) */
   linkedStudyGroup?: string;
+  /** Number of validator comments (for display badge) */
+  validatorCommentsCount?: number;
   /** Validator comments on the report quality/impressions */
   validatorComments?: ValidatorComment[];
   /** Current report content */

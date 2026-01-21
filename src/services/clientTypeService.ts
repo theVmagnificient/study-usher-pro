@@ -5,6 +5,7 @@ import { mapClientTypeToTaskType, unmapModality } from '@/lib/mappers/clientType
 import { lookupCache } from '@/lib/cache/lookupCache'
 import { parseTaskTypeId } from '@/lib/mappers/utils'
 import type { PaginatedResult } from './studyService'
+import { BatchLoader } from '@/lib/utils/batchLoader'
 
 
 export interface ClientTypeFilters {
@@ -60,12 +61,40 @@ export const clientTypeService = {
 
       const clientTypes = response.data.items
 
+      // Optimization: Instead of fetching each client type individually,
+      // use the data we already have from the list response
+      // and only fetch missing client details if needed
 
-      const taskTypes: TaskType[] = []
-      for (const clientType of clientTypes) {
-        const taskType = await this._fetchClientTypeAsTaskType(clientType.id)
-        taskTypes.push(taskType)
-      }
+      // Cache all client types from the response
+      clientTypes.forEach(ct => lookupCache.setClientType(ct))
+
+      // Collect unique client IDs
+      const clientIds = [...new Set(clientTypes.map(ct => ct.client_id))]
+
+      // Fetch any missing clients in parallel (most will be cache hits or stubs)
+      await Promise.all(
+        clientIds.map(async (clientId) => {
+          if (!lookupCache.getClient(clientId)) {
+            // Create stub client if not in cache
+            const client: Client = {
+              id: clientId,
+              name: `Client ${clientId}`,
+              created_at: '',
+              updated_at: '',
+            }
+            lookupCache.setClient(client)
+          }
+        })
+      )
+
+      // Map all client types to task types (no API calls needed)
+      const taskTypes: TaskType[] = clientTypes.map(clientType => {
+        const client = lookupCache.getClient(clientType.client_id)!
+        return mapClientTypeToTaskType({
+          clientType,
+          client,
+        })
+      })
 
       return {
         items: taskTypes,

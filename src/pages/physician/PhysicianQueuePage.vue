@@ -40,8 +40,8 @@
         <TabsTrigger value="commented" class="gap-2">
           <MessageCircle class="w-4 h-4" />
           {{ t('queue.tabs.commented') }}
-          <span v-if="commentedStudies.length > 0" class="ml-1 bg-amber-500 text-white text-xs px-1.5 py-0.5 rounded-full">
-            {{ commentedStudies.length }}
+          <span v-if="commentedCount > 0" class="ml-1 bg-amber-500 text-white text-xs px-1.5 py-0.5 rounded-full">
+            {{ commentedCount }}
           </span>
         </TabsTrigger>
         <TabsTrigger value="completed" class="gap-2">
@@ -231,11 +231,13 @@ const completedStudies = computed(() =>
 
 const commentedStudies = computed(() =>
   taskStore.myReportingTasks.filter(s =>
-    s.validatorComments && s.validatorComments.length > 0 && ['draft-ready', 'translated', 'assigned-for-validation', 'under-validation', 'finalized', 'delivered'].includes(s.status)
+    (s.validatorCommentsCount && s.validatorCommentsCount > 0) && ['draft-ready', 'translated', 'assigned-for-validation', 'under-validation', 'finalized', 'delivered'].includes(s.status)
   ).sort((a, b) =>
     new Date(b.deadline).getTime() - new Date(a.deadline).getTime()
   )
 )
+
+const commentedCount = computed(() => commentedStudies.value.length)
 
 const activeCount = computed(() =>
   pendingStudies.value.filter(s => s.status === 'in-progress').length

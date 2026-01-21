@@ -8,6 +8,7 @@ import type {
   Task,
   UserWithDetails,
   UserStats,
+  UserProfileWithDetails,
 } from '@/types/api'
 import { mapUserToPhysician, mapUserWithDetailsToPhysician } from '@/lib/mappers/userMapper'
 import { parseUserId } from '@/lib/mappers/utils'
@@ -301,6 +302,70 @@ export const userService = {
       return response.data
     } catch (error) {
       console.error('Failed to fetch user statistics:', error)
+      throw error
+    }
+  },
+
+  async getProfileWithDetails(userId: number, authUser?: { firstName: string; lastName: string; email: string }): Promise<{
+    profile: Physician
+    statistics: UserStats
+  }> {
+    try {
+      const response = await apiClient.get<UserProfileWithDetails>('/api/v1/user/profile-with-details')
+      const data = response.data
+
+      // Map to UserStats format
+      const statistics: UserStats = {
+        user_id: data.statistics.user_id,
+        total_tasks: data.statistics.total_tasks,
+        tasks_this_month: data.statistics.tasks_this_month,
+        tasks_last_month: data.statistics.tasks_last_month,
+        tasks_by_modality: data.statistics.tasks_by_modality,
+        tasks_by_body_area: data.statistics.tasks_by_body_area,
+        monthly_tasks_by_modality: data.statistics.monthly_tasks_by_modality,
+        monthly_tasks_by_body_area: data.statistics.monthly_tasks_by_body_area,
+        average_completion_time_hours: data.statistics.average_completion_time_hours,
+        tasks_completed_per_day: data.statistics.tasks_completed_per_day.map(point => ({
+          day: point.day,
+          value: point.value,
+        })),
+      }
+
+      // Build user object
+      const user: User = {
+        id: userId,
+        first_name: authUser?.firstName || 'User',
+        last_name: authUser?.lastName || '',
+        email: authUser?.email || '',
+        created_at: '',
+        updated_at: '',
+      }
+
+      // Build profile object
+      const profile: UserProfile = {
+        user_id: data.user_id,
+        specialization: data.specialization,
+        role: data.role,
+        created_at: '',
+        updated_at: '',
+      }
+
+      const activeTaskCount = 0
+
+      // Map to Physician
+      const physician = mapUserToPhysician({
+        user,
+        profile,
+        scheduleSlots: data.schedule_slots,
+        activeTaskCount,
+      })
+
+      return {
+        profile: physician,
+        statistics,
+      }
+    } catch (error) {
+      console.error('Failed to fetch profile with details:', error)
       throw error
     }
   },

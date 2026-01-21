@@ -231,21 +231,28 @@ const statisticsError = ref<string | null>(null)
 
 onMounted(async () => {
   if (authStore.user?.id) {
-    await userStore.fetchProfile(authStore.user.id, {
-      firstName: authStore.user.firstName,
-      lastName: authStore.user.lastName,
-      email: authStore.user.email,
-    })
-
     statisticsLoading.value = true
+    userStore.loading = true
     statisticsError.value = null
+    userStore.error = null
+
     try {
-      statistics.value = await userService.getUserStatistics()
+      // Fetch profile and statistics in one request
+      const result = await userService.getProfileWithDetails(authStore.user.id, {
+        firstName: authStore.user.firstName,
+        lastName: authStore.user.lastName,
+        email: authStore.user.email,
+      })
+
+      userStore.currentProfile = result.profile
+      statistics.value = result.statistics
     } catch (error) {
-      console.error('Failed to load statistics:', error)
-      statisticsError.value = 'Failed to load statistics'
+      console.error('Failed to load profile with details:', error)
+      statisticsError.value = 'Failed to load profile'
+      userStore.error = error instanceof Error ? error.message : 'Failed to load profile'
     } finally {
       statisticsLoading.value = false
+      userStore.loading = false
     }
   }
 })

@@ -53,7 +53,7 @@
             <div
               v-for="study in urgentInProgress"
               :key="study.id"
-              @click="handleStudyClick(study.id)"
+              @click="handleStudyClick(study.taskId)"
               :class="cn(
                 'queue-item',
                 study.urgency === 'stat' && !['finalized', 'delivered'].includes(study.status) && 'queue-item-urgent'
@@ -97,7 +97,7 @@
             <div
               v-for="study in urgentPending"
               :key="study.id"
-              @click="handleStudyClick(study.id)"
+              @click="handleStudyClick(study.taskId)"
               :class="cn(
                 'queue-item',
                 study.urgency === 'stat' && !['finalized', 'delivered'].includes(study.status) && 'queue-item-urgent'
@@ -141,7 +141,7 @@
             <div
               v-for="study in urgentCompleted"
               :key="study.id"
-              @click="handleStudyClick(study.id)"
+              @click="handleStudyClick(study.taskId)"
               :class="cn(
                 'queue-item',
                 study.urgency === 'stat' && !['finalized', 'delivered'].includes(study.status) && 'queue-item-urgent'
@@ -196,7 +196,7 @@
             <div
               v-for="study in retroInProgress"
               :key="study.id"
-              @click="handleStudyClick(study.id)"
+              @click="handleStudyClick(study.taskId)"
               :class="cn(
                 'queue-item',
                 study.urgency === 'stat' && !['finalized', 'delivered'].includes(study.status) && 'queue-item-urgent'
@@ -240,7 +240,7 @@
             <div
               v-for="study in retroPending"
               :key="study.id"
-              @click="handleStudyClick(study.id)"
+              @click="handleStudyClick(study.taskId)"
               :class="cn(
                 'queue-item',
                 study.urgency === 'stat' && !['finalized', 'delivered'].includes(study.status) && 'queue-item-urgent'
@@ -284,7 +284,7 @@
             <div
               v-for="study in retroCompleted"
               :key="study.id"
-              @click="handleStudyClick(study.id)"
+              @click="handleStudyClick(study.taskId)"
               :class="cn(
                 'queue-item',
                 study.urgency === 'stat' && !['finalized', 'delivered'].includes(study.status) && 'queue-item-urgent'
@@ -383,7 +383,7 @@ const retroPending = computed(() => pendingValidation.value.filter(s => !isUrgen
 const retroInProgress = computed(() => inProgressValidation.value.filter(s => !isUrgent(s)))
 const retroCompleted = computed(() => completedValidation.value.filter(s => !isUrgent(s)))
 
-const handleStudyClick = (taskId: string) => {
+const handleStudyClick = (taskId: string | number) => {
   router.push(`/report/${taskId}`)
 }
 

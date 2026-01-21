@@ -1,6 +1,6 @@
 import apiClient from '@/lib/api/client'
 import type { Study } from '@/types/study'
-import type { Task, Study as BackendStudy, ClientType, Client, User, Report, UserWithDetails } from '@/types/api'
+import type { Task, TaskWithEmbedded, Study as BackendStudy, ClientType, Client, User, Report, UserWithDetails, TaskDetail, TaskEvent, PriorStudy as BackendPriorStudy } from '@/types/api'
 import { mapTaskToStudy } from '@/lib/mappers/taskMapper'
 import { mapReportSubmit, type ReportSubmitData } from '@/lib/mappers/reportMapper'
 import { lookupCache } from '@/lib/cache/lookupCache'
@@ -11,13 +11,13 @@ export const taskService = {
 
   async getMyReportingTasks(): Promise<Study[]> {
     try {
-      const response = await apiClient.get<{ items: Task[] }>('/api/v1/tasks', {
+      const response = await apiClient.get<{ items: TaskWithEmbedded[] }>('/api/v1/tasks', {
         params: { queue: 'reporting' }
       })
 
       const tasks = response.data.items
 
-      // For list views, use the lighter version that doesn't fetch comments/priors/reports
+      // For list views, use the optimized version with embedded data
       const studies: Study[] = []
       for (const task of tasks) {
         const study = await this._fetchTaskAsStudyLight(task)
@@ -34,13 +34,13 @@ export const taskService = {
 
   async getMyValidationTasks(): Promise<Study[]> {
     try {
-      const response = await apiClient.get<{ items: Task[] }>('/api/v1/tasks', {
+      const response = await apiClient.get<{ items: TaskWithEmbedded[] }>('/api/v1/tasks', {
         params: { queue: 'validation' }
       })
 
       const tasks = response.data.items
 
-      // For list views, use the lighter version that doesn't fetch comments/priors/reports
+      // For list views, use the optimized version with embedded data
       const studies: Study[] = []
       for (const task of tasks) {
         const study = await this._fetchTaskAsStudyLight(task)
@@ -209,22 +209,72 @@ export const taskService = {
   },
 
 
-  async _fetchTaskAsStudyLight(task: Task): Promise<Study> {
+  async _fetchTaskAsStudyLight(task: TaskWithEmbedded): Promise<Study> {
     try {
-      // Fetch only the essential data for list views
-      const studyResponse = await apiClient.get<BackendStudy>(`/api/v1/studies/${task.study_id}`)
-      const backendStudy = studyResponse.data
+      // Use embedded data if available (optimized backend response)
+      // Otherwise fall back to fetching (backward compatibility)
 
-      // Get cached client type and client
-      let clientType = lookupCache.getClientType(backendStudy.client_type_id)
-      if (!clientType) {
-        const clientTypeResponse = await apiClient.get<ClientType>(
-          `/api/v1/lookups/types/${backendStudy.client_type_id}`
-        )
-        clientType = clientTypeResponse.data
-        lookupCache.setClientType(clientType)
+      let backendStudy: BackendStudy
+      let clientType: ClientType
+      let reportingUser: User | undefined
+      let validatingUser: User | undefined
+
+      // Check if we have embedded study data
+      if (task.study) {
+        // Use embedded study data - no API call needed!
+        backendStudy = {
+          id: task.study_id,
+          patient_id: task.study.patient_id,
+          patient_age: task.study.patient_age,
+          patient_sex: task.study.patient_sex,
+          description: task.study.description,
+          study_datetime: task.study.study_datetime,
+          client_id: task.study.client_id,
+          client_type_id: task.study.client_type_id,
+          // Fields not included in embedded version - use defaults
+          instance_uid: '',
+          accession_number: '',
+          report_text: null,
+          processing_status: 'processing_finished',
+          created_at: '',
+          updated_at: '',
+        }
+      } else {
+        // Fallback: fetch study data (backward compatibility)
+        const studyResponse = await apiClient.get<BackendStudy>(`/api/v1/studies/${task.study_id}`)
+        backendStudy = studyResponse.data
       }
 
+      // Check if we have embedded client type
+      if (task.client_type) {
+        // Use embedded client type - no API call needed!
+        clientType = {
+          id: task.client_type.id,
+          modality: task.client_type.modality,
+          body_area: task.client_type.body_area,
+          expected_tat_hours: task.client_type.expected_tat_hours,
+          // Fields not included in embedded version
+          client_id: backendStudy.client_id,
+          price: 0,
+          payout: 0,
+          created_at: '',
+          updated_at: '',
+        }
+        lookupCache.setClientType(clientType)
+      } else {
+        // Fallback: fetch or use cached client type
+        let cachedClientType = lookupCache.getClientType(backendStudy.client_type_id)
+        if (!cachedClientType) {
+          const clientTypeResponse = await apiClient.get<ClientType>(
+            `/api/v1/lookups/types/${backendStudy.client_type_id}`
+          )
+          cachedClientType = clientTypeResponse.data
+          lookupCache.setClientType(cachedClientType)
+        }
+        clientType = cachedClientType
+      }
+
+      // Get or create client
       let client = lookupCache.getClient(backendStudy.client_id)
       if (!client) {
         client = {
@@ -236,21 +286,37 @@ export const taskService = {
         lookupCache.setClient(client)
       }
 
-      // Optionally fetch users if needed for the list view
-      let reportingUser: User | undefined
-      if (task.reporting_radiologist_id) {
+      // Check if we have embedded radiologist data
+      if (task.reporting_radiologist) {
+        // Use embedded data - no API call needed!
+        reportingUser = {
+          ...task.reporting_radiologist,
+          created_at: '',
+          updated_at: '',
+        }
+        lookupCache.setUser(reportingUser)
+      } else if (task.reporting_radiologist_id) {
+        // Fallback: use cached user if available
         reportingUser = lookupCache.getUser(task.reporting_radiologist_id)
       }
 
-      let validatingUser: User | undefined
-      if (task.validating_radiologist_id) {
+      if (task.validating_radiologist) {
+        // Use embedded data - no API call needed!
+        validatingUser = {
+          ...task.validating_radiologist,
+          created_at: '',
+          updated_at: '',
+        }
+        lookupCache.setUser(validatingUser)
+      } else if (task.validating_radiologist_id) {
+        // Fallback: use cached user if available
         validatingUser = lookupCache.getUser(task.validating_radiologist_id)
       }
 
-      // Fetch validator comments for the list view (needed for Commented tab)
-      const validatorEvents = await this.getValidatorComments(task.id)
+      // Don't fetch validator comments upfront - they'll be loaded on-demand
+      // This eliminates N+1 queries for comments (5 tasks = 5 extra requests)
 
-      // Map to Study with validator comments but without prior studies or report
+      // Map to Study without validator comments for list view
       return mapTaskToStudy({
         task,
         study: backendStudy,
@@ -258,7 +324,7 @@ export const taskService = {
         client,
         reportingUser,
         validatingUser,
-        validatorEvents,
+        validatorEvents: undefined, // Comments loaded on-demand
       })
     } catch (error) {
       console.error(`Failed to fetch task as study (light) for task ID ${task.id}:`, error)
@@ -266,22 +332,63 @@ export const taskService = {
     }
   },
 
-  async _fetchTaskAsStudy(task: Task): Promise<Study> {
+  async _fetchTaskAsStudy(task: TaskWithEmbedded): Promise<Study> {
     try {
+      // Use embedded data if available, otherwise fall back to fetching
 
-      const studyResponse = await apiClient.get<BackendStudy>(`/api/v1/studies/${task.study_id}`)
-      const backendStudy = studyResponse.data
+      let backendStudy: BackendStudy
+      let clientType: ClientType
+      let reportingUser: User | undefined
+      let validatingUser: User | undefined
 
-
-      let clientType = lookupCache.getClientType(backendStudy.client_type_id)
-      if (!clientType) {
-        const clientTypeResponse = await apiClient.get<ClientType>(
-          `/api/v1/lookups/types/${backendStudy.client_type_id}`
-        )
-        clientType = clientTypeResponse.data
-        lookupCache.setClientType(clientType)
+      // Check if we have embedded study data
+      if (task.study) {
+        backendStudy = {
+          id: task.study_id,
+          patient_id: task.study.patient_id,
+          patient_age: task.study.patient_age,
+          patient_sex: task.study.patient_sex,
+          description: task.study.description,
+          study_datetime: task.study.study_datetime,
+          client_id: task.study.client_id,
+          client_type_id: task.study.client_type_id,
+          instance_uid: '',
+          accession_number: '',
+          report_text: null,
+          processing_status: 'processing_finished',
+          created_at: '',
+          updated_at: '',
+        }
+      } else {
+        const studyResponse = await apiClient.get<BackendStudy>(`/api/v1/studies/${task.study_id}`)
+        backendStudy = studyResponse.data
       }
 
+      // Check if we have embedded client type
+      if (task.client_type) {
+        clientType = {
+          id: task.client_type.id,
+          modality: task.client_type.modality,
+          body_area: task.client_type.body_area,
+          expected_tat_hours: task.client_type.expected_tat_hours,
+          client_id: backendStudy.client_id,
+          price: 0,
+          payout: 0,
+          created_at: '',
+          updated_at: '',
+        }
+        lookupCache.setClientType(clientType)
+      } else {
+        let cachedClientType = lookupCache.getClientType(backendStudy.client_type_id)
+        if (!cachedClientType) {
+          const clientTypeResponse = await apiClient.get<ClientType>(
+            `/api/v1/lookups/types/${backendStudy.client_type_id}`
+          )
+          cachedClientType = clientTypeResponse.data
+          lookupCache.setClientType(cachedClientType)
+        }
+        clientType = cachedClientType
+      }
 
       let client = lookupCache.getClient(backendStudy.client_id)
       if (!client) {
@@ -294,9 +401,15 @@ export const taskService = {
         lookupCache.setClient(client)
       }
 
-
-      let reportingUser: User | undefined
-      if (task.reporting_radiologist_id) {
+      // Check if we have embedded radiologist data
+      if (task.reporting_radiologist) {
+        reportingUser = {
+          ...task.reporting_radiologist,
+          created_at: '',
+          updated_at: '',
+        }
+        lookupCache.setUser(reportingUser)
+      } else if (task.reporting_radiologist_id) {
         reportingUser = lookupCache.getUser(task.reporting_radiologist_id)
         if (!reportingUser) {
           try {
@@ -311,9 +424,14 @@ export const taskService = {
         }
       }
 
-
-      let validatingUser: User | undefined
-      if (task.validating_radiologist_id) {
+      if (task.validating_radiologist) {
+        validatingUser = {
+          ...task.validating_radiologist,
+          created_at: '',
+          updated_at: '',
+        }
+        lookupCache.setUser(validatingUser)
+      } else if (task.validating_radiologist_id) {
         validatingUser = lookupCache.getUser(task.validating_radiologist_id)
         if (!validatingUser) {
           try {
@@ -328,14 +446,12 @@ export const taskService = {
         }
       }
 
-
       // Fetch validator comments, prior studies, and current report in parallel
       const [validatorEvents, priorStudies, currentReport] = await Promise.all([
         this.getValidatorComments(task.id),
         this.getPriorStudies(task.id, 10),
         this.getLatestReport(task.id)
       ])
-
 
       return mapTaskToStudy({
         task,
@@ -368,25 +484,15 @@ export const taskService = {
 
   async getAdminValidationTasks(): Promise<Study[]> {
     try {
+      // Fetch all validation statuses in a single request
+      const response = await apiClient.get<{ items: TaskWithEmbedded[] }>('/api/v1/admin/tasks', {
+        params: {
+          status: ['assigned_for_validation', 'under_validation', 'finalized'],
+          per_page: 100
+        }
+      })
 
-      const [assignedResponse, underValidationResponse, finalizedResponse] = await Promise.all([
-        apiClient.get<{ items: Task[] }>('/api/v1/admin/tasks', {
-          params: { status: 'assigned_for_validation', per_page: 100 }
-        }),
-        apiClient.get<{ items: Task[] }>('/api/v1/admin/tasks', {
-          params: { status: 'under_validation', per_page: 100 }
-        }),
-        apiClient.get<{ items: Task[] }>('/api/v1/admin/tasks', {
-          params: { status: 'finalized', per_page: 100 }
-        }),
-      ])
-
-
-      const tasks = [
-        ...assignedResponse.data.items,
-        ...underValidationResponse.data.items,
-        ...finalizedResponse.data.items,
-      ]
+      const tasks = response.data.items
 
       // For list views, use the lighter version that doesn't fetch comments/priors/reports
       const studies: Study[] = []
@@ -427,6 +533,74 @@ export const taskService = {
       console.error(`Failed to fetch validator comments for task ${taskId}:`, error)
 
       return []
+    }
+  },
+
+  async getTaskDetails(taskId: number): Promise<Study> {
+    try {
+      // Use optimized endpoint that returns everything in one request
+      const response = await apiClient.get<TaskDetail>(`/api/v1/tasks/${taskId}/details`)
+      const data = response.data
+
+      // Map to Study format
+      return mapTaskToStudy({
+        task: data.task as any, // The TaskWithEmbedded from backend
+        study: {
+          id: data.task.study_id,
+          patient_id: data.task.study!.patient_id,
+          patient_age: data.task.study!.patient_age,
+          patient_sex: data.task.study!.patient_sex,
+          description: data.task.study!.description,
+          study_datetime: data.task.study!.study_datetime,
+          client_id: data.task.study!.client_id,
+          client_type_id: data.task.study!.client_type_id,
+          instance_uid: '',
+          accession_number: '',
+          report_text: null,
+          processing_status: 'processing_finished',
+          created_at: '',
+          updated_at: '',
+        },
+        clientType: {
+          id: data.task.client_type!.id,
+          modality: data.task.client_type!.modality,
+          body_area: data.task.client_type!.body_area,
+          expected_tat_hours: data.task.client_type!.expected_tat_hours,
+          client_id: data.task.study!.client_id,
+          price: 0,
+          payout: 0,
+          created_at: '',
+          updated_at: '',
+        },
+        client: {
+          id: data.task.study!.client_id,
+          name: `Client ${data.task.study!.client_id}`,
+          created_at: '',
+          updated_at: '',
+        },
+        reportingUser: data.task.reporting_radiologist ? {
+          id: data.task.reporting_radiologist.id,
+          first_name: data.task.reporting_radiologist.first_name,
+          last_name: data.task.reporting_radiologist.last_name,
+          email: data.task.reporting_radiologist.email,
+          created_at: '',
+          updated_at: '',
+        } : undefined,
+        validatingUser: data.task.validating_radiologist ? {
+          id: data.task.validating_radiologist.id,
+          first_name: data.task.validating_radiologist.first_name,
+          last_name: data.task.validating_radiologist.last_name,
+          email: data.task.validating_radiologist.email,
+          created_at: '',
+          updated_at: '',
+        } : undefined,
+        validatorEvents: data.validator_comments as TaskEvent[],
+        priorStudies: data.prior_studies as BackendPriorStudy[],
+        currentReport: data.latest_report || undefined,
+      })
+    } catch (error) {
+      console.error(`Failed to fetch task details for task ${taskId}:`, error)
+      throw error
     }
   },
 }

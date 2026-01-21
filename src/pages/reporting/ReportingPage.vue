@@ -588,13 +588,13 @@ const taskStore = useTaskStore()
 
 const study = computed(() => {
   // Always prefer currentTask for the current route since it has full data
-  const taskId = route.params.taskId as string
+  const numericTaskId = parseInt(route.params.taskId as string, 10)
 
-  // If currentTask matches the route, use it (it has full report data)
-  if (taskStore.currentTask?.id === taskId) {
+  // Compare using taskId (not id, which is the formatted study ID)
+  if (taskStore.currentTask?.taskId === numericTaskId) {
     console.log('study computed: using currentTask', {
-      routeTaskId: taskId,
-      currentTaskId: taskStore.currentTask?.id,
+      routeTaskId: numericTaskId,
+      currentTaskId: taskStore.currentTask?.taskId,
       hasReport: !!taskStore.currentTask?.report
     })
     return taskStore.currentTask
@@ -603,8 +603,8 @@ const study = computed(() => {
   // Otherwise, return null to show loading state until currentTask is fetched
   // We don't want to use the lightweight list data because it lacks report details
   console.log('study computed: waiting for currentTask to load', {
-    routeTaskId: taskId,
-    currentTaskId: taskStore.currentTask?.id
+    routeTaskId: numericTaskId,
+    currentTaskId: taskStore.currentTask?.taskId
   })
   return null
 })

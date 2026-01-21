@@ -72,6 +72,26 @@ export const useTaskStore = defineStore('task', () => {
     error.value = null
 
     try {
+      // studyId is actually taskId in the route params
+      // Try using the optimized endpoint first
+      const taskId = parseInt(studyId, 10)
+      if (!isNaN(taskId)) {
+        try {
+          console.log('Trying optimized getTaskDetails for task:', taskId)
+          const task = await taskService.getTaskDetails(taskId)
+          console.log('Fetched task from optimized endpoint:', { id: task.id, hasReport: !!task.report, report: task.report })
+
+          // Directly assign the task to maintain reactivity
+          currentTask.value = task
+          console.log('After setting currentTask, report is:', currentTask.value?.report)
+          return
+        } catch (optimizedError) {
+          console.warn('Optimized endpoint failed, falling back to old method:', optimizedError)
+          // Fall through to old method
+        }
+      }
+
+      // Fallback to old method
       const task = await taskService.getTaskByStudyId(studyId)
       console.log('Fetched task from service:', { id: task.id, hasReport: !!task.report, report: task.report })
 
@@ -362,6 +382,34 @@ export const useTaskStore = defineStore('task', () => {
     return grouped
   })
 
+
+  // Lazy load validator comments for tasks
+  async function loadCommentsForTasks(tasks: Study[]) {
+    try {
+      // Fetch comments for all tasks in parallel
+      const commentsPromises = tasks.map(task =>
+        taskService.getValidatorComments(task.taskId)
+      )
+      const commentsResults = await Promise.all(commentsPromises)
+
+      // Update each task with its comments
+      tasks.forEach((task, index) => {
+        const validatorEvents = commentsResults[index]
+        if (validatorEvents && validatorEvents.length > 0) {
+          // Map events to validator comments
+          task.validatorComments = validatorEvents.map((event, idx) => ({
+            id: `${task.taskId}-${idx}`,
+            text: event.comment || '',
+            validatorName: `Validator ${event.user_id}`,
+            timestamp: event.created_at
+          }))
+        }
+      })
+    } catch (err) {
+      console.error('Error loading comments for tasks:', err)
+    }
+  }
+
   return {
 
     myReportingTasks,
@@ -387,6 +435,7 @@ export const useTaskStore = defineStore('task', () => {
     getValidators,
     startValidationTask,
     markTaskTranslated,
+    loadCommentsForTasks,
 
 
     pendingReportingTasks,
