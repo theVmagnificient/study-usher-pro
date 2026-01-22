@@ -34,8 +34,10 @@ const messages = {
     // Common UI elements
     common: {
       save: "Save",
+      saving: "Saving...",
       cancel: "Cancel",
       delete: "Delete",
+      deleting: "Deleting...",
       edit: "Edit",
       add: "Add",
       search: "Search",
@@ -388,6 +390,11 @@ const messages = {
         tat: "TAT (hours)",
         price: "Price ($)",
         payout: "Payout ($)"
+      },
+
+      deleteConfirm: {
+        title: "Delete Task Type",
+        message: "Are you sure you want to delete this task type? This action cannot be undone."
       }
     },
 
@@ -593,8 +600,10 @@ const messages = {
     // Общие элементы интерфейса
     common: {
       save: "Сохранить",
+      saving: "Сохранение...",
       cancel: "Отмена",
       delete: "Удалить",
+      deleting: "Удаление...",
       edit: "Редактировать",
       add: "Добавить",
       search: "Поиск",
@@ -947,6 +956,11 @@ const messages = {
         tat: "TAT (часы)",
         price: "Цена ($)",
         payout: "Выплата ($)"
+      },
+
+      deleteConfirm: {
+        title: "Удалить тип задачи",
+        message: "Вы уверены, что хотите удалить этот тип задачи? Это действие нельзя отменить."
       }
     },
 

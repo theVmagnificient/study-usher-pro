@@ -17,7 +17,7 @@ export function mapClientTypeToTaskType(ctx: ClientTypeToTaskTypeContext): TaskT
     client: client.name,
     modality: mapModality(clientType.modality),
     bodyArea: formatBodyArea(clientType.body_area),
-    hasPriors: false,
+    hasPriors: clientType.has_priors,
     expectedTAT: clientType.expected_tat_hours,
     price: clientType.price,
     physicianPayout: clientType.payout,

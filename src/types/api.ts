@@ -60,6 +60,7 @@ export interface ClientType {
   client_id: number
   modality: Modality
   body_area: BodyArea
+  has_priors: boolean
   expected_tat_hours: number
   price: number
   payout: number

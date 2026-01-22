@@ -19,6 +19,7 @@ export interface ClientTypeCreateData {
   clientId: number
   modality: Modality
   bodyArea: BodyArea
+  hasPriors: boolean
   expectedTAT: number
   price: number
   physicianPayout: number
@@ -138,6 +139,7 @@ export const clientTypeService = {
         client_id: data.clientId,
         modality: unmapModality(data.modality),
         body_area: data.bodyArea.toUpperCase().replace(' ', '_'),
+        has_priors: data.hasPriors,
         expected_tat_hours: data.expectedTAT,
         price: data.price,
         payout: data.physicianPayout,
