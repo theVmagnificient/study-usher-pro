@@ -516,4 +516,58 @@ export const studyService = {
       return null
     }
   },
+
+  /**
+   * Get download URL for a study from PACS
+   * @param studyId - Numeric study ID (not STD- prefixed)
+   * @returns Promise with download URL and expiration info
+   */
+  async getDownloadUrl(studyId: number): Promise<{
+    url: string
+    expires_in: number
+    expires_at: string
+    study_id: number
+    study_instance_uid: string
+    accession_number: string
+  }> {
+    try {
+      const response = await apiClient.get(`/api/v1/studies/${studyId}/download`)
+      return response.data
+    } catch (error: any) {
+      console.error(`Failed to get download URL for study ${studyId}:`, error)
+      // Re-throw with more specific error message
+      if (error.response?.status === 403) {
+        throw new Error('You do not have permission to download this study')
+      } else if (error.response?.status === 404) {
+        throw new Error('Study not found')
+      } else if (error.response?.status === 503) {
+        throw new Error('PACS service is temporarily unavailable. Please try again later.')
+      }
+      throw new Error('Failed to generate download URL. Please try again.')
+    }
+  },
+
+  /**
+   * Download a study from PACS
+   * Initiates browser download of the DICOM archive
+   * @param studyId - Numeric study ID (not STD- prefixed)
+   */
+  async downloadStudy(studyId: number): Promise<void> {
+    try {
+      // Get download URL from backend
+      const downloadInfo = await this.getDownloadUrl(studyId)
+
+      // Create temporary link and trigger download
+      // Filename is already set in the URL via Orthanc's filename parameter
+      const link = document.createElement('a')
+      link.href = downloadInfo.url
+      link.target = '_blank' // Open in new tab as fallback
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+    } catch (error) {
+      console.error(`Failed to download study ${studyId}:`, error)
+      throw error
+    }
+  },
 }

@@ -1,6 +1,6 @@
 import type { AuditLogEntry, StudyStatus } from '@/types/study'
 import type { TaskEvent, User } from '@/types/api'
-import { formatStudyId, formatPhysicianName } from './utils'
+import { formatPhysicianName } from './utils'
 import { mapTaskStatus } from './taskMapper'
 
 
@@ -38,7 +38,7 @@ export function mapTaskEventToAuditLog(ctx: TaskEventToAuditContext): AuditLogEn
 
   return {
     id: `LOG-${studyId}-${new Date(taskEvent.created_at).getTime()}`,
-    studyId: formatStudyId(studyId),
+    studyId: studyId,
     action,
     user: user ? formatPhysicianName(user.first_name, user.last_name) : 'System',
     timestamp: taskEvent.created_at,

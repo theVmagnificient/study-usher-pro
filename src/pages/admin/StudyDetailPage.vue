@@ -1,13 +1,13 @@
 <template>
   <div>
     <!-- Loading State -->
-    <div v-if="studyStore.loading" class="flex items-center justify-center p-8">
+    <div v-if="taskStore.loading" class="flex items-center justify-center p-8">
       <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
     </div>
 
     <!-- Error State -->
-    <div v-else-if="studyStore.error" class="p-4 bg-red-50 text-red-600 rounded-md mb-6">
-      {{ studyStore.error }}
+    <div v-else-if="taskStore.error" class="p-4 bg-red-50 text-red-600 rounded-md mb-6">
+      {{ taskStore.error }}
     </div>
 
     <!-- Content -->
@@ -19,7 +19,7 @@
       </Button>
       <div class="flex-1">
         <div class="flex items-center gap-3">
-          <h1 class="text-xl font-semibold">{{ study.id }}</h1>
+          <h1 class="text-xl font-semibold">{{ study.accessionNumber }}</h1>
           <StatusBadge :status="study.status" />
           <UrgencyBadge :urgency="study.urgency" />
         </div>
@@ -29,13 +29,26 @@
       </div>
       <div class="flex items-center gap-3">
         <DeadlineTimer :deadline="study.deadline" />
-        <Button variant="outline">
-          <Download class="w-4 h-4 mr-2" />
-          {{ t('studyDetail.dicom') }}
+        <Button
+          variant="outline"
+          @click="handleDownload"
+          :disabled="isDownloading"
+        >
+          <Download class="w-4 h-4 mr-2" :class="{ 'animate-bounce': isDownloading }" />
+          {{ isDownloading ? t('reporting.downloading') : t('studyDetail.dicom') }}
         </Button>
         <Button variant="outline" @click="showReassignDialog = true">
           <UserPlus class="w-4 h-4 mr-2" />
           {{ t('studyList.reassign') }}
+        </Button>
+        <Button
+          v-if="study.status === 'finalized'"
+          variant="default"
+          @click="handleMarkDelivered"
+          :disabled="markingDelivered"
+        >
+          <CheckCircle class="w-4 h-4 mr-2" />
+          {{ markingDelivered ? t('studyDetail.markingDelivered') : t('studyDetail.markDelivered') }}
         </Button>
       </div>
     </div>
@@ -216,7 +229,7 @@
               <div class="flex items-center justify-between">
                 <div>
                   <p class="text-sm font-medium">{{ study.bodyArea }}</p>
-                  <p class="text-xs text-muted-foreground font-mono">{{ study.id }}</p>
+                  <p class="text-xs text-muted-foreground font-mono">{{ study.accessionNumber }}</p>
                 </div>
                 <span class="text-xs px-2 py-0.5 rounded bg-primary/20 text-primary font-medium">{{ t('studyDetail.current') }}</span>
               </div>
@@ -231,11 +244,11 @@
               <div class="flex items-center justify-between">
                 <div>
                   <p class="text-sm font-medium">{{ linked.bodyArea }}</p>
-                  <p class="text-xs text-muted-foreground font-mono">{{ linked.id }}</p>
+                  <p class="text-xs text-muted-foreground font-mono">{{ linked.accessionNumber }}</p>
                 </div>
                 <span :class="cn(
                   'text-xs px-2 py-0.5 rounded font-medium',
-                  linked.status === 'finalized' || linked.status === 'delivered' 
+                  linked.status === 'finalized' || linked.status === 'delivered'
                     ? 'bg-status-finalized/20 text-status-finalized'
                     : 'bg-muted text-muted-foreground'
                 )">
@@ -298,13 +311,13 @@
             >
               <option :value="null">{{ t('studyDetail.reassignDialog.selectPlaceholder') }}</option>
               <optgroup v-if="availableRadiologists.reporting.length > 0" :label="t('studyDetail.reassignDialog.reportingRadiologists')">
-                <option v-for="user in availableRadiologists.reporting" :key="user.id" :value="user.id">
-                  {{ user.first_name }} {{ user.last_name }} ({{ user.active_task_count }} active tasks)
+                <option v-for="user in availableRadiologists.reporting" :key="user.id" :value="parseUserId(user.id)">
+                  {{ user.fullName }} ({{ user.activeStudies }} active tasks)
                 </option>
               </optgroup>
               <optgroup v-if="availableRadiologists.validating.length > 0" :label="t('studyDetail.reassignDialog.validatingRadiologists')">
-                <option v-for="user in availableRadiologists.validating" :key="user.id" :value="user.id">
-                  {{ user.first_name }} {{ user.last_name }} ({{ user.active_task_count }} active tasks)
+                <option v-for="user in availableRadiologists.validating" :key="user.id" :value="parseUserId(user.id)">
+                  {{ user.fullName }} ({{ user.activeStudies }} active tasks)
                 </option>
               </optgroup>
             </select>
@@ -408,14 +421,19 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { ArrowLeft, Download, UserPlus, History, Link2, FileText } from 'lucide-vue-next'
+import { ArrowLeft, Download, UserPlus, History, Link2, FileText, CheckCircle } from 'lucide-vue-next'
 import Button from '@/components/ui/button.vue'
 import StatusBadge from '@/components/ui/StatusBadge.vue'
 import UrgencyBadge from '@/components/ui/UrgencyBadge.vue'
 import DeadlineTimer from '@/components/ui/DeadlineTimer.vue'
 import { getLinkedStudies } from '@/utils/linkedStudies'
-import { useStudyStore } from '@/stores/studyStore'
 import { useAuditStore } from '@/stores/auditStore'
+import { useTaskStore } from '@/stores/taskStore'
+import { userService } from '@/services/userService'
+import { studyService } from '@/services/studyService'
+import { useToast } from '@/hooks/use-toast'
+import apiClient from '@/lib/api/client'
+import { parseUserId } from '@/lib/mappers/utils'
 import { format } from 'date-fns'
 import { cn } from '@/lib/utils'
 import Dialog from '@/components/ui/dialog.vue'
@@ -423,28 +441,29 @@ import DialogContent from '@/components/ui/DialogContent.vue'
 import DialogHeader from '@/components/ui/DialogHeader.vue'
 import DialogTitle from '@/components/ui/DialogTitle.vue'
 import DialogDescription from '@/components/ui/DialogDescription.vue'
-import type { PriorStudy } from '@/types/study'
+import type { PriorStudy, Physician } from '@/types/study'
 
 const route = useRoute()
 const router = useRouter()
 const { t } = useI18n()
-const studyStore = useStudyStore()
+const { toast } = useToast()
 const auditStore = useAuditStore()
+const taskStore = useTaskStore()
 
 const selectedPrior = ref<PriorStudy | null>(null)
 const showReassignDialog = ref(false)
 const selectedRadiologistId = ref<number | null>(null)
 const reassignComment = ref('')
 const reassigning = ref(false)
-const reportingRadiologists = ref<any[]>([])
-const validatingRadiologists = ref<any[]>([])
+const markingDelivered = ref(false)
+const isDownloading = ref(false)
+const reportingRadiologists = ref<Physician[]>([])
+const validatingRadiologists = ref<Physician[]>([])
 
-const study = computed(() =>
-  studyStore.currentStudy || studyStore.studies.find(s => s.id === route.params.taskId as string)
-)
+const study = computed(() => taskStore.currentTask)
 
 const linkedStudies = computed(() =>
-  study.value ? getLinkedStudies(study.value, studyStore.studies) : []
+  study.value ? getLinkedStudies(study.value, [...taskStore.myReportingTasks, ...taskStore.myValidationTasks]) : []
 )
 
 const studyAuditLog = computed(() =>
@@ -462,16 +481,12 @@ const availableRadiologists = computed(() => {
 
 async function fetchRadiologists() {
   try {
-    const response = await fetch('http://localhost:8000/api/v1/admin/users/with-details?per_page=100', {
-      headers: {
-        'Authorization': 'Basic YWRtaW5AZXhhbXBsZS5jb206cGFzc3dvcmQxMjM='
-      }
-    })
-    const data = await response.json()
-    const users = data.items || []
+    // Fetch all users with pagination (100 per page to get all users)
+    const response = await userService.getAll(1, 100)
+    const users = response.items || []
 
-    reportingRadiologists.value = users.filter((u: any) => u.role === 'reporting_radiologist')
-    validatingRadiologists.value = users.filter((u: any) => u.role === 'validating_radiologist')
+    reportingRadiologists.value = users.filter(u => u.role === 'reporting-radiologist')
+    validatingRadiologists.value = users.filter(u => u.role === 'validating-radiologist')
   } catch (error) {
     console.error('Failed to fetch radiologists:', error)
   }
@@ -484,62 +499,95 @@ async function handleReassign() {
   try {
     const taskId = study.value.taskId
     const selectedUser = [...reportingRadiologists.value, ...validatingRadiologists.value]
-      .find(u => u.id === selectedRadiologistId.value)
+      .find(u => parseUserId(u.id) === selectedRadiologistId.value)
 
     let endpoint = ''
 
     // Determine which endpoint to use based on task status and selected radiologist role
-    if (selectedUser?.role === 'validating_radiologist') {
+    if (selectedUser?.role === 'validating-radiologist') {
       endpoint = `/api/v1/admin/tasks/${taskId}/assign-validation`
-    } else if (study.value.status === 'new' || study.value.status === 'assigned') {
+    } else if (study.value.status === 'new') {
+      // Only use assign-reporting for new tasks
       endpoint = `/api/v1/admin/tasks/${taskId}/assign-reporting`
     } else {
+      // For all other statuses (assigned, in_progress, etc.) use reassign
       endpoint = `/api/v1/admin/tasks/${taskId}/reassign`
     }
 
-    const response = await fetch(`http://localhost:8000${endpoint}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Basic YWRtaW5AZXhhbXBsZS5jb206cGFzc3dvcmQxMjM='
-      },
-      body: JSON.stringify({
-        radiologist_id: selectedRadiologistId.value,
-        comment: reassignComment.value || 'Reassigned by admin'
-      })
+    await apiClient.post(endpoint, {
+      radiologist_id: selectedRadiologistId.value,
+      comment: reassignComment.value || 'Reassigned by admin'
     })
 
-    if (!response.ok) {
-      const error = await response.json()
-
-      // Handle specific error cases
-      if (error.detail?.includes('assigned_for_validation to assigned_for_validation')) {
-        throw new Error('Cannot reassign validators once task is already assigned for validation. The task must be started by the current validator first.')
-      }
-
-      throw new Error(error.detail || 'Failed to reassign task')
-    }
-
     // Refresh the study data
-    await studyStore.fetchStudyById(study.value.id)
+    await taskStore.fetchTaskDetails(study.value.taskId)
     await auditStore.fetchAuditLog()
 
     // Close dialog and reset
     showReassignDialog.value = false
     selectedRadiologistId.value = null
     reassignComment.value = ''
-  } catch (error) {
+  } catch (error: any) {
     console.error('Failed to reassign task:', error)
-    alert(error instanceof Error ? error.message : 'Failed to reassign task')
+
+    // Handle specific error cases
+    const errorMessage = error.response?.data?.detail || error.message || 'Failed to reassign task'
+    if (errorMessage.includes('assigned_for_validation to assigned_for_validation')) {
+      alert('Cannot reassign validators once task is already assigned for validation. The task must be started by the current validator first.')
+    } else {
+      alert(errorMessage)
+    }
   } finally {
     reassigning.value = false
   }
 }
 
+async function handleDownload() {
+  if (!study.value || isDownloading.value) return
+
+  isDownloading.value = true
+
+  try {
+    await studyService.downloadStudy(study.value.studyId)
+    toast({
+      title: t('reporting.downloadStarted'),
+      description: t('reporting.downloadDescription'),
+    })
+  } catch (error: any) {
+    console.error('Failed to download study:', error)
+    toast({
+      title: t('reporting.downloadFailed'),
+      description: error.message || t('reporting.downloadErrorDescription'),
+      variant: 'destructive',
+    })
+  } finally {
+    isDownloading.value = false
+  }
+}
+
+async function handleMarkDelivered() {
+  if (!study.value) return
+
+  markingDelivered.value = true
+  try {
+    const taskId = study.value.taskId
+    await taskStore.markTaskDelivered(taskId)
+
+    // Refresh the study data
+    await taskStore.fetchTaskDetails(taskId)
+    await auditStore.fetchAuditLog()
+  } catch (error) {
+    console.error('Failed to mark task as delivered:', error)
+    alert(error instanceof Error ? error.message : 'Failed to mark task as delivered')
+  } finally {
+    markingDelivered.value = false
+  }
+}
+
 onMounted(async () => {
-  const taskId = route.params.taskId as string
+  const taskId = parseInt(route.params.taskId as string, 10)
   await Promise.all([
-    studyStore.fetchStudyById(taskId),
+    taskStore.fetchTaskDetails(taskId),
     auditStore.fetchAuditLog(),
     fetchRadiologists()
   ])

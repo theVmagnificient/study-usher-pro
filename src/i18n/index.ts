@@ -114,7 +114,7 @@ const messages = {
       subtitle: "Sign in to access your account",
       email: "Email",
       password: "Password",
-      emailPlaceholder: "your.email@example.com",
+      emailPlaceholder: "your.email{'@'}example.com",
       passwordPlaceholder: "••••••••",
       signIn: "Sign in",
       signingIn: "Signing in...",
@@ -154,6 +154,31 @@ const messages = {
       // Actions
       downloadDicom: "Download DICOM",
       reassign: "Reassign"
+    },
+
+    taskList: {
+      title: "Tasks",
+      subtitle: "{count} tasks",
+      searchPlaceholder: "Search by Task ID, Study ID, or Patient ID...",
+      allStatuses: "All Statuses",
+
+      // Table headers
+      headers: {
+        taskId: "Task ID",
+        studyId: "Study ID",
+        patient: "Patient",
+        status: "Status",
+        urgency: "Urgency",
+        reportingPhysician: "Reporting Physician",
+        validatingPhysician: "Validating Physician",
+        created: "Created",
+        deadline: "Deadline",
+        modalityArea: "Modality / Area"
+      },
+
+      // Actions
+      viewDetails: "View Details",
+      viewReport: "View Report"
     },
 
     // Study Detail Page
@@ -208,6 +233,10 @@ const messages = {
         reassigning: "Reassigning..."
       },
 
+      // Mark as Delivered
+      markDelivered: "Mark as Delivered",
+      markingDelivered: "Marking as Delivered...",
+
       // Prior report dialog
       priorReportDialog: {
         title: "Prior Report",
@@ -251,7 +280,9 @@ const messages = {
         lastName: "Last Name",
         lastNamePlaceholder: "Doe",
         email: "Email",
-        emailPlaceholder: "john.doe@example.com",
+        emailPlaceholder: "john.doe{'@'}example.com",
+        password: "Password",
+        passwordPlaceholder: "Minimum 6 characters",
         phone: "Phone",
         phonePlaceholder: "+1234567890",
         role: "Role",
@@ -493,11 +524,18 @@ const messages = {
       dicom: "DICOM",
       downloadBodyArea: "Download {area} only",
       downloadAll: "Download all ({count} body parts)",
+      downloading: "Downloading...",
+      downloadStarted: "Download Started",
+      downloadDescription: "Your DICOM study is being downloaded",
+      downloadFailed: "Download Failed",
+      downloadErrorDescription: "Failed to download the study. Please try again.",
 
       comments: "Comments",
       commentCount: "{count} comment(s)",
       clinicalNotes: "Clinical Notes",
+      noClinicalNotes: "No clinical notes available",
       technicalNotes: "Technical Notes",
+      noTechnicalNotes: "No technical notes available",
 
       currentReport: "Current Report",
       englishTranslation: "English Translation",
@@ -528,8 +566,16 @@ const messages = {
       validatorCommentPlaceholder: "Leave a comment about the report quality, suggestions for improvement, or positive feedback...",
 
       saveDraft: "Save Draft",
+      draftSaved: "Draft Saved",
+      draftSavedDescription: "Draft successfully saved",
       submitForValidation: "Submit for Validation",
       returnForRevision: "Return for Revision",
+      saveChanges: "Save Changes",
+      saving: "Saving...",
+      changesSaved: "Changes Saved",
+      changesSavedDescription: "Report successfully updated",
+      saveError: "Save Error",
+      saveErrorDescription: "Failed to save changes. Please try again.",
       finalizeReport: "Finalize Report",
 
       finalizedNote: "This report is finalized and cannot be edited",
@@ -680,7 +726,7 @@ const messages = {
       subtitle: "Войдите, чтобы получить доступ к аккаунту",
       email: "Email",
       password: "Пароль",
-      emailPlaceholder: "your.email@example.com",
+      emailPlaceholder: "your.email{'@'}example.com",
       passwordPlaceholder: "••••••••",
       signIn: "Войти",
       signingIn: "Вход...",
@@ -720,6 +766,31 @@ const messages = {
       // Действия
       downloadDicom: "Скачать DICOM",
       reassign: "Переназначить"
+    },
+
+    taskList: {
+      title: "Задачи",
+      subtitle: "{count} задач | {count} задача | {count} задачи",
+      searchPlaceholder: "Поиск по ID задачи, ID исследования или ID пациента...",
+      allStatuses: "Все статусы",
+
+      // Заголовки таблицы
+      headers: {
+        taskId: "ID задачи",
+        studyId: "ID исследования",
+        patient: "Пациент",
+        status: "Статус",
+        urgency: "Срочность",
+        reportingPhysician: "Рентгенолог",
+        validatingPhysician: "Валидатор",
+        created: "Создано",
+        deadline: "Срок",
+        modalityArea: "Модальность / Область"
+      },
+
+      // Действия
+      viewDetails: "Просмотр деталей",
+      viewReport: "Просмотр отчета"
     },
 
     // Страница детализации задачи
@@ -774,6 +845,10 @@ const messages = {
         reassigning: "Переназначение..."
       },
 
+      // Отметить как доставлено
+      markDelivered: "Отметить как доставлено",
+      markingDelivered: "Отметка как доставлено...",
+
       // Диалог предыдущего отчета
       priorReportDialog: {
         title: "Предыдущий отчет",
@@ -817,7 +892,9 @@ const messages = {
         lastName: "Фамилия",
         lastNamePlaceholder: "Иванов",
         email: "Email",
-        emailPlaceholder: "ivan.ivanov@example.com",
+        emailPlaceholder: "ivan.ivanov{'@'}example.com",
+        password: "Пароль",
+        passwordPlaceholder: "Минимум 6 символов",
         phone: "Телефон",
         phonePlaceholder: "+79123456789",
         role: "Роль",
@@ -1059,11 +1136,18 @@ const messages = {
       dicom: "DICOM",
       downloadBodyArea: "Скачать только {area}",
       downloadAll: "Скачать все ({count} частей тела)",
+      downloading: "Скачивание...",
+      downloadStarted: "Скачивание начато",
+      downloadDescription: "Ваше DICOM исследование скачивается",
+      downloadFailed: "Ошибка скачивания",
+      downloadErrorDescription: "Не удалось скачать исследование. Пожалуйста, попробуйте снова.",
 
       comments: "Комментарии",
       commentCount: "{count} комментарий | {count} комментария | {count} комментариев",
       clinicalNotes: "Клинические заметки",
+      noClinicalNotes: "Клинические заметки отсутствуют",
       technicalNotes: "Технические заметки",
+      noTechnicalNotes: "Технические заметки отсутствуют",
 
       currentReport: "Текущий отчет",
       englishTranslation: "Перевод на английский",
@@ -1094,8 +1178,16 @@ const messages = {
       validatorCommentPlaceholder: "Оставьте комментарий о качестве отчета, предложения по улучшению или положительный отзыв...",
 
       saveDraft: "Сохранить черновик",
+      draftSaved: "Черновик сохранен",
+      draftSavedDescription: "Черновик успешно сохранен",
       submitForValidation: "Отправить на валидацию",
       returnForRevision: "Вернуть на доработку",
+      saveChanges: "Сохранить изменения",
+      saving: "Сохранение...",
+      changesSaved: "Изменения сохранены",
+      changesSavedDescription: "Отчет успешно обновлен",
+      saveError: "Ошибка сохранения",
+      saveErrorDescription: "Не удалось сохранить изменения. Пожалуйста, попробуйте снова.",
       finalizeReport: "Завершить отчет",
 
       finalizedNote: "Этот отчет завершен и не может быть отредактирован",

@@ -65,7 +65,7 @@
                 </div>
                 <div>
                   <div class="flex items-center gap-2 mb-1">
-                    <span class="font-mono text-xs font-medium">{{ study.id }}</span>
+                    <span class="font-mono text-xs font-medium">{{ study.accessionNumber }}</span>
                     <StatusBadge :status="study.status" />
                   </div>
                   <div class="text-sm text-muted-foreground flex items-center gap-2">
@@ -109,7 +109,7 @@
                 </div>
                 <div>
                   <div class="flex items-center gap-2 mb-1">
-                    <span class="font-mono text-xs font-medium">{{ study.id }}</span>
+                    <span class="font-mono text-xs font-medium">{{ study.accessionNumber }}</span>
                     <StatusBadge :status="study.status" />
                   </div>
                   <div class="text-sm text-muted-foreground flex items-center gap-2">
@@ -153,7 +153,7 @@
                 </div>
                 <div>
                   <div class="flex items-center gap-2 mb-1">
-                    <span class="font-mono text-xs font-medium">{{ study.id }}</span>
+                    <span class="font-mono text-xs font-medium">{{ study.accessionNumber }}</span>
                     <StatusBadge :status="study.status" />
                   </div>
                   <div class="text-sm text-muted-foreground flex items-center gap-2">
@@ -168,9 +168,7 @@
                   {{ study.assignedPhysician }}
                 </div>
                 <UrgencyBadge :urgency="study.urgency" />
-                <span class="text-sm text-muted-foreground">
-                  {{ format(new Date(study.deadline), "MMM d, yyyy") }}
-                </span>
+                <DeadlineTimer :deadline="study.deadline" />
               </div>
             </div>
           </div>
@@ -208,7 +206,7 @@
                 </div>
                 <div>
                   <div class="flex items-center gap-2 mb-1">
-                    <span class="font-mono text-xs font-medium">{{ study.id }}</span>
+                    <span class="font-mono text-xs font-medium">{{ study.accessionNumber }}</span>
                     <StatusBadge :status="study.status" />
                   </div>
                   <div class="text-sm text-muted-foreground flex items-center gap-2">
@@ -252,7 +250,7 @@
                 </div>
                 <div>
                   <div class="flex items-center gap-2 mb-1">
-                    <span class="font-mono text-xs font-medium">{{ study.id }}</span>
+                    <span class="font-mono text-xs font-medium">{{ study.accessionNumber }}</span>
                     <StatusBadge :status="study.status" />
                   </div>
                   <div class="text-sm text-muted-foreground flex items-center gap-2">
@@ -296,7 +294,7 @@
                 </div>
                 <div>
                   <div class="flex items-center gap-2 mb-1">
-                    <span class="font-mono text-xs font-medium">{{ study.id }}</span>
+                    <span class="font-mono text-xs font-medium">{{ study.accessionNumber }}</span>
                     <StatusBadge :status="study.status" />
                   </div>
                   <div class="text-sm text-muted-foreground flex items-center gap-2">
@@ -311,9 +309,7 @@
                   {{ study.assignedPhysician }}
                 </div>
                 <UrgencyBadge :urgency="study.urgency" />
-                <span class="text-sm text-muted-foreground">
-                  {{ format(new Date(study.deadline), "MMM d, yyyy") }}
-                </span>
+                <DeadlineTimer :deadline="study.deadline" />
               </div>
             </div>
           </div>
@@ -330,7 +326,7 @@ import { computed, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { FileCheck, User, AlertTriangle, Clock, CheckCircle, Loader2 } from 'lucide-vue-next'
-import { differenceInHours, format } from 'date-fns'
+import { differenceInHours } from 'date-fns'
 import PageHeader from '@/components/layout/PageHeader.vue'
 import StatusBadge from '@/components/ui/StatusBadge.vue'
 import UrgencyBadge from '@/components/ui/UrgencyBadge.vue'
@@ -352,7 +348,7 @@ const authStore = useAuthStore()
 const activeTab = ref('urgent')
 
 const pendingValidation = computed(() =>
-  taskStore.myValidationTasks.filter(s => ['draft-ready', 'assigned-for-validation'].includes(s.status))
+  taskStore.myValidationTasks.filter(s => ['assigned-for-validation'].includes(s.status))
     .sort((a, b) => new Date(a.deadline).getTime() - new Date(b.deadline).getTime())
 )
 
@@ -383,7 +379,7 @@ const retroPending = computed(() => pendingValidation.value.filter(s => !isUrgen
 const retroInProgress = computed(() => inProgressValidation.value.filter(s => !isUrgent(s)))
 const retroCompleted = computed(() => completedValidation.value.filter(s => !isUrgent(s)))
 
-const handleStudyClick = (taskId: string | number) => {
+const handleStudyClick = (taskId: number) => {
   router.push(`/report/${taskId}`)
 }
 

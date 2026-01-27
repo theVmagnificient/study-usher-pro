@@ -63,7 +63,7 @@
             <Button
               variant="outline"
               size="sm"
-              @click="router.push(`/schedule/${physician.id}`)"
+              @click="router.push(`/schedule/${authStore.userId}`)"
             >
               <CalendarClock class="w-4 h-4 mr-2" />
               {{ t('profile.manageSchedule') }}
@@ -211,7 +211,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { Clock, Mail, MessageCircle, CalendarClock } from 'lucide-vue-next'
-import { startOfWeek, addDays, format, getDay } from 'date-fns'
+import { startOfWeek, addDays, format, getDay, endOfWeek } from 'date-fns'
 import PageHeader from '@/components/layout/PageHeader.vue'
 import Badge from '@/components/ui/badge.vue'
 import Button from '@/components/ui/button.vue'
@@ -229,10 +229,15 @@ const statistics = ref<UserStats | null>(null)
 const statisticsLoading = ref(false)
 const statisticsError = ref<string | null>(null)
 
+// Schedule slots for current week
+const scheduleSlots = ref<any[]>([])
+const scheduleLoading = ref(false)
+
 onMounted(async () => {
   if (authStore.user?.id) {
     statisticsLoading.value = true
     userStore.loading = true
+    scheduleLoading.value = true
     statisticsError.value = null
     userStore.error = null
 
@@ -246,6 +251,17 @@ onMounted(async () => {
 
       userStore.currentProfile = result.profile
       statistics.value = result.statistics
+
+      // Fetch actual schedule for current week
+      const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 })
+      const weekEnd = endOfWeek(new Date(), { weekStartsOn: 1 })
+
+      const slots = await userService.getSchedule(authStore.user.id, {
+        from: weekStart,
+        to: weekEnd
+      })
+
+      scheduleSlots.value = slots
     } catch (error) {
       console.error('Failed to load profile with details:', error)
       statisticsError.value = 'Failed to load profile'
@@ -253,6 +269,7 @@ onMounted(async () => {
     } finally {
       statisticsLoading.value = false
       userStore.loading = false
+      scheduleLoading.value = false
     }
   }
 })
@@ -305,15 +322,41 @@ const currentWeekDays = computed(() => {
   return Array.from({ length: 7 }, (_, i) => {
     const date = addDays(weekStart, i)
     const dayIndex = getDay(date)
-    const dayName = dayNames[dayIndex]
-    const isWorkingDay = physician.value.schedule.days.includes(dayName)
+    const dateKey = format(date, 'yyyy-MM-dd')
+
+    // Find slots for this day
+    const daySlotsFiltered = scheduleSlots.value.filter(slot => {
+      const slotDate = format(new Date(slot.start_time), 'yyyy-MM-dd')
+      return slotDate === dateKey
+    })
+
+    let isWorkingDay = false
+    let hours = "Off"
+
+    if (daySlotsFiltered.length > 0) {
+      // Calculate time range from slots
+      const times = daySlotsFiltered.map(slot => ({
+        start: new Date(slot.start_time),
+        end: new Date(slot.end_time)
+      }))
+
+      const earliestStart = times.reduce((min, time) =>
+        time.start < min ? time.start : min, times[0].start
+      )
+      const latestEnd = times.reduce((max, time) =>
+        time.end > max ? time.end : max, times[0].end
+      )
+
+      isWorkingDay = true
+      hours = `${format(earliestStart, 'HH:mm')} - ${format(latestEnd, 'HH:mm')}`
+    }
 
     return {
       date,
       shortName: shortDayNames[dayIndex],
       dayNumber: format(date, "d"),
       isWorkingDay,
-      hours: isWorkingDay ? `${physician.value.schedule.hours.start} - ${physician.value.schedule.hours.end}` : "Off",
+      hours,
     }
   })
 })

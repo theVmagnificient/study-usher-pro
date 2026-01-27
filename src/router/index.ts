@@ -6,6 +6,7 @@ import LoginPage from '@/pages/LoginPage.vue'
 import NotFound from '@/pages/NotFound.vue'
 
 // Admin Pages
+import TaskListPage from '@/pages/admin/TaskListPage.vue'
 import StudyListPage from '@/pages/admin/StudyListPage.vue'
 import StudyDetailPage from '@/pages/admin/StudyDetailPage.vue'
 import TaskTypesPage from '@/pages/admin/TaskTypesPage.vue'
@@ -48,7 +49,7 @@ const routes = [
     children: [
       {
         path: '',
-        component: StudyListPage
+        component: TaskListPage
       }
     ]
   },
@@ -88,7 +89,7 @@ const routes = [
   {
     path: '/schedule/:physicianId',
     component: AppLayout,
-    meta: { allowedRoles: ['admin'] },
+    meta: { allowedRoles: ['admin', 'reporting-radiologist', 'validating-radiologist'] },
     children: [
       {
         path: '',

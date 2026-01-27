@@ -2,7 +2,6 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { Study, StudyStatus } from '@/types/study'
 import { taskService } from '@/services/taskService'
-import { parseStudyId } from '@/lib/mappers/utils'
 import type { ReportSubmitData } from '@/lib/mappers/reportMapper'
 
 
@@ -67,47 +66,28 @@ export const useTaskStore = defineStore('task', () => {
   }
 
 
-  async function fetchTaskByStudyId(studyId: string) {
+  async function fetchTaskDetails(taskId: number) {
     loading.value = true
     error.value = null
 
     try {
-      // studyId is actually taskId in the route params
-      // Try using the optimized endpoint first
-      const taskId = parseInt(studyId, 10)
-      if (!isNaN(taskId)) {
-        try {
-          console.log('Trying optimized getTaskDetails for task:', taskId)
-          const task = await taskService.getTaskDetails(taskId)
-          console.log('Fetched task from optimized endpoint:', { id: task.id, hasReport: !!task.report, report: task.report })
-
-          // Directly assign the task to maintain reactivity
-          currentTask.value = task
-          console.log('After setting currentTask, report is:', currentTask.value?.report)
-          return
-        } catch (optimizedError) {
-          console.warn('Optimized endpoint failed, falling back to old method:', optimizedError)
-          // Fall through to old method
-        }
-      }
-
-      // Fallback to old method
-      const task = await taskService.getTaskByStudyId(studyId)
-      console.log('Fetched task from service:', { id: task.id, hasReport: !!task.report, report: task.report })
+      console.log('Fetching task details for task ID:', taskId)
+      const task = await taskService.getTaskDetails(taskId)
+      console.log('Fetched task from optimized endpoint:', { id: task.id, hasReport: !!task.report, report: task.report })
 
       // Directly assign the task to maintain reactivity
       currentTask.value = task
       console.log('After setting currentTask, report is:', currentTask.value?.report)
     } catch (err) {
-      error.value = err instanceof Error ? err.message : `Failed to fetch task for study ${studyId}`
-      console.error(`Error fetching task for study ${studyId}:`, err)
+      error.value = err instanceof Error ? err.message : `Failed to fetch task ${taskId}`
+      console.error(`Error fetching task ${taskId}:`, err)
     } finally {
       loading.value = false
     }
   }
 
 
-  async function takeTask(studyId: string) {
+  async function takeTask(taskId: number) {
     loading.value = true
     error.value = null
 
@@ -121,8 +101,8 @@ export const useTaskStore = defineStore('task', () => {
 
       await fetchMyReportingTasks()
     } catch (err) {
-      error.value = err instanceof Error ? err.message : `Failed to take task ${studyId}`
-      console.error(`Error taking task ${studyId}:`, err)
+      error.value = err instanceof Error ? err.message : `Failed to take task ${taskId}`
+      console.error(`Error taking task ${taskId}:`, err)
       throw err
     } finally {
       loading.value = false
@@ -130,7 +110,7 @@ export const useTaskStore = defineStore('task', () => {
   }
 
 
-  async function startTask(studyId: string) {
+  async function startTask(taskId: number) {
     loading.value = true
     error.value = null
 
@@ -142,11 +122,11 @@ export const useTaskStore = defineStore('task', () => {
       await taskService.startTask(currentTask.value.taskId, currentUserId.value)
 
 
-      await fetchTaskByStudyId(studyId)
+      if (currentTask.value) await fetchTaskDetails(currentTask.value.taskId)
       await fetchMyReportingTasks()
     } catch (err) {
-      error.value = err instanceof Error ? err.message : `Failed to start task ${studyId}`
-      console.error(`Error starting task ${studyId}:`, err)
+      error.value = err instanceof Error ? err.message : `Failed to start task ${taskId}`
+      console.error(`Error starting task ${taskId}:`, err)
       throw err
     } finally {
       loading.value = false
@@ -154,7 +134,7 @@ export const useTaskStore = defineStore('task', () => {
   }
 
 
-  async function submitReport(studyId: string, report: ReportSubmitData) {
+  async function submitReport(taskId: number, report: ReportSubmitData) {
     loading.value = true
     error.value = null
 
@@ -166,11 +146,11 @@ export const useTaskStore = defineStore('task', () => {
       await taskService.submitReport(currentTask.value.taskId, report, currentUserId.value)
 
 
-      await fetchTaskByStudyId(studyId)
+      if (currentTask.value) await fetchTaskDetails(currentTask.value.taskId)
       await fetchMyReportingTasks()
     } catch (err) {
-      error.value = err instanceof Error ? err.message : `Failed to submit report for ${studyId}`
-      console.error(`Error submitting report for ${studyId}:`, err)
+      error.value = err instanceof Error ? err.message : `Failed to submit report for ${taskId}`
+      console.error(`Error submitting report for ${taskId}:`, err)
       throw err
     } finally {
       loading.value = false
@@ -178,7 +158,7 @@ export const useTaskStore = defineStore('task', () => {
   }
 
 
-  async function assignForValidation(studyId: string, validatorId: number) {
+  async function assignForValidation(taskId: number) {
     loading.value = true
     error.value = null
 
@@ -187,16 +167,19 @@ export const useTaskStore = defineStore('task', () => {
         throw new Error('No current task loaded')
       }
 
-      // First mark the task as translated (workflow requirement)
-      await taskService.markTranslated(currentTask.value.taskId)
+      // First mark the task as translated (workflow requirement) if not already translated
+      if (currentTask.value.status !== 'translated') {
+        await taskService.markTranslated(currentTask.value.taskId)
+      }
 
-      // Submit for validation with the selected validator
-      await taskService.submitForValidation(currentTask.value.taskId, validatorId)
+      // Submit for validation - backend will auto-assign validator from schedule
+      // If no validator available, task stays in TRANSLATED for admin to assign
+      await taskService.submitForValidation(currentTask.value.taskId)
 
       await fetchMyReportingTasks()
     } catch (err) {
-      error.value = err instanceof Error ? err.message : `Failed to submit task ${studyId} for validation`
-      console.error(`Error submitting task ${studyId} for validation:`, err)
+      error.value = err instanceof Error ? err.message : `Failed to submit task ${taskId} for validation`
+      console.error(`Error submitting task ${taskId} for validation:`, err)
       throw err
     } finally {
       loading.value = false
@@ -204,7 +187,7 @@ export const useTaskStore = defineStore('task', () => {
   }
 
 
-  async function finalizeTask(studyId: string) {
+  async function finalizeTask(taskId: number) {
     loading.value = true
     error.value = null
 
@@ -218,8 +201,8 @@ export const useTaskStore = defineStore('task', () => {
 
       await fetchMyValidationTasks()
     } catch (err) {
-      error.value = err instanceof Error ? err.message : `Failed to finalize task ${studyId}`
-      console.error(`Error finalizing task ${studyId}:`, err)
+      error.value = err instanceof Error ? err.message : `Failed to finalize task ${taskId}`
+      console.error(`Error finalizing task ${taskId}:`, err)
       throw err
     } finally {
       loading.value = false
@@ -227,7 +210,7 @@ export const useTaskStore = defineStore('task', () => {
   }
 
 
-  async function returnForRevision(studyId: string, comment: string) {
+  async function returnForRevision(taskId: number, comment: string) {
     loading.value = true
     error.value = null
 
@@ -241,8 +224,35 @@ export const useTaskStore = defineStore('task', () => {
 
       await fetchMyValidationTasks()
     } catch (err) {
-      error.value = err instanceof Error ? err.message : `Failed to return task ${studyId}`
-      console.error(`Error returning task ${studyId}:`, err)
+      error.value = err instanceof Error ? err.message : `Failed to return task ${taskId}`
+      console.error(`Error returning task ${taskId}:`, err)
+      throw err
+    } finally {
+      loading.value = false
+    }
+  }
+
+
+  async function editReportByValidator(taskId: number, updates: {
+    protocol?: string
+    findings?: string
+    impression?: string
+    protocol_en?: string
+    findings_en?: string
+    impression_en?: string
+    comment?: string
+  }) {
+    loading.value = true
+    error.value = null
+
+    try {
+      await taskService.editReportByValidator(taskId, updates)
+
+      // Refresh validation tasks to reflect the changes
+      await fetchMyValidationTasks()
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : `Failed to edit report for task ${taskId}`
+      console.error(`Error editing report for task ${taskId}:`, err)
       throw err
     } finally {
       loading.value = false
@@ -260,18 +270,12 @@ export const useTaskStore = defineStore('task', () => {
   }
 
 
-  async function getValidators() {
-    try {
-      return await taskService.getValidators()
-    } catch (err) {
-      error.value = err instanceof Error ? err.message : 'Failed to fetch validators'
-      console.error('Error fetching validators:', err)
-      throw err
-    }
-  }
+  // Note: getValidators removed - врач не выбирает валидатора
+  // Система автоматически назначает из расписания
+  // Админ использует отдельный endpoint: /api/v1/admin/tasks/{id}/assign-validation
 
 
-  async function startValidationTask(studyId: string) {
+  async function startValidationTask(taskId: number) {
     loading.value = true
     error.value = null
 
@@ -283,8 +287,8 @@ export const useTaskStore = defineStore('task', () => {
 
       await fetchMyValidationTasks()
     } catch (err) {
-      error.value = err instanceof Error ? err.message : `Failed to start validation for ${studyId}`
-      console.error(`Error starting validation for ${studyId}:`, err)
+      error.value = err instanceof Error ? err.message : `Failed to start validation for ${taskId}`
+      console.error(`Error starting validation for ${taskId}:`, err)
       throw err
     } finally {
       loading.value = false
@@ -292,7 +296,7 @@ export const useTaskStore = defineStore('task', () => {
   }
 
 
-  async function markTaskTranslated(studyId: string) {
+  async function markTaskTranslated(taskId: number) {
     loading.value = true
     error.value = null
 
@@ -304,8 +308,30 @@ export const useTaskStore = defineStore('task', () => {
 
       await fetchMyReportingTasks()
     } catch (err) {
-      error.value = err instanceof Error ? err.message : `Failed to mark task ${studyId} as translated`
-      console.error(`Error marking task ${studyId} as translated:`, err)
+      error.value = err instanceof Error ? err.message : `Failed to mark task ${taskId} as translated`
+      console.error(`Error marking task ${taskId} as translated:`, err)
+      throw err
+    } finally {
+      loading.value = false
+    }
+  }
+
+
+  async function markTaskDelivered(taskId: number) {
+    loading.value = true
+    error.value = null
+
+    try {
+      if (!currentTask.value) {
+        throw new Error('No current task loaded')
+      }
+      await taskService.markDelivered(currentTask.value.taskId)
+
+      // Refresh current task to update status
+      if (currentTask.value) await fetchTaskDetails(currentTask.value.taskId)
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : `Failed to mark task ${taskId} as delivered`
+      console.error(`Error marking task ${taskId} as delivered:`, err)
       throw err
     } finally {
       loading.value = false
@@ -423,18 +449,19 @@ export const useTaskStore = defineStore('task', () => {
     fetchMyReportingTasks,
     fetchMyValidationTasks,
     fetchAdminValidationTasks,
-    fetchTaskByStudyId,
+    fetchTaskDetails,
     takeTask,
     startTask,
     submitReport,
     assignForValidation,
     finalizeTask,
     returnForRevision,
+    editReportByValidator,
     refreshQueues,
     setCurrentUserId,
-    getValidators,
     startValidationTask,
     markTaskTranslated,
+    markTaskDelivered,
     loadCommentsForTasks,
 
 

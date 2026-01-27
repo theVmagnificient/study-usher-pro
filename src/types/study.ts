@@ -28,8 +28,9 @@ export type BodyArea =
 export type UserRole = 'admin' | 'reporting-radiologist' | 'validating-radiologist';
 
 export interface Study {
-  id: string;
+  id: number;
   taskId: number;
+  studyId: number;
   patientId: string;
   clientName: string;
   status: StudyStatus;
@@ -44,12 +45,18 @@ export interface Study {
   priorStudies?: PriorStudy[];
   sex: 'M' | 'F';
   age: number;
+  description: string;
+  accessionNumber: string;
+  clinicalNotes: string;
+  technicalNotes: string;
   /** Group ID for multi-zone studies (same patient, multiple body areas) */
   linkedStudyGroup?: string;
   /** Number of validator comments (for display badge) */
   validatorCommentsCount?: number;
   /** Validator comments on the report quality/impressions */
   validatorComments?: ValidatorComment[];
+  /** Full audit log of all task events */
+  auditLog?: AuditLogEntry[];
   /** Current report content */
   report?: {
     protocol?: string;
@@ -67,6 +74,7 @@ export interface ValidatorComment {
   validatorName: string;
   timestamp: string;
   isCritical?: boolean;
+  isAction?: boolean; // Flag to distinguish actions from regular comments
 }
 
 export interface TaskType {
@@ -104,7 +112,7 @@ export interface Physician {
 }
 
 export interface PriorStudy {
-  id: string;
+  id: number; // Study ID (numeric)
   type: string;
   date: string;
   protocol?: string;
@@ -118,7 +126,7 @@ export interface PriorStudy {
 
 export interface AuditLogEntry {
   id: string;
-  studyId: string;
+  studyId: number;
   action: string;
   user: string;
   timestamp: string;

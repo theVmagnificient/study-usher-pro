@@ -1,10 +1,9 @@
 import apiClient from '@/lib/api/client'
 import type { Study } from '@/types/study'
-import type { Task, TaskWithEmbedded, Study as BackendStudy, ClientType, Client, User, Report, UserWithDetails, TaskDetail, TaskEvent, PriorStudy as BackendPriorStudy } from '@/types/api'
+import type { Task, TaskWithEmbedded, Study as BackendStudy, ClientType, Client, User, Report, UserWithDetails, TaskDetail, TaskEvent, TaskEventWithEmbedded, PriorStudy as BackendPriorStudy } from '@/types/api'
 import { mapTaskToStudy } from '@/lib/mappers/taskMapper'
 import { mapReportSubmit, type ReportSubmitData } from '@/lib/mappers/reportMapper'
 import { lookupCache } from '@/lib/lookup/lookupCache'
-import { parseStudyId } from '@/lib/mappers/utils'
 
 
 export const taskService = {
@@ -115,6 +114,27 @@ export const taskService = {
     }
   },
 
+  async editReportByValidator(
+    taskId: number,
+    updates: {
+      protocol?: string
+      findings?: string
+      impression?: string
+      protocol_en?: string
+      findings_en?: string
+      impression_en?: string
+      comment?: string
+    }
+  ): Promise<{ task: Task; report: Report }> {
+    try {
+      const response = await apiClient.patch(`/api/v1/tasks/${taskId}/validation/edit`, updates)
+      return response.data
+    } catch (error) {
+      console.error(`Failed to edit report for task ${taskId}:`, error)
+      throw error
+    }
+  },
+
 
   async markTranslated(taskId: number): Promise<void> {
     try {
@@ -126,11 +146,11 @@ export const taskService = {
   },
 
 
-  async submitForValidation(taskId: number, validatingRadiologistId: number): Promise<void> {
+  async submitForValidation(taskId: number): Promise<void> {
     try {
-      await apiClient.post(`/api/v1/tasks/${taskId}/validation/submit`, {
-        validating_radiologist_id: validatingRadiologistId
-      })
+      // No body needed - backend auto-assigns validator from schedule
+      // If no validator available, task stays in TRANSLATED for admin to assign
+      await apiClient.post(`/api/v1/tasks/${taskId}/validation/submit`)
     } catch (error) {
       console.error(`Failed to submit task ${taskId} for validation:`, error)
       throw error
@@ -178,36 +198,6 @@ export const taskService = {
   },
 
 
-  async getTaskByStudyId(studyId: string): Promise<Study> {
-    try {
-      // Parse study ID (e.g., "STD-001" -> 1) to get the numeric study ID
-      const numericStudyId = parseStudyId(studyId)
-
-      // Fetch the study to find its associated task
-      const studyResponse = await apiClient.get<BackendStudy>(`/api/v1/studies/${numericStudyId}`)
-      const study = studyResponse.data
-
-      // Now fetch all tasks to find which one belongs to this study
-      // We need to check both reporting and validation queues
-      const [reportingTasks, validationTasks] = await Promise.all([
-        apiClient.get<{ items: Task[] }>('/api/v1/tasks', { params: { queue: 'reporting' } }),
-        apiClient.get<{ items: Task[] }>('/api/v1/tasks', { params: { queue: 'validation' } })
-      ])
-
-      const allTasks = [...reportingTasks.data.items, ...validationTasks.data.items]
-      const task = allTasks.find(t => t.study_id === study.id)
-
-      if (!task) {
-        throw new Error(`No task found for study ${studyId}`)
-      }
-
-      return await this._fetchTaskAsStudy(task)
-    } catch (error) {
-      console.error(`Failed to fetch task for study ${studyId}:`, error)
-      throw error
-    }
-  },
-
 
   async _fetchTaskAsStudyLight(task: TaskWithEmbedded): Promise<Study> {
     try {
@@ -222,23 +212,8 @@ export const taskService = {
       // Check if we have embedded study data
       if (task.study) {
         // Use embedded study data - no API call needed!
-        backendStudy = {
-          id: task.study_id,
-          patient_id: task.study.patient_id,
-          patient_age: task.study.patient_age,
-          patient_sex: task.study.patient_sex,
-          description: task.study.description,
-          study_datetime: task.study.study_datetime,
-          client_id: task.study.client_id,
-          client_type_id: task.study.client_type_id,
-          // Fields not included in embedded version - use defaults
-          instance_uid: '',
-          accession_number: '',
-          report_text: null,
-          processing_status: 'processing_finished',
-          created_at: '',
-          updated_at: '',
-        }
+        // Study is now full object with all DICOM fields
+        backendStudy = task.study
       } else {
         // Fallback: fetch study data (backward compatibility)
         const studyResponse = await apiClient.get<BackendStudy>(`/api/v1/studies/${task.study_id}`)
@@ -255,6 +230,7 @@ export const taskService = {
           expected_tat_hours: task.client_type.expected_tat_hours,
           // Fields not included in embedded version
           client_id: backendStudy.client_id,
+          has_priors: false,
           price: 0,
           payout: 0,
           created_at: '',
@@ -343,22 +319,8 @@ export const taskService = {
 
       // Check if we have embedded study data
       if (task.study) {
-        backendStudy = {
-          id: task.study_id,
-          patient_id: task.study.patient_id,
-          patient_age: task.study.patient_age,
-          patient_sex: task.study.patient_sex,
-          description: task.study.description,
-          study_datetime: task.study.study_datetime,
-          client_id: task.study.client_id,
-          client_type_id: task.study.client_type_id,
-          instance_uid: '',
-          accession_number: '',
-          report_text: null,
-          processing_status: 'processing_finished',
-          created_at: '',
-          updated_at: '',
-        }
+        // Study is now full object with all DICOM fields
+        backendStudy = task.study
       } else {
         const studyResponse = await apiClient.get<BackendStudy>(`/api/v1/studies/${task.study_id}`)
         backendStudy = studyResponse.data
@@ -372,6 +334,7 @@ export const taskService = {
           body_area: task.client_type.body_area,
           expected_tat_hours: task.client_type.expected_tat_hours,
           client_id: backendStudy.client_id,
+          has_priors: false,
           price: 0,
           payout: 0,
           created_at: '',
@@ -485,6 +448,8 @@ export const taskService = {
   async getAdminValidationTasks(): Promise<Study[]> {
     try {
       // Fetch all validation statuses in a single request
+      // NOTE: 'translated' means ready for admin to assign validator (not shown in validation queue)
+      // Validators only see tasks where they are already assigned (assigned_for_validation+)
       const response = await apiClient.get<{ items: TaskWithEmbedded[] }>('/api/v1/admin/tasks', {
         params: {
           status: ['assigned_for_validation', 'under_validation', 'finalized'],
@@ -545,28 +510,14 @@ export const taskService = {
       // Map to Study format
       return mapTaskToStudy({
         task: data.task as any, // The TaskWithEmbedded from backend
-        study: {
-          id: data.task.study_id,
-          patient_id: data.task.study!.patient_id,
-          patient_age: data.task.study!.patient_age,
-          patient_sex: data.task.study!.patient_sex,
-          description: data.task.study!.description,
-          study_datetime: data.task.study!.study_datetime,
-          client_id: data.task.study!.client_id,
-          client_type_id: data.task.study!.client_type_id,
-          instance_uid: '',
-          accession_number: '',
-          report_text: null,
-          processing_status: 'processing_finished',
-          created_at: '',
-          updated_at: '',
-        },
+        study: data.task.study!, // Study is now full object with all DICOM fields
         clientType: {
           id: data.task.client_type!.id,
           modality: data.task.client_type!.modality,
           body_area: data.task.client_type!.body_area,
           expected_tat_hours: data.task.client_type!.expected_tat_hours,
           client_id: data.task.study!.client_id,
+          has_priors: false,
           price: 0,
           payout: 0,
           created_at: '',
@@ -594,7 +545,7 @@ export const taskService = {
           created_at: '',
           updated_at: '',
         } : undefined,
-        validatorEvents: data.validator_comments as TaskEvent[],
+        validatorEvents: data.validator_comments as TaskEventWithEmbedded[],
         priorStudies: data.prior_studies as BackendPriorStudy[],
         currentReport: data.latest_report || undefined,
       })

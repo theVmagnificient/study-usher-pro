@@ -21,7 +21,7 @@
           </Button>
           <div>
             <div class="flex items-center gap-3">
-              <span class="font-mono text-xs text-muted-foreground">{{ study.id }}</span>
+              <span class="font-mono text-xs text-muted-foreground">{{ study.accessionNumber }}</span>
               <StatusBadge :status="study.status" />
               <UrgencyBadge :urgency="study.urgency" />
             </div>
@@ -52,9 +52,15 @@
               {{ t('reporting.downloadAll', { count: linkedStudies.length + 1 }) }}
             </DropdownMenuItem>
           </DropdownMenu>
-          <Button v-else variant="outline" size="sm">
-            <Download class="w-4 h-4 mr-2" />
-            {{ t('reporting.dicom') }}
+          <Button
+            v-else
+            variant="outline"
+            size="sm"
+            @click="handleDownload"
+            :disabled="isDownloading"
+          >
+            <Download class="w-4 h-4 mr-2" :class="{ 'animate-bounce': isDownloading }" />
+            {{ isDownloading ? t('reporting.downloading') : t('reporting.dicom') }}
           </Button>
         </div>
       </div>
@@ -78,9 +84,13 @@
           <ChevronDown v-else class="w-4 h-4 text-muted-foreground" />
         </div>
         <div v-if="!commentsExpanded" class="clinical-card-body">
-          <p class="text-sm text-foreground line-clamp-1">
-            {{ sortedComments[0]?.text }}
-          </p>
+          <div class="flex items-start gap-2">
+            <FileEdit v-if="sortedComments[0]?.isAction" class="w-4 h-4 text-blue-500 flex-shrink-0 mt-0.5" />
+            <MessageCircle v-else class="w-4 h-4 text-orange-500 flex-shrink-0 mt-0.5" />
+            <p class="text-sm text-foreground line-clamp-1 flex-1">
+              {{ sortedComments[0]?.text }}
+            </p>
+          </div>
           <p class="text-xs text-muted-foreground mt-1">
             — {{ sortedComments[0]?.validatorName }} • {{ formatTime(sortedComments[0]?.timestamp) }}
           </p>
@@ -94,11 +104,17 @@
             'clinical-card border-l-4',
             comment.isCritical
               ? 'border-l-destructive bg-destructive/5'
-              : 'border-l-yellow-500 bg-yellow-500/5'
+              : comment.isAction
+              ? 'border-l-blue-500 bg-blue-500/5'
+              : 'border-l-orange-500 bg-orange-500/5'
           )"
         >
           <div class="clinical-card-body">
-            <p class="text-sm text-foreground">{{ comment.text }}</p>
+            <div class="flex items-start gap-2">
+              <FileEdit v-if="comment.isAction" class="w-4 h-4 text-blue-500 flex-shrink-0 mt-0.5" />
+              <MessageCircle v-else class="w-4 h-4 text-orange-500 flex-shrink-0 mt-0.5" />
+              <p class="text-sm text-foreground whitespace-pre-line flex-1">{{ comment.text }}</p>
+            </div>
             <p class="text-xs text-muted-foreground mt-2">
               — {{ comment.validatorName }} • {{ formatDate(comment.timestamp) }} at {{ formatTime(comment.timestamp) }}
             </p>
@@ -180,7 +196,7 @@
                 v-model="protocol"
                 class="report-textarea"
                 :placeholder="t('reporting.protocolPlaceholder')"
-                :readonly="isValidator || study.status === 'finalized' || study.status === 'delivered'"
+                :readonly="study.status === 'finalized' || study.status === 'delivered'"
               />
             </div>
             <div v-if="showEnglishTranslation">
@@ -213,7 +229,7 @@
                 v-model="findings"
                 class="report-textarea"
                 :placeholder="t('reporting.findingsPlaceholder')"
-                :readonly="isValidator || study.status === 'finalized' || study.status === 'delivered'"
+                :readonly="study.status === 'finalized' || study.status === 'delivered'"
               />
             </div>
             <div v-if="showEnglishTranslation">
@@ -247,7 +263,7 @@
                 v-model="impression"
                 class="report-textarea"
                 :placeholder="t('reporting.impressionPlaceholder')"
-                :readonly="isValidator || study.status === 'finalized' || study.status === 'delivered'"
+                :readonly="study.status === 'finalized' || study.status === 'delivered'"
               />
             </div>
             <div v-if="showEnglishTranslation">
@@ -301,6 +317,15 @@
                 >
                   <RotateCcw class="w-4 h-4 mr-2" />
                   {{ t('reporting.returnForRevision') }}
+                </Button>
+                <Button
+                  variant="outline"
+                  @click="handleSaveValidatorChanges"
+                  :disabled="isSavingValidatorChanges"
+                >
+                  <div v-if="isSavingValidatorChanges" class="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
+                  <Save v-else class="w-4 h-4 mr-2" />
+                  {{ isSavingValidatorChanges ? t('reporting.saving') : t('reporting.saveChanges') }}
                 </Button>
                 <Button @click="handleApprove">
                   <CheckCircle class="w-4 h-4 mr-2" />
@@ -533,6 +558,105 @@
         </DialogFooter>
       </DialogContent>
     </Dialog>
+
+    <!-- Edit Report Dialog -->
+    <Dialog v-model:open="showEditDialog">
+      <DialogContent class="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Edit Report</DialogTitle>
+          <DialogDescription>
+            Make corrections to the report. Only the fields you modify will be updated. A new version will be created.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div class="space-y-4">
+          <div>
+            <label class="field-label">{{ t('reporting.protocol') }}</label>
+            <Textarea
+              v-model="editProtocol"
+              class="report-textarea"
+              :placeholder="protocol"
+              :rows="4"
+            />
+          </div>
+
+          <div>
+            <label class="field-label">{{ t('reporting.findings') }}</label>
+            <Textarea
+              v-model="editFindings"
+              class="report-textarea"
+              :placeholder="findings"
+              :rows="6"
+            />
+          </div>
+
+          <div>
+            <label class="field-label">{{ t('reporting.impression') }}</label>
+            <Textarea
+              v-model="editImpression"
+              class="report-textarea"
+              :placeholder="impression"
+              :rows="4"
+            />
+          </div>
+
+          <div v-if="englishProtocol || englishFindings || englishImpression" class="space-y-4 pt-4 border-t border-border">
+            <div>
+              <label class="field-label text-blue-600 dark:text-blue-400">{{ t('reporting.protocolEn') }}</label>
+              <Textarea
+                v-model="editProtocolEn"
+                class="report-textarea bg-blue-500/5 dark:bg-blue-500/10 border-blue-500/20"
+                :placeholder="englishProtocol"
+                :rows="4"
+              />
+            </div>
+
+            <div>
+              <label class="field-label text-blue-600 dark:text-blue-400">{{ t('reporting.findingsEn') }}</label>
+              <Textarea
+                v-model="editFindingsEn"
+                class="report-textarea bg-blue-500/5 dark:bg-blue-500/10 border-blue-500/20"
+                :placeholder="englishFindings"
+                :rows="6"
+              />
+            </div>
+
+            <div>
+              <label class="field-label text-blue-600 dark:text-blue-400">{{ t('reporting.impressionEn') }}</label>
+              <Textarea
+                v-model="editImpressionEn"
+                class="report-textarea bg-blue-500/5 dark:bg-blue-500/10 border-blue-500/20"
+                :placeholder="englishImpression"
+                :rows="4"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label class="field-label">Comment (optional)</label>
+            <Textarea
+              v-model="editComment"
+              class="report-textarea"
+              placeholder="Add a comment about your changes..."
+              :rows="2"
+            />
+          </div>
+
+          <div class="p-3 bg-amber-500/10 dark:bg-amber-500/20 rounded-md border border-amber-500/20">
+            <p class="text-sm text-foreground">
+              <strong>Note:</strong> Only fields you modify will be updated. Empty fields will keep their current values. This will create version {{ (study?.report?.version || 0) + 1 }} of the report.
+            </p>
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" @click="showEditDialog = false">Cancel</Button>
+          <Button @click="handleSaveEdit" :disabled="!hasEditChanges">
+            Save Changes
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
     </div>
   </div>
 </template>
@@ -559,7 +683,8 @@ import {
   ChevronUp,
   ChevronDown,
   MessageCircle,
-  Languages
+  Languages,
+  FileEdit
 } from 'lucide-vue-next'
 import Button from '@/components/ui/button.vue'
 import StatusBadge from '@/components/ui/StatusBadge.vue'
@@ -580,11 +705,14 @@ import DropdownMenuItem from '@/components/ui/DropdownMenuItem.vue'
 import DropdownMenuSeparator from '@/components/ui/DropdownMenuSeparator.vue'
 import Textarea from '@/components/ui/textarea.vue'
 import type { PriorStudy } from '@/types/study'
+import { useToast } from '@/hooks/use-toast'
+import { studyService } from '@/services/studyService'
 
 const route = useRoute()
 const router = useRouter()
 const { t } = useI18n()
 const taskStore = useTaskStore()
+const { toast } = useToast()
 
 const study = computed(() => {
   // Always prefer currentTask for the current route since it has full data
@@ -661,9 +789,20 @@ const showEnglishTranslation = ref(false)
 const summaryExpanded = ref(true)
 const notesExpanded = ref(false)
 const validatorComment = ref("")
+const isSavingValidatorChanges = ref(false)
 const commentsExpanded = ref(true)
 const availableValidators = ref<any[]>([])
 const selectedValidatorId = ref<number | null>(null)
+
+// Edit report dialog state
+const showEditDialog = ref(false)
+const editProtocol = ref("")
+const editFindings = ref("")
+const editImpression = ref("")
+const editProtocolEn = ref("")
+const editFindingsEn = ref("")
+const editImpressionEn = ref("")
+const editComment = ref("")
 
 const englishProtocol = computed({
   get: () => study.value?.report?.protocolEn || '',
@@ -701,9 +840,9 @@ const englishImpression = computed({
   }
 })
 
-const clinicalNotesText = `Patient presents with persistent cough for 3 weeks, productive of yellowish sputum. History of smoking (20 pack-years), quit 2 years ago. Reports occasional dyspnea on exertion and mild chest discomfort. No hemoptysis. No fever or night sweats reported. Family history significant for lung cancer (father, diagnosed age 62). Previous chest X-ray from 6 months ago showed no significant abnormalities. Patient currently on ACE inhibitor for hypertension - consider ACE inhibitor-induced cough in differential. Weight loss of 5kg over past 2 months noted. Rule out pulmonary pathology including malignancy given risk factors.`
+const clinicalNotesText = computed(() => study.value?.clinicalNotes || t('reporting.noClinicalNotes'))
 
-const technicalNotesText = `Study performed on Siemens SOMATOM Definition Edge (128-slice). Acquisition parameters: Slice thickness 1.5mm, reconstruction interval 1.0mm. kVp: 120, mAs: 180 (with tube current modulation enabled). Non-contrast examination per protocol. Pitch factor: 1.2. Scan range from lung apices to adrenal glands. Iterative reconstruction (SAFIRE strength 3) applied. Motion artifact present at lung bases - limited evaluation of lower lobes, recommend clinical correlation if persistent symptoms. Streak artifact from patient arms noted but does not significantly impact diagnostic quality. Total DLP: 385 mGy·cm. Effective dose estimate: 5.4 mSv. Images reviewed on Syngo.via workstation.`
+const technicalNotesText = computed(() => study.value?.technicalNotes || t('reporting.noTechnicalNotes'))
 
 const authStore = useAuthStore()
 const isValidator = computed(() => authStore.role === 'validating-radiologist')
@@ -715,7 +854,54 @@ const sortedComments = computed(() => {
   )
 })
 
+const hasEditChanges = computed(() => {
+  return editProtocol.value.trim() !== '' ||
+         editFindings.value.trim() !== '' ||
+         editImpression.value.trim() !== '' ||
+         editProtocolEn.value.trim() !== '' ||
+         editFindingsEn.value.trim() !== '' ||
+         editImpressionEn.value.trim() !== ''
+})
+
 const handleBack = () => router.go(-1)
+
+const handleOpenEditDialog = () => {
+  // Reset edit fields
+  editProtocol.value = ""
+  editFindings.value = ""
+  editImpression.value = ""
+  editProtocolEn.value = ""
+  editFindingsEn.value = ""
+  editImpressionEn.value = ""
+  editComment.value = ""
+  showEditDialog.value = true
+}
+
+const handleSaveEdit = async () => {
+  if (!study.value || !hasEditChanges.value) return
+
+  try {
+    const updates: any = {}
+
+    // Only include fields that were modified
+    if (editProtocol.value.trim()) updates.protocol = editProtocol.value
+    if (editFindings.value.trim()) updates.findings = editFindings.value
+    if (editImpression.value.trim()) updates.impression = editImpression.value
+    if (editProtocolEn.value.trim()) updates.protocol_en = editProtocolEn.value
+    if (editFindingsEn.value.trim()) updates.findings_en = editFindingsEn.value
+    if (editImpressionEn.value.trim()) updates.impression_en = editImpressionEn.value
+    if (editComment.value.trim()) updates.comment = editComment.value
+
+    await taskStore.editReportByValidator(study.value.taskId, updates)
+
+    // Reload task data to show new version
+    await taskStore.fetchTaskDetails(study.value.taskId)
+
+    showEditDialog.value = false
+  } catch (error) {
+    console.error('Failed to edit report:', error)
+  }
+}
 
 const handleOpenSubmitDialog = async () => {
   showSubmitDialog.value = true
@@ -725,20 +911,8 @@ const handleSaveDraft = async () => {
   if (!study.value) return
 
   try {
-    // Handle workflow transitions before saving
-    if (study.value.status === 'new') {
-      await taskStore.takeTask(study.value.id)
-      await taskStore.fetchTaskByStudyId(study.value.id)  // Reload to get updated status
-      await taskStore.startTask(study.value.id)
-      await taskStore.fetchTaskByStudyId(study.value.id)  // Reload again
-    } else if (study.value.status === 'assigned') {
-      await taskStore.startTask(study.value.id)
-      await taskStore.fetchTaskByStudyId(study.value.id)
-    } else if (study.value.status === 'returned') {
-      await taskStore.startTask(study.value.id)
-      await taskStore.fetchTaskByStudyId(study.value.id)
-    }
-
+    // 1. FIRST: Collect form data BEFORE any workflow transitions
+    // This prevents data loss when fetchTaskDetails reloads from DB
     const reportData = {
       protocol: protocol.value,
       findings: findings.value,
@@ -748,9 +922,35 @@ const handleSaveDraft = async () => {
       impression_en: englishImpression.value,
     }
 
-    await taskStore.submitReport(study.value.id, reportData)
+    // 2. THEN: Handle workflow transitions if needed
+    if (study.value.status === 'new') {
+      await taskStore.takeTask(study.value.taskId)
+      await taskStore.startTask(study.value.taskId)
+    } else if (study.value.status === 'assigned') {
+      await taskStore.startTask(study.value.taskId)
+    } else if (study.value.status === 'returned') {
+      await taskStore.startTask(study.value.taskId)
+    }
+
+    // 3. Save the report with data collected in step 1
+    await taskStore.submitReport(study.value.taskId, reportData)
+
+    // 4. Reload to get updated task status
+    await taskStore.fetchTaskDetails(study.value.taskId)
+
+    // 5. Show success feedback
+    toast({
+      title: t('reporting.draftSaved'),
+      description: t('reporting.draftSavedDescription'),
+      variant: 'default'
+    })
   } catch (error) {
     console.error('Failed to save draft:', error)
+    toast({
+      title: t('reporting.saveError'),
+      description: t('reporting.saveErrorDescription'),
+      variant: 'destructive'
+    })
   }
 }
 
@@ -758,9 +958,10 @@ const handleSubmit = async () => {
   if (!study.value) return
 
   try {
-    // If task is draft-ready, mark as translated (admin will assign validator)
-    if (study.value.status === 'draft-ready') {
-      await taskStore.markTaskTranslated(study.value.id)
+    // If task is draft-ready or translated, submit for validation
+    // Backend will auto-assign validator from schedule
+    if (study.value.status === 'draft-ready' || study.value.status === 'translated') {
+      await taskStore.assignForValidation(study.value.taskId)
       showSubmitDialog.value = false
       router.go(-1)
       return
@@ -768,16 +969,16 @@ const handleSubmit = async () => {
 
     // Handle workflow transitions before submitting
     if (study.value.status === 'new') {
-      await taskStore.takeTask(study.value.id)
-      await taskStore.fetchTaskByStudyId(study.value.id)  // Reload to get updated status
-      await taskStore.startTask(study.value.id)
-      await taskStore.fetchTaskByStudyId(study.value.id)  // Reload again
+      await taskStore.takeTask(study.value.taskId)
+      await taskStore.fetchTaskDetails(study.value.taskId)  // Reload to get updated status
+      await taskStore.startTask(study.value.taskId)
+      await taskStore.fetchTaskDetails(study.value.taskId)  // Reload again
     } else if (study.value.status === 'assigned') {
-      await taskStore.startTask(study.value.id)
-      await taskStore.fetchTaskByStudyId(study.value.id)
+      await taskStore.startTask(study.value.taskId)
+      await taskStore.fetchTaskDetails(study.value.taskId)
     } else if (study.value.status === 'returned') {
-      await taskStore.startTask(study.value.id)
-      await taskStore.fetchTaskByStudyId(study.value.id)
+      await taskStore.startTask(study.value.taskId)
+      await taskStore.fetchTaskDetails(study.value.taskId)
     }
 
     const reportData = {
@@ -789,7 +990,7 @@ const handleSubmit = async () => {
       impression_en: englishImpression.value,
     }
 
-    await taskStore.submitReport(study.value.id, reportData)
+    await taskStore.submitReport(study.value.taskId, reportData)
     showSubmitDialog.value = false
     router.go(-1)
   } catch (error) {
@@ -802,7 +1003,7 @@ const handleApprove = async () => {
 
   try {
     // Use taskId directly instead of parsing study ID
-    await taskStore.finalizeTask(study.value.id)
+    await taskStore.finalizeTask(study.value.taskId)
     router.go(-1)
   } catch (error) {
     console.error('Failed to finalize task:', error)
@@ -814,15 +1015,84 @@ const handleReturn = async () => {
 
   try {
     // Use taskId directly instead of parsing study ID
-    await taskStore.returnForRevision(study.value.id, validatorComment.value)
+    await taskStore.returnForRevision(study.value.taskId, validatorComment.value)
     router.go(-1)
   } catch (error) {
     console.error('Failed to return task for revision:', error)
   }
 }
+
+const handleSaveValidatorChanges = async () => {
+  if (!study.value) return
+
+  isSavingValidatorChanges.value = true
+
+  try {
+    const updates = {
+      protocol: protocol.value,
+      findings: findings.value,
+      impression: impression.value,
+      protocol_en: englishProtocol.value,
+      findings_en: englishFindings.value,
+      impression_en: englishImpression.value,
+      comment: validatorComment.value.trim() || undefined,
+    }
+
+    await taskStore.editReportByValidator(study.value.taskId, updates)
+
+    // Reload task to get updated report (using taskId for optimized endpoint)
+    await taskStore.fetchTaskDetails(study.value.taskId)
+
+    // Clear validator comment after successful save
+    validatorComment.value = ''
+
+    // Show success toast
+    toast({
+      title: t('reporting.changesSaved'),
+      description: t('reporting.changesSavedDescription'),
+      variant: 'default'
+    })
+  } catch (error) {
+    console.error('Failed to save validator changes:', error)
+    toast({
+      title: t('reporting.saveError'),
+      description: t('reporting.saveErrorDescription'),
+      variant: 'destructive'
+    })
+  } finally {
+    isSavingValidatorChanges.value = false
+  }
+}
+
 const handlePriorClick = (prior: PriorStudy) => {
   selectedPrior.value = selectedPrior.value?.id === prior.id ? null : prior
   if (selectedPrior.value?.id !== prior.id) showEnglishTranslation.value = false
+}
+
+// Download study from PACS
+const isDownloading = ref(false)
+
+const handleDownload = async () => {
+  if (!study.value || isDownloading.value) return
+
+  isDownloading.value = true
+
+  try {
+    await studyService.downloadStudy(study.value.studyId)
+    toast({
+      title: t('reporting.downloadStarted'),
+      description: t('reporting.downloadDescription'),
+    })
+  } catch (error: any) {
+    console.error('Failed to download study:', error)
+    toast({
+      title: t('reporting.downloadFailed'),
+      description: error.message || t('reporting.downloadErrorDescription'),
+      variant: 'destructive',
+    })
+  } finally {
+    isDownloading.value = false
+  }
 }
 
 const formatDate = (timestamp: string) => {
@@ -836,14 +1106,14 @@ const formatTime = (timestamp: string) => {
 }
 
 onMounted(async () => {
-  const taskId = route.params.taskId as string
-  await taskStore.fetchTaskByStudyId(taskId)
+  const taskId = parseInt(route.params.taskId as string, 10)
+  await taskStore.fetchTaskDetails(taskId)
 
   // Auto-start validation if validator opens an assigned_for_validation task
   if (isValidator.value && study.value?.status === 'assigned-for-validation') {
     try {
       await taskStore.startValidationTask(taskId)
-      await taskStore.fetchTaskByStudyId(taskId)
+      await taskStore.fetchTaskDetails(taskId)
     } catch (error) {
       console.error('Failed to auto-start validation:', error)
     }
@@ -853,13 +1123,14 @@ onMounted(async () => {
 // Watch for route changes to refetch task data when navigating between tasks
 watch(() => route.params.taskId, async (newTaskId) => {
   if (newTaskId) {
-    await taskStore.fetchTaskByStudyId(newTaskId as string)
+    const taskId = parseInt(newTaskId as string, 10)
+    await taskStore.fetchTaskDetails(taskId)
 
     // Auto-start validation if validator opens an assigned_for_validation task
     if (isValidator.value && study.value?.status === 'assigned-for-validation') {
       try {
-        await taskStore.startValidationTask(newTaskId as string)
-        await taskStore.fetchTaskByStudyId(newTaskId as string)
+        await taskStore.startValidationTask(taskId)
+        await taskStore.fetchTaskDetails(taskId)
       } catch (error) {
         console.error('Failed to auto-start validation:', error)
       }

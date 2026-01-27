@@ -206,16 +206,6 @@ export interface PriorStudy {
 
 // Embedded types for optimized API responses
 
-export interface StudyEmbedded {
-  patient_id: string
-  patient_age: number
-  patient_sex: PatientSex
-  description: string
-  study_datetime: string
-  client_id: number
-  client_type_id: number
-}
-
 export interface ClientTypeEmbedded {
   id: number
   modality: Modality
@@ -231,7 +221,7 @@ export interface UserEmbedded {
 }
 
 export interface TaskWithEmbedded extends Task {
-  study?: StudyEmbedded
+  study?: Study  // Full Study with all DICOM fields
   client_type?: ClientTypeEmbedded
   reporting_radiologist?: UserEmbedded | null
   validating_radiologist?: UserEmbedded | null
@@ -264,7 +254,7 @@ export interface UserProfileWithDetails {
 
 export interface TaskDetail {
   task: TaskWithEmbedded
-  validator_comments: TaskEvent[]
+  validator_comments: TaskEventWithEmbedded[]
   prior_studies: PriorStudy[]
   latest_report: Report | null
 }

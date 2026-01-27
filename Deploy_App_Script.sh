@@ -5,7 +5,7 @@
 
 set -e
 
-STACK_NAME="${1:-platform-smi-xaidos-com}"
+STACK_NAME="${1:-platform-xaidos-com}"
 REGION="${2:-us-east-1}"
 
 # Colors for output
@@ -83,6 +83,6 @@ echo -e "${GREEN}Invalidation created: $INVALIDATION_ID${NC}"
 
 # Display summary
 echo -e "\n${GREEN}=== Application Deployment Complete ===${NC}"
-echo -e "${GREEN}Website URL: https://platform.smi.xaidos.com${NC}"
+echo -e "${GREEN}Website URL: https://platform.xaidos.com${NC}"
 echo -e "${GREEN}CloudFront URL: https://$CLOUDFRONT_DOMAIN${NC}"
 echo -e "${YELLOW}Note: Changes may take a few minutes to propagate through CloudFront${NC}"

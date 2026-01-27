@@ -26,8 +26,12 @@ function mapRole(backendRole: string | null): UserRole {
   if (!backendRole) return 'admin'
   const roleMap: Record<string, UserRole> = {
     'admin': 'admin',
+    // Backend format with underscores
     'reporting_radiologist': 'reporting-radiologist',
     'validating_radiologist': 'validating-radiologist',
+    // Also support kebab-case format (in case backend already returns it)
+    'reporting-radiologist': 'reporting-radiologist',
+    'validating-radiologist': 'validating-radiologist',
   }
   return roleMap[backendRole] || 'admin'
 }
@@ -41,6 +45,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   const isAuthenticated = computed(() => !!token.value && !!user.value)
   const isAdmin = computed(() => role.value === 'admin')
+  const userId = computed(() => user.value?.id ?? null)
   const fullName = computed(() => user.value ? `${user.value.firstName} ${user.value.lastName}` : '')
 
 
@@ -52,7 +57,13 @@ export const useAuthStore = defineStore('auth', () => {
     if (savedToken && savedUser) {
       token.value = savedToken
       user.value = JSON.parse(savedUser)
-      role.value = savedRole as UserRole
+      // Map the saved role to handle both old and new formats
+      role.value = mapRole(savedRole)
+
+      // Update localStorage with the correct format if it was different
+      if (savedRole !== role.value) {
+        localStorage.setItem('auth_role', role.value)
+      }
     }
   }
 
@@ -114,6 +125,7 @@ export const useAuthStore = defineStore('auth', () => {
     error,
     isAuthenticated,
     isAdmin,
+    userId,
     fullName,
     login,
     logout,

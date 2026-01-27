@@ -1,11 +1,6 @@
 import type { BodyArea } from '@/types/study'
 
 
-export function formatStudyId(id: number): string {
-  return `STD-${id.toString().padStart(3, '0')}`
-}
-
-
 export function formatUserId(id: number): string {
   return `PHY-${id.toString().padStart(3, '0')}`
 }
@@ -41,11 +36,6 @@ export function snakeToCamelCase(str: string): string {
 
 export function camelToSnakeCase(str: string): string {
   return str.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`)
-}
-
-
-export function parseStudyId(studyId: string): number {
-  return parseInt(studyId.replace('STD-', ''), 10)
 }
 
 

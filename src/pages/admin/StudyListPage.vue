@@ -149,7 +149,7 @@
               @click="handleRowClick(study, $event)"
               class="cursor-pointer"
             >
-              <td class="font-mono text-xs font-medium">{{ study.id }}</td>
+              <td class="font-mono text-xs font-medium">{{ study.accessionNumber }}</td>
               <td>
                 <div class="text-sm">{{ study.patientId }}</div>
                 <div class="text-xs text-muted-foreground">
@@ -277,7 +277,7 @@ const getDateTimeTo = () => {
 const filteredStudies = computed(() => {
   return studyStore.studies.filter((study) => {
     const matchesSearch =
-      study.id.toLowerCase().includes(searchTerm.value.toLowerCase()) ||
+      study.id.toString().toLowerCase().includes(searchTerm.value.toLowerCase()) ||
       study.patientId.toLowerCase().includes(searchTerm.value.toLowerCase()) ||
       study.clientName.toLowerCase().includes(searchTerm.value.toLowerCase())
     const matchesStatus = statusFilter.value === 'all' || study.status === statusFilter.value

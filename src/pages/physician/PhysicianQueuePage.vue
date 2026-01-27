@@ -70,7 +70,7 @@
               </div>
               <div>
                 <div class="flex items-center gap-2 mb-1">
-                  <span class="font-mono text-xs font-medium">{{ study.id }}</span>
+                  <span class="font-mono text-xs font-medium">{{ study.accessionNumber }}</span>
                   <StatusBadge :status="study.status" />
                 </div>
                 <div class="text-sm text-muted-foreground flex items-center gap-2">
@@ -113,7 +113,7 @@
               </div>
               <div class="flex-1">
                 <div class="flex items-center gap-2 mb-1">
-                  <span class="font-mono text-xs font-medium">{{ study.id }}</span>
+                  <span class="font-mono text-xs font-medium">{{ study.accessionNumber }}</span>
                   <span class="text-xs px-2 py-0.5 rounded bg-status-finalized/20 text-status-finalized">
                     {{ study.status }}
                   </span>
@@ -130,9 +130,7 @@
               </div>
             </div>
             <div class="flex items-center gap-6">
-              <span class="text-sm text-muted-foreground">
-                {{ format(new Date(study.deadline), "MMM d, yyyy") }}
-              </span>
+              <DeadlineTimer :deadline="study.deadline" />
             </div>
           </div>
 
@@ -161,7 +159,7 @@
               </div>
               <div>
                 <div class="flex items-center gap-2 mb-1">
-                  <span class="font-mono text-xs font-medium">{{ study.id }}</span>
+                  <span class="font-mono text-xs font-medium">{{ study.accessionNumber }}</span>
                   <StatusBadge :status="study.status" />
                 </div>
                 <div class="text-sm text-muted-foreground flex items-center gap-2">
@@ -172,9 +170,7 @@
             </div>
             <div class="flex items-center gap-6">
               <UrgencyBadge :urgency="study.urgency" />
-              <span class="text-sm text-muted-foreground">
-                {{ format(new Date(study.deadline), "MMM d, yyyy") }}
-              </span>
+              <DeadlineTimer :deadline="study.deadline" />
             </div>
           </div>
 
@@ -195,7 +191,6 @@ import { computed, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { FileText, AlertCircle, CheckCircle, Clock, MessageCircle } from 'lucide-vue-next'
-import { format } from 'date-fns'
 import PageHeader from '@/components/layout/PageHeader.vue'
 import StatusBadge from '@/components/ui/StatusBadge.vue'
 import UrgencyBadge from '@/components/ui/UrgencyBadge.vue'
@@ -214,25 +209,44 @@ const taskStore = useTaskStore()
 const activeTab = ref('pending')
 
 const pendingStudies = computed(() =>
-  [...taskStore.pendingReportingTasks, ...taskStore.inProgressReportingTasks, ...taskStore.draftReadyReportingTasks, ...taskStore.returnedTasks]
-    .filter(task => task.status !== 'translated')  // Exclude translated tasks - they're waiting for admin assignment
-    .sort((a, b) =>
-      new Date(a.deadline).getTime() - new Date(b.deadline).getTime()
-    )
+  taskStore.myReportingTasks.filter(task => {
+    // "На описание" - tasks BEFORE sending to validation
+    // Include: new, assigned, in-progress, draft-ready, returned (returned-for-revision)
+    // Exclude: translated (ready for validation), assigned-for-validation and beyond (they go to "Завершенные")
+    const pendingStatuses = ['new', 'assigned', 'in-progress', 'draft-ready', 'returned']
+    return pendingStatuses.includes(task.status)
+  }).sort((a, b) =>
+    new Date(a.deadline).getTime() - new Date(b.deadline).getTime()
+  )
 )
 
 const completedStudies = computed(() =>
-  taskStore.myReportingTasks.filter(s =>
-    ['draft-ready', 'translated', 'assigned-for-validation', 'under-validation', 'finalized', 'delivered'].includes(s.status)
-  ).sort((a, b) =>
+  taskStore.myReportingTasks.filter(s => {
+    // "Завершенные" - tasks AFTER sending to validation
+    // Include: assigned-for-validation, under-validation, finalized, delivered
+    const completedStatuses = ['assigned-for-validation', 'under-validation', 'finalized', 'delivered']
+    return completedStatuses.includes(s.status)
+  }).sort((a, b) =>
     new Date(b.deadline).getTime() - new Date(a.deadline).getTime()
   )
 )
 
 const commentedStudies = computed(() =>
-  taskStore.myReportingTasks.filter(s =>
-    (s.validatorCommentsCount && s.validatorCommentsCount > 0) && ['draft-ready', 'translated', 'assigned-for-validation', 'under-validation', 'finalized', 'delivered'].includes(s.status)
-  ).sort((a, b) =>
+  taskStore.myReportingTasks.filter(s => {
+    // "С комментариями" - tasks with validator comments
+    // Always show: 'returned' (returned-for-revision) - critical comments
+    // Also show: 'finalized' or 'delivered' with validator comments (non-critical edits)
+    if (s.status === 'returned') {
+      return true // Always show returned tasks (critical comments)
+    }
+
+    // For finalized/delivered, check if there are ANY validator comments
+    if (['finalized', 'delivered'].includes(s.status)) {
+      return (s.validatorCommentsCount && s.validatorCommentsCount > 0)
+    }
+
+    return false
+  }).sort((a, b) =>
     new Date(b.deadline).getTime() - new Date(a.deadline).getTime()
   )
 )
@@ -244,7 +258,7 @@ const activeCount = computed(() =>
 )
 const maxActive = 2
 
-const handleStudyClick = (taskId: string) => {
+const handleStudyClick = (taskId: number) => {
   router.push(`/report/${taskId}`)
 }
 

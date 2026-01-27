@@ -1,5 +1,5 @@
 import apiClient from '@/lib/api/client'
-import type { Physician } from '@/types/study'
+import type { Physician, UserRole } from '@/types/study'
 import type {
   PaginatedResponse,
   User,
@@ -10,7 +10,7 @@ import type {
   UserStats,
   UserProfileWithDetails,
 } from '@/types/api'
-import { mapUserToPhysician, mapUserWithDetailsToPhysician } from '@/lib/mappers/userMapper'
+import { mapUserToPhysician, mapUserWithDetailsToPhysician, unmapUserRole } from '@/lib/mappers/userMapper'
 import { parseUserId } from '@/lib/mappers/utils'
 import type { PaginatedResult } from './studyService'
 
@@ -91,17 +91,23 @@ export const userService = {
         password: data.password,
       }
 
-      if (data.phone) backendData.phone = data.phone
+      // Add role if provided
+      if (data.role) {
+        backendData.role = unmapUserRole(data.role as UserRole)
+      }
 
+      // Create user with role in single request
       const response = await apiClient.post<User>('/api/v1/admin/users', backendData)
       const user = response.data
 
-      if (data.role || data.specialization) {
+      // Update specialization separately if provided (role is already set during creation)
+      if (data.specialization) {
         await apiClient.patch(`/api/v1/admin/users/${user.id}/profile`, {
-          role: data.role,
           specialization: data.specialization,
         })
       }
+
+      // Note: phone is not supported by backend yet, skipping it
 
       return await this._fetchUserAsPhysician(user.id)
     } catch (error) {
@@ -116,14 +122,14 @@ export const userService = {
       if (data.firstName) backendData.first_name = data.firstName
       if (data.lastName) backendData.last_name = data.lastName
       if (data.email) backendData.email = data.email
-      if (data.phone) backendData.phone = data.phone
+      // Note: phone is not supported by backend yet, skipping it
 
       await apiClient.patch(`/api/v1/admin/users/${id}`, backendData)
 
       // Update role via profile endpoint if provided
       if (data.role) {
         await apiClient.patch(`/api/v1/admin/users/${id}/profile`, {
-          role: data.role,
+          role: unmapUserRole(data.role as UserRole),
         })
       }
 
@@ -182,7 +188,7 @@ export const userService = {
   async updateProfile(userId: number, data: ProfileUpdateData): Promise<void> {
     try {
       await apiClient.put('/api/v1/user/profile', {
-        role: data.role,
+        role: data.role ? unmapUserRole(data.role as UserRole) : undefined,
         specialization: data.specialization,
       })
     } catch (error) {

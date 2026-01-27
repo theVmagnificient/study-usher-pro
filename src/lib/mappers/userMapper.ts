@@ -66,6 +66,9 @@ function mapUserRole(role?: string | null): UserRole {
     admin: 'admin',
     reporting_radiologist: 'reporting-radiologist',
     validating_radiologist: 'validating-radiologist',
+    // Support both formats (backend may return kebab-case already)
+    'reporting-radiologist': 'reporting-radiologist',
+    'validating-radiologist': 'validating-radiologist',
   }
 
   return mapping[role] || 'reporting-radiologist'

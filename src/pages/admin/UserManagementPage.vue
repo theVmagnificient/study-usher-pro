@@ -259,10 +259,12 @@
             <Label>{{ t('userManagement.editDialog.email') }}</Label>
             <Input v-model="formData.email" type="email" :placeholder="t('userManagement.editDialog.emailPlaceholder')" />
           </div>
-          <div class="grid gap-2">
-            <Label>{{ t('userManagement.editDialog.phone') }}</Label>
-            <Input v-model="formData.phone" :placeholder="t('userManagement.editDialog.phonePlaceholder')" />
+          <!-- Password field - shown only when creating new user -->
+          <div v-if="!editingPhysician" class="grid gap-2">
+            <Label>{{ t('userManagement.editDialog.password') }}</Label>
+            <Input v-model="formData.password" type="password" :placeholder="t('userManagement.editDialog.passwordPlaceholder')" />
           </div>
+          <!-- Phone field temporarily hidden - not supported by backend yet -->
           <div class="grid gap-2">
             <Label>{{ t('userManagement.editDialog.role') }}</Label>
             <Select v-model="formData.role">
@@ -296,8 +298,10 @@
           </p>
         </div>
         <DialogFooter>
-          <Button variant="outline" @click="isDeleteDialogOpen = false">{{ t('common.cancel') }}</Button>
-          <Button variant="destructive" @click="confirmDelete">{{ t('userManagement.deleteDialog.delete') }}</Button>
+          <Button variant="outline" @click="isDeleteDialogOpen = false" :disabled="isDeleting">{{ t('common.cancel') }}</Button>
+          <Button variant="destructive" @click="confirmDelete" :disabled="isDeleting">
+            {{ isDeleting ? t('common.deleting') : t('userManagement.deleteDialog.delete') }}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -350,19 +354,20 @@ const isDialogOpen = ref(false)
 const isDeleteDialogOpen = ref(false)
 const editingPhysician = ref<string | null>(null)
 const deletingPhysician = ref<string | null>(null)
+const isDeleting = ref(false)
 
 const formData = ref({
   firstName: '',
   lastName: '',
   email: '',
-  phone: '',
+  password: '',
   role: 'reporting-radiologist' as UserRole
 })
 
 const filteredPhysicians = computed(() => {
   const query = searchQuery.value.toLowerCase()
   return userStore.users.filter(p =>
-    p.fullName.toLowerCase().includes(query) || p.id.toLowerCase().includes(query)
+    p.fullName.toLowerCase().includes(query) || p.id.toString().toLowerCase().includes(query)
   )
 })
 
@@ -388,7 +393,7 @@ const handleNew = () => {
     firstName: '',
     lastName: '',
     email: '',
-    phone: '',
+    password: '',
     role: 'reporting-radiologist'
   }
   isDialogOpen.value = true
@@ -403,7 +408,6 @@ const handleEdit = (physicianId: string) => {
       firstName: firstName || '',
       lastName: lastNameParts.join(' ') || '',
       email: physician.email || '',
-      phone: physician.phone || '',
       role: physician.role
     }
     isDialogOpen.value = true
@@ -425,18 +429,22 @@ const handleSave = async () => {
         firstName: formData.value.firstName,
         lastName: formData.value.lastName,
         email: formData.value.email,
-        phone: formData.value.phone,
         role: formData.value.role
       })
     }
   } else {
+    // Validate password for new user
+    if (!formData.value.password || formData.value.password.length < 6) {
+      alert('Password must be at least 6 characters long')
+      return
+    }
+
     // Create new physician
     await userStore.createUser({
       firstName: formData.value.firstName,
       lastName: formData.value.lastName,
       email: formData.value.email,
-      password: 'ChangeMe123!',
-      phone: formData.value.phone,
+      password: formData.value.password,
       role: formData.value.role
     })
   }
@@ -444,15 +452,26 @@ const handleSave = async () => {
 }
 
 const confirmDelete = async () => {
-  if (deletingPhysician.value) {
+  if (!deletingPhysician.value) return
+
+  isDeleting.value = true
+  try {
     const physician = userStore.users.find(p => p.id === deletingPhysician.value)
     if (physician) {
       const userId = parseInt(physician.id.split('-')[1])
       await userStore.deleteUser(userId)
+
+      // Close dialog only on success
+      isDeleteDialogOpen.value = false
+      deletingPhysician.value = null
     }
+  } catch (error) {
+    console.error('Failed to delete user:', error)
+    // Don't close dialog on error so user can see the error and retry
+    alert('Failed to delete user. Please try again.')
+  } finally {
+    isDeleting.value = false
   }
-  isDeleteDialogOpen.value = false
-  deletingPhysician.value = null
 }
 
 onMounted(async () => {
