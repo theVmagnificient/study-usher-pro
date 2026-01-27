@@ -25,7 +25,7 @@
         <h1 class="text-xl font-semibold">{{ physician.fullName }}</h1>
         <p class="text-sm text-muted-foreground">{{ t('profile.manageSchedule') }}</p>
       </div>
-      <Button variant="outline" @click="saveSchedule" v-if="isOwnSchedule">
+      <Button variant="outline" @click="saveSchedule">
         {{ t('common.save') }}
       </Button>
     </div>
@@ -268,11 +268,36 @@ const loadSchedule = async () => {
       schedule.value = scheduleMap
     } else {
       // Admin loading another user's schedule
-      // TODO: Implement admin schedule loading if needed
-      // For now, use existing physician.customSchedule logic
-      if (physician.value?.customSchedule) {
-        schedule.value = physician.value.customSchedule
-      }
+      const userId = parseInt(physicianId)
+      if (!userId) return
+
+      const slots = await userService.adminGetSchedule(userId, {
+        from: currentWeekStart.value,
+        to: endOfWeek(currentWeekStart.value, { weekStartsOn: 1 })
+      })
+
+      // Convert slots to schedule map
+      const scheduleMap: Record<string, number[]> = {}
+      slots.forEach(slot => {
+        const startDate = new Date(slot.start_time)
+        const endDate = new Date(slot.end_time)
+        const dateKey = format(startDate, 'yyyy-MM-dd')
+
+        const startHour = startDate.getHours()
+        const endHour = endDate.getHours()
+
+        if (!scheduleMap[dateKey]) {
+          scheduleMap[dateKey] = []
+        }
+
+        for (let hour = startHour; hour < endHour; hour++) {
+          if (!scheduleMap[dateKey].includes(hour)) {
+            scheduleMap[dateKey].push(hour)
+          }
+        }
+      })
+
+      schedule.value = scheduleMap
     }
   } catch (error) {
     console.error('Failed to load schedule:', error)
@@ -281,13 +306,9 @@ const loadSchedule = async () => {
 
 const saveSchedule = async () => {
   try {
-    if (!isOwnSchedule.value) {
-      // TODO: Implement admin schedule saving if needed
-      console.warn('Admin schedule saving not implemented yet')
-      return
-    }
+    const physicianId = route.params.physicianId as string
+    const userId = isOwnSchedule.value ? authStore.userId : parseInt(physicianId)
 
-    const userId = authStore.userId
     if (!userId) return
 
     // Convert schedule map to slot format
@@ -333,7 +354,13 @@ const saveSchedule = async () => {
       })
     })
 
-    await userService.bulkUpdateSchedule(userId, slots)
+    // Use appropriate API based on user type
+    if (isOwnSchedule.value) {
+      await userService.bulkUpdateSchedule(userId, slots)
+    } else {
+      await userService.adminBulkUpdateSchedule(userId, slots)
+    }
+
     alert(t('schedule.saveSuccess', 'Schedule saved successfully'))
   } catch (error) {
     console.error('Failed to save schedule:', error)

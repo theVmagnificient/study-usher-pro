@@ -213,6 +213,22 @@ export const userService = {
     }
   },
 
+  async adminGetSchedule(userId: number, dateRange?: DateRange): Promise<ScheduleSlot[]> {
+    try {
+      const params: Record<string, any> = {}
+      if (dateRange) {
+        params.start_date = dateRange.from.toISOString()
+        params.end_date = dateRange.to.toISOString()
+      }
+
+      const response = await apiClient.get<ScheduleSlot[]>(`/api/v1/admin/users/${userId}/schedule`, { params })
+      return response.data
+    } catch (error) {
+      console.error(`Failed to fetch schedule for user ${userId}:`, error)
+      throw error
+    }
+  },
+
   async createScheduleSlot(userId: number, slot: ScheduleSlotData): Promise<void> {
     try {
       const backendData = {
@@ -251,6 +267,24 @@ export const userService = {
       return response.data
     } catch (error) {
       console.error('Failed to bulk update schedule:', error)
+      throw error
+    }
+  },
+
+  async adminBulkUpdateSchedule(userId: number, slots: ScheduleSlotData[]): Promise<ScheduleSlot[]> {
+    try {
+      const backendData = {
+        slots: slots.map(slot => ({
+          start_time: slot.startTime,
+          end_time: slot.endTime,
+          is_available: slot.isAvailable,
+        })),
+      }
+
+      const response = await apiClient.put<ScheduleSlot[]>(`/api/v1/admin/users/${userId}/schedule`, backendData)
+      return response.data
+    } catch (error) {
+      console.error(`Failed to bulk update schedule for user ${userId}:`, error)
       throw error
     }
   },
