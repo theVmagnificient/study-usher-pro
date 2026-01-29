@@ -167,13 +167,10 @@ export const useTaskStore = defineStore('task', () => {
         throw new Error('No current task loaded')
       }
 
-      // First mark the task as translated (workflow requirement) if not already translated
-      if (currentTask.value.status !== 'translated') {
-        await taskService.markTranslated(currentTask.value.taskId)
-      }
-
-      // Submit for validation - backend will auto-assign validator from schedule
-      // If no validator available, task stays in TRANSLATED for admin to assign
+      // Submit for validation - backend will:
+      // 1. Auto-translate if status is DRAFT_READY (TODO: add real translation)
+      // 2. Auto-assign validator from schedule if available
+      // 3. If no validator → stays in TRANSLATED for admin to assign manually
       await taskService.submitForValidation(currentTask.value.taskId)
 
       await fetchMyReportingTasks()
@@ -187,7 +184,7 @@ export const useTaskStore = defineStore('task', () => {
   }
 
 
-  async function finalizeTask(taskId: number) {
+  async function finalizeTask(taskId: number, comment?: string) {
     loading.value = true
     error.value = null
 
@@ -196,7 +193,7 @@ export const useTaskStore = defineStore('task', () => {
       if (!currentTask.value) {
         throw new Error('No current task loaded')
       }
-      await taskService.finalizeTask(currentTask.value.taskId, currentUserId.value)
+      await taskService.finalizeTask(currentTask.value.taskId, currentUserId.value, comment)
 
 
       await fetchMyValidationTasks()

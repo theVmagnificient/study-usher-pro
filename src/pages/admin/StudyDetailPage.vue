@@ -37,10 +37,23 @@
           <Download class="w-4 h-4 mr-2" :class="{ 'animate-bounce': isDownloading }" />
           {{ isDownloading ? t('reporting.downloading') : t('studyDetail.dicom') }}
         </Button>
-        <Button variant="outline" @click="showReassignDialog = true">
-          <UserPlus class="w-4 h-4 mr-2" />
-          {{ t('studyList.reassign') }}
-        </Button>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger as-child>
+              <Button
+                variant="outline"
+                @click="showReassignDialog = true"
+                :disabled="!canReassign"
+              >
+                <UserPlus class="w-4 h-4 mr-2" />
+                {{ t('studyList.reassign') }}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent v-if="!canReassign">
+              <p>Cannot reassign tasks that have progressed beyond assignment</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
         <Button
           v-if="study.status === 'finalized'"
           variant="default"
@@ -441,6 +454,10 @@ import DialogContent from '@/components/ui/DialogContent.vue'
 import DialogHeader from '@/components/ui/DialogHeader.vue'
 import DialogTitle from '@/components/ui/DialogTitle.vue'
 import DialogDescription from '@/components/ui/DialogDescription.vue'
+import Tooltip from '@/components/ui/tooltip.vue'
+import TooltipContent from '@/components/ui/TooltipContent.vue'
+import TooltipProvider from '@/components/ui/TooltipProvider.vue'
+import TooltipTrigger from '@/components/ui/TooltipTrigger.vue'
 import type { PriorStudy, Physician } from '@/types/study'
 
 const route = useRoute()
@@ -477,6 +494,15 @@ const availableRadiologists = computed(() => {
     reporting: isValidationStatus ? [] : reportingRadiologists.value,
     validating: validatingRadiologists.value
   }
+})
+
+const canReassign = computed(() => {
+  if (!study.value) return false
+
+  // Allow reassignment for NEW (not yet assigned) and TRANSLATED (ready for validator assignment)
+  // Do NOT allow for ASSIGNED (already assigned) or other in-progress statuses
+  const allowedStatuses = ['new', 'translated']
+  return allowedStatuses.includes(study.value.status)
 })
 
 async function fetchRadiologists() {

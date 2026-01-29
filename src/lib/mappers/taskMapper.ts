@@ -72,14 +72,15 @@ export function mapTaskToStudy(ctx: TaskToStudyContext): Study {
   const { task, study, clientType, client, reportingUser, validatingUser, validatorEvents, priorStudies, currentReport } = ctx
 
 
-  // Validator comments - only comments from validator when returning or editing
+  // Validator comments - include comments from validator when returning, editing, or finalizing
   const validatorComments: ValidatorComment[] | undefined = validatorEvents
     ?.filter(event => {
       const action = event.data?.action
-      // Only include validator actions with meaningful content
+      // Include validator actions with meaningful content
       return (
         (action === 'task_report_returned_for_revision' && event.comment) ||
-        (action === 'task_report_edited_by_validator')
+        (action === 'task_report_edited_by_validator') ||
+        (action === 'task_report_finalized' && event.comment)
       )
     })
     .map((event, index) => ({
@@ -91,6 +92,7 @@ export function mapTaskToStudy(ctx: TaskToStudyContext): Study {
       timestamp: event.created_at,
       isCritical: event.data?.action === 'task_report_returned_for_revision',
       isAction: event.data?.action === 'task_report_edited_by_validator',
+      isNonCritical: event.data?.action === 'task_report_finalized',
     }))
 
   // Get validator comments count from embedded data if available, otherwise use array length

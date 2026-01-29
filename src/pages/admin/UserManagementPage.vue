@@ -378,7 +378,7 @@ const selected = computed(() =>
 const handleRoleChange = async (physicianId: string, newRole: UserRole) => {
   const physician = userStore.users.find(p => p.id === physicianId)
   if (physician) {
-    const userId = parseInt(physician.id.split('-')[1])
+    const userId = parseInt(physician.id)
     await userStore.updateUser(userId, { role: newRole })
   }
 }
@@ -424,7 +424,7 @@ const handleSave = async () => {
     // Update existing physician
     const physician = userStore.users.find(p => p.id === editingPhysician.value)
     if (physician) {
-      const userId = parseInt(physician.id.split('-')[1])
+      const userId = parseInt(physician.id)
       await userStore.updateUser(userId, {
         firstName: formData.value.firstName,
         lastName: formData.value.lastName,
@@ -458,7 +458,7 @@ const confirmDelete = async () => {
   try {
     const physician = userStore.users.find(p => p.id === deletingPhysician.value)
     if (physician) {
-      const userId = parseInt(physician.id.split('-')[1])
+      const userId = parseInt(physician.id)
       await userStore.deleteUser(userId)
 
       // Close dialog only on success

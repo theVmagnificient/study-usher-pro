@@ -33,7 +33,7 @@
           </div>
         </div>
         <div class="flex items-center gap-4">
-          <DeadlineTimer :deadline="study.deadline" />
+          <DeadlineTimer v-if="!['finalized', 'delivered'].includes(study.status)" :deadline="study.deadline" />
           <DropdownMenu v-if="linkedStudies.length > 0">
             <template #trigger>
               <Button variant="outline" size="sm">
@@ -144,6 +144,7 @@
         </div>
       </button>
       <button
+        v-if="isValidator"
         @click="notesExpanded = !notesExpanded"
         class="clinical-card border-l-4 border-l-muted-foreground text-left w-full hover:bg-muted/50 transition-colors cursor-pointer"
       >
@@ -196,7 +197,7 @@
                 v-model="protocol"
                 class="report-textarea"
                 :placeholder="t('reporting.protocolPlaceholder')"
-                :readonly="study.status === 'finalized' || study.status === 'delivered'"
+                :readonly="study.status === 'finalized' || study.status === 'delivered' || isTaskWithValidator"
               />
             </div>
             <div v-if="showEnglishTranslation">
@@ -208,7 +209,7 @@
                 v-model="englishProtocol"
                 class="report-textarea bg-blue-500/5 dark:bg-blue-500/10 border-blue-500/20"
                 :placeholder="t('reporting.protocolEnPlaceholder')"
-                :readonly="study.status === 'finalized' || study.status === 'delivered'"
+                :readonly="study.status === 'finalized' || study.status === 'delivered' || isTaskWithValidator"
               />
             </div>
             <div v-else-if="selectedPrior">
@@ -229,7 +230,7 @@
                 v-model="findings"
                 class="report-textarea"
                 :placeholder="t('reporting.findingsPlaceholder')"
-                :readonly="study.status === 'finalized' || study.status === 'delivered'"
+                :readonly="study.status === 'finalized' || study.status === 'delivered' || isTaskWithValidator"
               />
             </div>
             <div v-if="showEnglishTranslation">
@@ -241,7 +242,7 @@
                 v-model="englishFindings"
                 class="report-textarea bg-blue-500/5 dark:bg-blue-500/10 border-blue-500/20"
                 :placeholder="t('reporting.findingsEnPlaceholder')"
-                :readonly="study.status === 'finalized' || study.status === 'delivered'"
+                :readonly="study.status === 'finalized' || study.status === 'delivered' || isTaskWithValidator"
               />
             </div>
             <div v-else-if="selectedPrior">
@@ -263,7 +264,7 @@
                 v-model="impression"
                 class="report-textarea"
                 :placeholder="t('reporting.impressionPlaceholder')"
-                :readonly="study.status === 'finalized' || study.status === 'delivered'"
+                :readonly="study.status === 'finalized' || study.status === 'delivered' || isTaskWithValidator"
               />
             </div>
             <div v-if="showEnglishTranslation">
@@ -275,7 +276,7 @@
                 v-model="englishImpression"
                 class="report-textarea bg-blue-500/5 dark:bg-blue-500/10 border-blue-500/20"
                 :placeholder="t('reporting.impressionEnPlaceholder')"
-                :readonly="study.status === 'finalized' || study.status === 'delivered'"
+                :readonly="study.status === 'finalized' || study.status === 'delivered' || isTaskWithValidator"
               />
             </div>
             <div v-else-if="selectedPrior">
@@ -333,11 +334,19 @@
                 </Button>
               </div>
               <div v-else class="flex items-center gap-3">
-                <Button variant="outline" @click="handleSaveDraft">
+                <Button
+                  variant="outline"
+                  @click="handleSaveDraft"
+                  :disabled="isTaskWithValidator"
+                >
                   <Save class="w-4 h-4 mr-2" />
                   {{ t('reporting.saveDraft') }}
                 </Button>
-                <Button @click="handleOpenSubmitDialog">
+                <Button
+                  v-if="!isTaskCompleted"
+                  @click="handleOpenSubmitDialog"
+                  :disabled="isTaskWithValidator"
+                >
                   <Send class="w-4 h-4 mr-2" />
                   {{ t('reporting.submitForValidation') }}
                 </Button>
@@ -404,7 +413,7 @@
         </div>
 
         <!-- English Translation Toggle -->
-        <div class="clinical-card border-blue-500/30 bg-blue-500/5 dark:bg-blue-500/10">
+        <div v-if="isValidator" class="clinical-card border-blue-500/30 bg-blue-500/5 dark:bg-blue-500/10">
           <div class="clinical-card-header">
             <h3 class="text-sm font-semibold flex items-center gap-2">
               <Languages class="w-4 h-4 text-blue-500" />
@@ -847,6 +856,21 @@ const technicalNotesText = computed(() => study.value?.technicalNotes || t('repo
 const authStore = useAuthStore()
 const isValidator = computed(() => authStore.role === 'validating-radiologist')
 
+const isTaskCompleted = computed(() => {
+  if (!study.value) return false
+
+  const completedStatuses = ['finalized', 'delivered']
+  return completedStatuses.includes(study.value.status)
+})
+
+const isTaskWithValidator = computed(() => {
+  if (!study.value) return false
+
+  // Task is with validator if in these statuses
+  const validatorStatuses = ['assigned-for-validation', 'under-validation']
+  return validatorStatuses.includes(study.value.status)
+})
+
 const sortedComments = computed(() => {
   if (!study.value.validatorComments) return []
   return [...study.value.validatorComments].sort(
@@ -1003,7 +1027,9 @@ const handleApprove = async () => {
 
   try {
     // Use taskId directly instead of parsing study ID
-    await taskStore.finalizeTask(study.value.taskId)
+    // Pass validator comment if provided (optional non-critical comment)
+    const comment = validatorComment.value.trim() || undefined
+    await taskStore.finalizeTask(study.value.taskId, comment)
     router.go(-1)
   } catch (error) {
     console.error('Failed to finalize task:', error)
@@ -1109,6 +1135,11 @@ onMounted(async () => {
   const taskId = parseInt(route.params.taskId as string, 10)
   await taskStore.fetchTaskDetails(taskId)
 
+  // Auto-show translation for validators
+  if (isValidator.value) {
+    showEnglishTranslation.value = true
+  }
+
   // Auto-start validation if validator opens an assigned_for_validation task
   if (isValidator.value && study.value?.status === 'assigned-for-validation') {
     try {
@@ -1125,6 +1156,11 @@ watch(() => route.params.taskId, async (newTaskId) => {
   if (newTaskId) {
     const taskId = parseInt(newTaskId as string, 10)
     await taskStore.fetchTaskDetails(taskId)
+
+    // Auto-show translation for validators
+    if (isValidator.value) {
+      showEnglishTranslation.value = true
+    }
 
     // Auto-start validation if validator opens an assigned_for_validation task
     if (isValidator.value && study.value?.status === 'assigned-for-validation') {

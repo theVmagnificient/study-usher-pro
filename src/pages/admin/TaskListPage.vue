@@ -89,11 +89,14 @@
                   <UrgencyBadge :urgency="task.urgency" />
                 </td>
                 <td>
-                  <DeadlineTimer
-                    v-if="task.study && task.client_type"
-                    :deadline="calculateDeadline(task.study.study_datetime, task.client_type.expected_tat_hours)"
-                  />
-                  <span v-else class="text-muted-foreground text-sm">N/A</span>
+                  <template v-if="task.status !== 'delivered'">
+                    <DeadlineTimer
+                      v-if="task.study && task.client_type"
+                      :deadline="calculateDeadline(task.study.study_datetime, task.client_type.expected_tat_hours)"
+                    />
+                    <span v-else class="text-muted-foreground text-sm">N/A</span>
+                  </template>
+                  <span v-else class="text-muted-foreground text-sm">—</span>
                 </td>
                 <td class="text-sm">
                   <span v-if="task.reporting_radiologist">

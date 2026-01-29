@@ -85,12 +85,31 @@ const studyStore = useStudyStore()
 const now = new Date()
 
 const activeStudies = computed(() =>
-  studyStore.studies.filter(s => !['finalized', 'delivered'].includes(s.status))
+  studyStore.studies.filter(s => s.status !== 'delivered')
 )
 
-const overdueStudies = computed(() => 
-  activeStudies.value.filter(s => new Date(s.deadline) < now)
-)
+const overdueStudies = computed(() => {
+  const currentTime = new Date()
+
+  const overdue = studyStore.studies.filter(study => {
+    // Must have deadline
+    if (!study.deadline) return false
+
+    // Must be past deadline
+    const deadline = new Date(study.deadline)
+    if (deadline >= currentTime) return false
+
+    // Exclude only DELIVERED status
+    return study.status !== 'delivered'
+  })
+
+  // Sort by most overdue first
+  return overdue.sort((a, b) => {
+    const aOverdue = currentTime.getTime() - new Date(a.deadline!).getTime()
+    const bOverdue = currentTime.getTime() - new Date(b.deadline!).getTime()
+    return bOverdue - aOverdue // Most overdue first
+  })
+})
 
 const criticalStudies = computed(() => 
   activeStudies.value.filter(s => {
@@ -127,7 +146,8 @@ const statusCounts = computed(() => [
 ])
 
 const getOverdueTime = (study: Study) => {
-  const overdueMs = now.getTime() - new Date(study.deadline).getTime()
+  const currentTime = new Date()
+  const overdueMs = currentTime.getTime() - new Date(study.deadline).getTime()
   const overdueHours = Math.floor(overdueMs / (1000 * 60 * 60))
   const overdueMins = Math.floor((overdueMs % (1000 * 60 * 60)) / (1000 * 60))
   return overdueHours > 0 ? `${overdueHours}h ${overdueMins}m` : `${overdueMins}m`

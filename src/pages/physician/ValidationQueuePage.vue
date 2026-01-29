@@ -80,7 +80,7 @@
                   {{ study.assignedPhysician }}
                 </div>
                 <UrgencyBadge :urgency="study.urgency" />
-                <DeadlineTimer :deadline="study.deadline" />
+                <DeadlineTimer v-if="!['finalized', 'delivered'].includes(study.status)" :deadline="study.deadline" />
               </div>
             </div>
           </div>
@@ -124,7 +124,7 @@
                   {{ study.assignedPhysician }}
                 </div>
                 <UrgencyBadge :urgency="study.urgency" />
-                <DeadlineTimer :deadline="study.deadline" />
+                <DeadlineTimer v-if="!['finalized', 'delivered'].includes(study.status)" :deadline="study.deadline" />
               </div>
             </div>
           </div>
@@ -168,7 +168,7 @@
                   {{ study.assignedPhysician }}
                 </div>
                 <UrgencyBadge :urgency="study.urgency" />
-                <DeadlineTimer :deadline="study.deadline" />
+                <DeadlineTimer v-if="!['finalized', 'delivered'].includes(study.status)" :deadline="study.deadline" />
               </div>
             </div>
           </div>
@@ -221,7 +221,7 @@
                   {{ study.assignedPhysician }}
                 </div>
                 <UrgencyBadge :urgency="study.urgency" />
-                <DeadlineTimer :deadline="study.deadline" />
+                <DeadlineTimer v-if="!['finalized', 'delivered'].includes(study.status)" :deadline="study.deadline" />
               </div>
             </div>
           </div>
@@ -265,7 +265,7 @@
                   {{ study.assignedPhysician }}
                 </div>
                 <UrgencyBadge :urgency="study.urgency" />
-                <DeadlineTimer :deadline="study.deadline" />
+                <DeadlineTimer v-if="!['finalized', 'delivered'].includes(study.status)" :deadline="study.deadline" />
               </div>
             </div>
           </div>
@@ -309,7 +309,7 @@
                   {{ study.assignedPhysician }}
                 </div>
                 <UrgencyBadge :urgency="study.urgency" />
-                <DeadlineTimer :deadline="study.deadline" />
+                <DeadlineTimer v-if="!['finalized', 'delivered'].includes(study.status)" :deadline="study.deadline" />
               </div>
             </div>
           </div>

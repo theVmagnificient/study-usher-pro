@@ -2,7 +2,7 @@ import type { BodyArea } from '@/types/study'
 
 
 export function formatUserId(id: number): string {
-  return `PHY-${id.toString().padStart(3, '0')}`
+  return id.toString()
 }
 
 
@@ -40,7 +40,7 @@ export function camelToSnakeCase(str: string): string {
 
 
 export function parseUserId(userId: string): number {
-  return parseInt(userId.replace('PHY-', ''), 10)
+  return parseInt(userId, 10)
 }
 
 

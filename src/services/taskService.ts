@@ -95,9 +95,10 @@ export const taskService = {
   },
 
 
-  async finalizeTask(taskId: number, userId: number): Promise<void> {
+  async finalizeTask(taskId: number, userId: number, comment?: string): Promise<void> {
     try {
-      await apiClient.post(`/api/v1/tasks/${taskId}/validation/approve`)
+      const params = comment ? { comment } : {}
+      await apiClient.post(`/api/v1/tasks/${taskId}/validation/approve`, null, { params })
     } catch (error) {
       console.error(`Failed to finalize task ${taskId}:`, error)
       throw error

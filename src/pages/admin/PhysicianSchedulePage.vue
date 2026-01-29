@@ -25,7 +25,11 @@
         <h1 class="text-xl font-semibold">{{ physician.fullName }}</h1>
         <p class="text-sm text-muted-foreground">{{ t('profile.manageSchedule') }}</p>
       </div>
-      <Button variant="outline" @click="saveSchedule">
+      <Button
+        variant="outline"
+        @click="saveSchedule"
+        :disabled="isReadOnly"
+      >
         {{ t('common.save') }}
       </Button>
     </div>
@@ -71,7 +75,7 @@
                 <div class="text-sm font-medium">{{ format(date, "dd.MM") }}</div>
                 <div class="text-xs text-muted-foreground">{{ DAY_NAMES[date.getDay()] }}</div>
                 <button
-                  v-if="!isOwnSchedule && schedule[format(date, 'yyyy-MM-dd')] !== undefined"
+                  v-if="!isOwnSchedule && schedule[format(date, 'yyyy-MM-dd')] !== undefined && !isReadOnly"
                   @click="resetDayToDefault(date)"
                   class="text-xs text-primary hover:underline mt-1"
                 >
@@ -84,13 +88,15 @@
                 <button
                   v-for="hour in HOURS"
                   :key="hour"
-                  @click="toggleHour(date, hour)"
+                  @click="!isReadOnly && toggleHour(date, hour)"
+                  :disabled="isReadOnly"
                   :class="cn(
                     'w-8 h-8 text-xs font-medium rounded transition-colors flex items-center justify-center',
                     isScheduled(date, hour)
                       ? 'bg-primary text-primary-foreground'
                       : 'bg-muted/50 text-muted-foreground hover:bg-muted',
-                    !isOwnSchedule && !isScheduled(date, hour) && isDefaultWorkingHour(date, hour) && 'ring-1 ring-primary/30'
+                    !isOwnSchedule && !isScheduled(date, hour) && isDefaultWorkingHour(date, hour) && 'ring-1 ring-primary/30',
+                    isReadOnly && 'cursor-not-allowed opacity-60'
                   )"
                   :title="`${hour}:00 - ${hour + 1}:00`"
                 >
@@ -154,6 +160,11 @@ const DAY_NAMES = computed(() => [
 const isOwnSchedule = computed(() => {
   const physicianId = route.params.physicianId
   return authStore.userId?.toString() === physicianId?.toString()
+})
+
+// Check if user can edit schedules (only admins can edit)
+const isReadOnly = computed(() => {
+  return !authStore.isAdmin
 })
 
 const physician = computed(() => {
@@ -309,7 +320,17 @@ const saveSchedule = async () => {
     const physicianId = route.params.physicianId as string
     const userId = isOwnSchedule.value ? authStore.userId : parseInt(physicianId)
 
-    if (!userId) return
+    if (!userId) {
+      console.error('No user ID available')
+      alert('Error: No user ID found')
+      return
+    }
+
+    console.log('Saving schedule:', {
+      isOwnSchedule: isOwnSchedule.value,
+      userId,
+      isAdmin: authStore.isAdmin
+    })
 
     // Convert schedule map to slot format
     const slots: Array<{ startTime: string; endTime: string; isAvailable: boolean }> = []
@@ -354,17 +375,26 @@ const saveSchedule = async () => {
       })
     })
 
+    console.log('Schedule slots to save:', slots.length)
+
     // Use appropriate API based on user type
     if (isOwnSchedule.value) {
       await userService.bulkUpdateSchedule(userId, slots)
     } else {
+      if (!authStore.isAdmin) {
+        throw new Error('Only admins can edit other users\' schedules')
+      }
       await userService.adminBulkUpdateSchedule(userId, slots)
     }
 
     alert(t('schedule.saveSuccess', 'Schedule saved successfully'))
-  } catch (error) {
+
+    // Reload schedule to confirm changes
+    await loadSchedule()
+  } catch (error: any) {
     console.error('Failed to save schedule:', error)
-    alert(t('schedule.saveError', 'Failed to save schedule'))
+    const errorMessage = error.response?.data?.detail || error.message || 'Failed to save schedule'
+    alert(`Error: ${errorMessage}`)
   }
 }
 

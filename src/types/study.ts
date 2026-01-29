@@ -75,6 +75,7 @@ export interface ValidatorComment {
   timestamp: string;
   isCritical?: boolean;
   isAction?: boolean; // Flag to distinguish actions from regular comments
+  isNonCritical?: boolean; // Flag for non-critical comments at finalization
 }
 
 export interface TaskType {

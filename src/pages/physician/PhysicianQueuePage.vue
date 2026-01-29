@@ -81,7 +81,7 @@
             </div>
             <div class="flex items-center gap-6">
               <UrgencyBadge :urgency="study.urgency" />
-              <DeadlineTimer :deadline="study.deadline" />
+              <DeadlineTimer v-if="!['finalized', 'delivered'].includes(study.status)" :deadline="study.deadline" />
               <span v-if="study.hasPriors" class="status-badge status-assigned">
                 {{ t('queue.priors', { count: study.priorCount }) }}
               </span>
@@ -130,7 +130,7 @@
               </div>
             </div>
             <div class="flex items-center gap-6">
-              <DeadlineTimer :deadline="study.deadline" />
+              <DeadlineTimer v-if="!['finalized', 'delivered'].includes(study.status)" :deadline="study.deadline" />
             </div>
           </div>
 
@@ -170,7 +170,7 @@
             </div>
             <div class="flex items-center gap-6">
               <UrgencyBadge :urgency="study.urgency" />
-              <DeadlineTimer :deadline="study.deadline" />
+              <DeadlineTimer v-if="!['finalized', 'delivered'].includes(study.status)" :deadline="study.deadline" />
             </div>
           </div>
 
