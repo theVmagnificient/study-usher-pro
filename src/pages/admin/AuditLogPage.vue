@@ -21,7 +21,7 @@
         <thead>
           <tr>
             <th>{{ t('auditLog.headers.timestamp') }}</th>
-            <th>{{ t('auditLog.headers.studyId') }}</th>
+            <th>{{ t('auditLog.headers.accessionNumber') }}</th>
             <th>{{ t('auditLog.headers.action') }}</th>
             <th>{{ t('auditLog.headers.statusChange') }}</th>
             <th>{{ t('auditLog.headers.user') }}</th>
@@ -31,10 +31,10 @@
         <tbody>
           <tr v-for="entry in auditStore.auditLog" :key="entry.id">
             <td class="text-sm text-muted-foreground whitespace-nowrap">
-              {{ format(new Date(entry.timestamp), "MMM dd, yyyy HH:mm") }}
+              {{ formatDate(entry.timestamp) }}
             </td>
-            <td class="font-mono text-xs font-medium">{{ entry.studyId }}</td>
-            <td class="text-sm">{{ entry.action }}</td>
+            <td class="font-mono text-xs font-medium">{{ entry.accessionNumber || entry.studyId }}</td>
+            <td class="text-sm">{{ getLocalizedAction(entry.action) }}</td>
             <td>
               <div v-if="entry.previousStatus && entry.newStatus" class="flex items-center gap-2">
                 <StatusBadge :status="entry.previousStatus" />
@@ -57,16 +57,33 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { onMounted, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { format } from 'date-fns'
+import { ru } from 'date-fns/locale'
 import { MessageSquare } from 'lucide-vue-next'
 import PageHeader from '@/components/layout/PageHeader.vue'
 import StatusBadge from '@/components/ui/StatusBadge.vue'
 import { useAuditStore } from '@/stores/auditStore'
+import { localizeAuditAction } from '@/lib/utils/auditLocale'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const auditStore = useAuditStore()
+
+// Определяем локаль для date-fns на основе текущего языка
+const dateLocale = computed(() => {
+  return locale.value === 'ru' ? ru : undefined
+})
+
+// Функция для форматирования даты с учетом локали
+const formatDate = (dateString: string) => {
+  return format(new Date(dateString), "d MMM yyyy HH:mm", { locale: dateLocale.value })
+}
+
+// Функция для локализации действия
+const getLocalizedAction = (action: string) => {
+  return localizeAuditAction(action, t)
+}
 
 onMounted(async () => {
   await auditStore.fetchAuditLog()

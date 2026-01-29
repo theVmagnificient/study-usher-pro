@@ -460,7 +460,7 @@
     </div>
 
     <!-- Patient Summary Panel -->
-    <div class="fixed bottom-4 right-4 w-80 bg-card border border-border rounded-lg shadow-lg z-20">
+    <div v-if="false" class="fixed bottom-4 right-4 w-80 bg-card border border-border rounded-lg shadow-lg z-20">
       <button
         @click="summaryExpanded = !summaryExpanded"
         class="w-full p-3 flex items-center justify-between bg-primary/5 rounded-t-lg hover:bg-primary/10 transition-colors"

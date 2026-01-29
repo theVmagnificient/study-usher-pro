@@ -360,7 +360,7 @@ const messages = {
 
       headers: {
         timestamp: "Timestamp",
-        studyId: "Study ID",
+        accessionNumber: "Accession Number",
         action: "Action",
         statusChange: "Status Change",
         user: "User",
@@ -972,11 +972,40 @@ const messages = {
 
       headers: {
         timestamp: "Время",
-        studyId: "ID исследования",
+        accessionNumber: "Номер исследования",
         action: "Действие",
         statusChange: "Изменение статуса",
         user: "Пользователь",
         comment: "Комментарий"
+      },
+
+      actions: {
+        "Status Changed": "Изменение статуса",
+        "Task Created": "Задача создана",
+        "Task Assigned": "Задача назначена",
+        "Задача назначена": "Задача назначена",
+        "Task Reassigned": "Задача переназначена",
+        "Report Submitted": "Отчет отправлен",
+        "Report Updated": "Отчет обновлен",
+        "Validation Started": "Валидация начата",
+        "Validation Completed": "Валидация завершена",
+        "Returned For Revision": "Возвращено на доработку",
+        "Task Finalized": "Задача завершена",
+        "Task Delivered": "Задача доставлена",
+        "Comment Added": "Комментарий добавлен",
+        "Assigned For Validation": "Назначено на валидацию",
+        "Unknown Action": "Неизвестное действие",
+
+        // Backend actions
+        "Task Report Assigned For Validation": "Назначено на валидацию",
+        "Task Report Translated": "Отчет переведен",
+        "Task Report Created": "Отчет создан",
+        "Task In Progress": "В работе",
+        "Task Report Delivered": "Отчет отправлен",
+        "Task Report Finalized": "Отчет завершен",
+        "Task Report Under Validation": "На валидации",
+        "Task Report Edited By Validator": "Отчет отредактирован валидатором",
+        "Task Report Returned For Revision": "Возвращено на доработку"
       }
     },
 

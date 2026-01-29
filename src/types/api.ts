@@ -230,6 +230,7 @@ export interface TaskWithEmbedded extends Task {
 
 export interface TaskEventWithEmbedded extends TaskEvent {
   study_id?: number
+  accession_number?: string
   user?: UserEmbedded | null
 }
 

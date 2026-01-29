@@ -127,6 +127,7 @@ export interface PriorStudy {
 export interface AuditLogEntry {
   id: string;
   studyId: number;
+  accessionNumber?: string;
   action: string;
   user: string;
   timestamp: string;

@@ -39,6 +39,7 @@ export function mapTaskEventToAuditLog(ctx: TaskEventToAuditContext): AuditLogEn
   return {
     id: `LOG-${studyId}-${new Date(taskEvent.created_at).getTime()}`,
     studyId: studyId,
+    accessionNumber: taskEvent.accession_number,
     action,
     user: user ? formatPhysicianName(user.first_name, user.last_name) : 'System',
     timestamp: taskEvent.created_at,
