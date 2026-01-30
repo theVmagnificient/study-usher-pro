@@ -1,6 +1,6 @@
 import apiClient from '@/lib/api/client'
 import type { Study } from '@/types/study'
-import type { Task, TaskWithEmbedded, Study as BackendStudy, ClientType, Client, User, Report, UserWithDetails, TaskDetail, TaskEvent, TaskEventWithEmbedded, PriorStudy as BackendPriorStudy } from '@/types/api'
+import type { Task, TaskWithEmbedded, Study as BackendStudy, ClientType, Client, User, Report, UserWithDetails, TaskDetail, ReportComment, PriorStudy as BackendPriorStudy } from '@/types/api'
 import { mapTaskToStudy } from '@/lib/mappers/taskMapper'
 import { mapReportSubmit, type ReportSubmitData } from '@/lib/mappers/reportMapper'
 import { lookupCache } from '@/lib/lookup/lookupCache'
@@ -301,7 +301,7 @@ export const taskService = {
         client,
         reportingUser,
         validatingUser,
-        validatorEvents: undefined, // Comments loaded on-demand
+        validatorComments: undefined, // Comments loaded on-demand
       })
     } catch (error) {
       console.error(`Failed to fetch task as study (light) for task ID ${task.id}:`, error)
@@ -411,7 +411,7 @@ export const taskService = {
       }
 
       // Fetch validator comments, prior studies, and current report in parallel
-      const [validatorEvents, priorStudies, currentReport] = await Promise.all([
+      const [validatorComments, priorStudies, currentReport] = await Promise.all([
         this.getValidatorComments(task.id),
         this.getPriorStudies(task.id, 10),
         this.getLatestReport(task.id)
@@ -424,7 +424,7 @@ export const taskService = {
         client,
         reportingUser,
         validatingUser,
-        validatorEvents,
+        validatorComments,
         priorStudies,
         currentReport: currentReport || undefined,
       })
@@ -489,9 +489,9 @@ export const taskService = {
   },
 
 
-  async getValidatorComments(taskId: number): Promise<import('@/types/api').TaskEvent[]> {
+  async getValidatorComments(taskId: number): Promise<import('@/types/api').ReportComment[]> {
     try {
-      const response = await apiClient.get<import('@/types/api').TaskEvent[]>(
+      const response = await apiClient.get<import('@/types/api').ReportComment[]>(
         `/api/v1/tasks/${taskId}/comments`
       )
       return response.data
@@ -546,7 +546,7 @@ export const taskService = {
           created_at: '',
           updated_at: '',
         } : undefined,
-        validatorEvents: data.validator_comments as TaskEventWithEmbedded[],
+        validatorComments: data.validator_comments,
         priorStudies: data.prior_studies as BackendPriorStudy[],
         currentReport: data.latest_report || undefined,
       })

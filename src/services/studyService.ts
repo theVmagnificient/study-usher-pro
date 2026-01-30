@@ -8,7 +8,7 @@ import type {
   ClientType,
   Client,
   User,
-  TaskEvent,
+  ReportComment,
   PriorStudy,
 } from '@/types/api'
 import { mapTaskToStudy } from '@/lib/mappers/taskMapper'
@@ -289,7 +289,7 @@ export const studyService = {
         : undefined
 
       // Skip fetching comments, prior studies, and report for list view - they're not displayed
-      const validatorEvents: TaskEvent[] = []
+      const validatorComments: ReportComment[] = []
       const priorStudies: PriorStudy[] = []
       const currentReport = undefined
 
@@ -300,7 +300,7 @@ export const studyService = {
         client,
         reportingUser,
         validatingUser,
-        validatorEvents,
+        validatorComments,
         priorStudies,
         currentReport,
       })
@@ -435,7 +435,7 @@ export const studyService = {
 
 
       // Fetch validator comments, prior studies, and current report in parallel
-      const [validatorEvents, priorStudies, currentReport] = await Promise.all([
+      const [validatorComments, priorStudies, currentReport] = await Promise.all([
         this._getValidatorComments(task.id),
         this._getPriorStudies(task.id, 10),
         this._getLatestReport(task.id)
@@ -449,7 +449,7 @@ export const studyService = {
         client,
         reportingUser,
         validatingUser,
-        validatorEvents,
+        validatorComments,
         priorStudies,
         currentReport: currentReport || undefined,
       })
@@ -472,9 +472,9 @@ export const studyService = {
   },
 
 
-  async _getValidatorComments(taskId: number): Promise<TaskEvent[]> {
+  async _getValidatorComments(taskId: number): Promise<ReportComment[]> {
     try {
-      const response = await apiClient.get<TaskEvent[]>(
+      const response = await apiClient.get<ReportComment[]>(
         `/api/v1/tasks/${taskId}/comments`
       )
       return response.data

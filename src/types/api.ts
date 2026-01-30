@@ -116,6 +116,21 @@ export interface TaskEvent {
   updated_at: string
 }
 
+export interface ReportComment {
+  id: number
+  task_id: number
+  report_id: number | null
+  author_id: number
+  text: string
+  comment_type: 'critical' | 'non_critical'
+  created_at: string
+  updated_at: string
+  // Embedded author info
+  author_first_name: string | null
+  author_last_name: string | null
+  author_email: string | null
+}
+
 export interface ScheduleSlot {
   id: number
   user_id: number
@@ -255,7 +270,7 @@ export interface UserProfileWithDetails {
 
 export interface TaskDetail {
   task: TaskWithEmbedded
-  validator_comments: TaskEventWithEmbedded[]
+  validator_comments: ReportComment[]
   prior_studies: PriorStudy[]
   latest_report: Report | null
 }

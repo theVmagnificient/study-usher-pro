@@ -197,7 +197,7 @@
                 v-model="protocol"
                 class="report-textarea"
                 :placeholder="t('reporting.protocolPlaceholder')"
-                :readonly="study.status === 'finalized' || study.status === 'delivered' || isTaskWithValidator"
+                :readonly="study.status === 'finalized' || study.status === 'delivered' || (isTaskWithValidator && !isValidator)"
               />
             </div>
             <div v-if="showEnglishTranslation">
@@ -209,7 +209,7 @@
                 v-model="englishProtocol"
                 class="report-textarea bg-blue-500/5 dark:bg-blue-500/10 border-blue-500/20"
                 :placeholder="t('reporting.protocolEnPlaceholder')"
-                :readonly="study.status === 'finalized' || study.status === 'delivered' || isTaskWithValidator"
+                :readonly="study.status === 'finalized' || study.status === 'delivered' || (isTaskWithValidator && !isValidator)"
               />
             </div>
             <div v-else-if="selectedPrior">
@@ -230,7 +230,7 @@
                 v-model="findings"
                 class="report-textarea"
                 :placeholder="t('reporting.findingsPlaceholder')"
-                :readonly="study.status === 'finalized' || study.status === 'delivered' || isTaskWithValidator"
+                :readonly="study.status === 'finalized' || study.status === 'delivered' || (isTaskWithValidator && !isValidator)"
               />
             </div>
             <div v-if="showEnglishTranslation">
@@ -242,7 +242,7 @@
                 v-model="englishFindings"
                 class="report-textarea bg-blue-500/5 dark:bg-blue-500/10 border-blue-500/20"
                 :placeholder="t('reporting.findingsEnPlaceholder')"
-                :readonly="study.status === 'finalized' || study.status === 'delivered' || isTaskWithValidator"
+                :readonly="study.status === 'finalized' || study.status === 'delivered' || (isTaskWithValidator && !isValidator)"
               />
             </div>
             <div v-else-if="selectedPrior">
@@ -264,7 +264,7 @@
                 v-model="impression"
                 class="report-textarea"
                 :placeholder="t('reporting.impressionPlaceholder')"
-                :readonly="study.status === 'finalized' || study.status === 'delivered' || isTaskWithValidator"
+                :readonly="study.status === 'finalized' || study.status === 'delivered' || (isTaskWithValidator && !isValidator)"
               />
             </div>
             <div v-if="showEnglishTranslation">
@@ -276,7 +276,7 @@
                 v-model="englishImpression"
                 class="report-textarea bg-blue-500/5 dark:bg-blue-500/10 border-blue-500/20"
                 :placeholder="t('reporting.impressionEnPlaceholder')"
-                :readonly="study.status === 'finalized' || study.status === 'delivered' || isTaskWithValidator"
+                :readonly="study.status === 'finalized' || study.status === 'delivered' || (isTaskWithValidator && !isValidator)"
               />
             </div>
             <div v-else-if="selectedPrior">
@@ -866,7 +866,6 @@ const isTaskCompleted = computed(() => {
 const isTaskWithValidator = computed(() => {
   if (!study.value) return false
 
-  // Task is with validator if in these statuses
   const validatorStatuses = ['assigned-for-validation', 'under-validation']
   return validatorStatuses.includes(study.value.status)
 })
@@ -914,7 +913,7 @@ const handleSaveEdit = async () => {
     if (editProtocolEn.value.trim()) updates.protocol_en = editProtocolEn.value
     if (editFindingsEn.value.trim()) updates.findings_en = editFindingsEn.value
     if (editImpressionEn.value.trim()) updates.impression_en = editImpressionEn.value
-    if (editComment.value.trim()) updates.comment = editComment.value
+    // Note: comment is NOT sent here - only on finalize/reject
 
     await taskStore.editReportByValidator(study.value.taskId, updates)
 
@@ -1061,7 +1060,7 @@ const handleSaveValidatorChanges = async () => {
       protocol_en: englishProtocol.value,
       findings_en: englishFindings.value,
       impression_en: englishImpression.value,
-      comment: validatorComment.value.trim() || undefined,
+      // Note: comment is NOT sent here - only on finalize/reject
     }
 
     await taskStore.editReportByValidator(study.value.taskId, updates)
@@ -1069,8 +1068,7 @@ const handleSaveValidatorChanges = async () => {
     // Reload task to get updated report (using taskId for optimized endpoint)
     await taskStore.fetchTaskDetails(study.value.taskId)
 
-    // Clear validator comment after successful save
-    validatorComment.value = ''
+    // Note: validator comment is NOT cleared here - it will be sent only on finalize/reject
 
     // Show success toast
     toast({

@@ -406,33 +406,6 @@ export const useTaskStore = defineStore('task', () => {
   })
 
 
-  // Lazy load validator comments for tasks
-  async function loadCommentsForTasks(tasks: Study[]) {
-    try {
-      // Fetch comments for all tasks in parallel
-      const commentsPromises = tasks.map(task =>
-        taskService.getValidatorComments(task.taskId)
-      )
-      const commentsResults = await Promise.all(commentsPromises)
-
-      // Update each task with its comments
-      tasks.forEach((task, index) => {
-        const validatorEvents = commentsResults[index]
-        if (validatorEvents && validatorEvents.length > 0) {
-          // Map events to validator comments
-          task.validatorComments = validatorEvents.map((event, idx) => ({
-            id: `${task.taskId}-${idx}`,
-            text: event.comment || '',
-            validatorName: `Validator ${event.user_id}`,
-            timestamp: event.created_at
-          }))
-        }
-      })
-    } catch (err) {
-      console.error('Error loading comments for tasks:', err)
-    }
-  }
-
   return {
 
     myReportingTasks,
@@ -459,7 +432,6 @@ export const useTaskStore = defineStore('task', () => {
     startValidationTask,
     markTaskTranslated,
     markTaskDelivered,
-    loadCommentsForTasks,
 
 
     pendingReportingTasks,

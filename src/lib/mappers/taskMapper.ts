@@ -6,8 +6,7 @@ import type {
   User,
   Client,
   TaskStatus as BackendTaskStatus,
-  TaskEvent,
-  TaskEventWithEmbedded,
+  ReportComment,
   PriorStudy as BackendPriorStudy,
 } from '@/types/api'
 import {
@@ -24,7 +23,7 @@ export interface TaskToStudyContext {
   client: Client
   reportingUser?: User
   validatingUser?: User
-  validatorEvents?: TaskEventWithEmbedded[]
+  validatorComments?: ReportComment[]
   priorStudies?: BackendPriorStudy[]
   currentReport?: import('@/types/api').Report
 }
@@ -69,55 +68,28 @@ function mapPriorStudy(backendPrior: BackendPriorStudy): PriorStudy {
 
 
 export function mapTaskToStudy(ctx: TaskToStudyContext): Study {
-  const { task, study, clientType, client, reportingUser, validatingUser, validatorEvents, priorStudies, currentReport } = ctx
+  const { task, study, clientType, client, reportingUser, validatingUser, validatorComments, priorStudies, currentReport } = ctx
 
-
-  // Validator comments - include comments from validator when returning, editing, or finalizing
-  const validatorComments: ValidatorComment[] | undefined = validatorEvents
-    ?.filter(event => {
-      const action = event.data?.action
-      // Include validator actions with meaningful content
-      return (
-        (action === 'task_report_returned_for_revision' && event.comment) ||
-        (action === 'task_report_edited_by_validator') ||
-        (action === 'task_report_finalized' && event.comment)
-      )
-    })
-    .map((event, index) => ({
-      id: `${task.id}-${index}`,
-      text: formatTaskEventMessage(event),
-      validatorName: event.user
-        ? formatPhysicianName(event.user.first_name, event.user.last_name)
-        : 'Unknown Validator',
-      timestamp: event.created_at,
-      isCritical: event.data?.action === 'task_report_returned_for_revision',
-      isAction: event.data?.action === 'task_report_edited_by_validator',
-      isNonCritical: event.data?.action === 'task_report_finalized',
+  // Map ReportComment to ValidatorComment format
+  const mappedValidatorComments: ValidatorComment[] | undefined = validatorComments
+    ?.map((comment) => ({
+      id: `comment-${comment.id}`,
+      text: comment.text,
+      validatorName: comment.author_first_name && comment.author_last_name
+        ? formatPhysicianName(comment.author_first_name, comment.author_last_name)
+        : comment.author_email || 'Unknown Validator',
+      timestamp: comment.created_at,
+      isCritical: comment.comment_type === 'critical',
+      isAction: false,  // Actions are not comments
+      isNonCritical: comment.comment_type === 'non_critical',
     }))
 
   // Get validator comments count from embedded data if available, otherwise use array length
   const taskWithEmbedded = task as import('@/types/api').TaskWithEmbedded
-  const validatorCommentsCount = taskWithEmbedded.validator_comments_count ?? validatorComments?.length ?? 0
+  const validatorCommentsCount = taskWithEmbedded.validator_comments_count ?? mappedValidatorComments?.length ?? 0
 
-  // Map ALL events to audit log entries - using the same validatorEvents source
-  const auditLog: AuditLogEntry[] | undefined = validatorEvents?.map((event, index) => {
-    const action = event.data?.action
-    const oldStatus = event.data?.old_status
-    const newStatus = event.data?.new_status
-
-    return {
-      id: `${task.id}-event-${index}`,
-      studyId: event.study_id ?? study.id,
-      action: formatTaskEventMessage(event),
-      user: event.user
-        ? formatPhysicianName(event.user.first_name, event.user.last_name)
-        : 'System',
-      timestamp: event.created_at,
-      previousStatus: oldStatus ? mapTaskStatus(oldStatus) : undefined,
-      newStatus: newStatus ? mapTaskStatus(newStatus) : undefined,
-      comment: event.comment ?? undefined,
-    }
-  })
+  // Audit log is no longer derived from comments - should come from a separate endpoint if needed
+  const auditLog: AuditLogEntry[] | undefined = undefined
 
   // Map prior studies from backend format to frontend format
   const mappedPriorStudies = priorStudies?.map(mapPriorStudy)
@@ -166,7 +138,7 @@ export function mapTaskToStudy(ctx: TaskToStudyContext): Study {
     clinicalNotes: task.clinical_notes || '',
     technicalNotes: task.technical_notes || '',
     validatorCommentsCount,
-    validatorComments,
+    validatorComments: mappedValidatorComments,
     auditLog,
     report,
   }
@@ -188,73 +160,6 @@ export function mapTaskStatus(status: BackendTaskStatus): StudyStatus {
     delivered: 'delivered',
   }
   return mapping[status] || 'new'
-}
-
-
-function formatTaskEventMessage(event: TaskEvent): string {
-  const action = event.data?.action
-  let actionText = ''
-
-  // Generate human-readable text for each action type
-  switch (action) {
-    case 'task_created':
-      actionText = 'Задача создана'
-      break
-    case 'task_assigned':
-      actionText = 'Задача назначена репортеру'
-      break
-    case 'reassign_reporting_radiologist':
-      actionText = 'Задача переназначена другому репортеру'
-      break
-    case 'task_in_progress':
-      actionText = 'Работа над задачей начата'
-      break
-    case 'task_report_created': {
-      const version = event.data.report_version
-      actionText = version > 1
-        ? `Отчет обновлен (версия ${version})`
-        : 'Отчет создан'
-      break
-    }
-    case 'task_report_translated':
-      actionText = 'Отчет переведен и готов для валидации'
-      break
-    case 'task_assigned_for_validation_auto':
-      actionText = 'Автоматически отправлено на валидацию (валидатор уже назначен)'
-      break
-    case 'task_report_assigned_for_validation':
-      actionText = 'Задача назначена валидатору'
-      break
-    case 'task_report_under_validation':
-      actionText = 'Валидация начата'
-      break
-    case 'task_report_edited_by_validator': {
-      const oldVersion = event.data.old_version
-      const newVersion = event.data.new_version
-      actionText = `Отчет отредактирован валидатором (версия ${oldVersion} → ${newVersion})`
-      break
-    }
-    case 'task_report_returned_for_revision':
-      actionText = 'Отчет возвращен на доработку'
-      break
-    case 'task_report_finalized':
-      actionText = 'Отчет финализирован'
-      break
-    case 'task_report_delivered':
-      actionText = 'Отчет доставлен клиенту'
-      break
-    default:
-      // For unknown actions, use the action name as fallback
-      actionText = action ? `Действие: ${action}` : ''
-  }
-
-  // Combine action text with comment if both exist
-  if (actionText && event.comment && event.comment.trim()) {
-    return `${actionText}\n\nКомментарий: ${event.comment}`
-  }
-
-  // Return action text or comment, whichever is available
-  return actionText || event.comment || ''
 }
 
 
