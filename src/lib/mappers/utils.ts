@@ -23,9 +23,9 @@ export function formatBodyArea(bodyArea: string): BodyArea {
 
 
 export function calculateDeadline(receivedAt: string, tatHours: number): string {
-  const received = new Date(receivedAt)
-  received.setHours(received.getHours() + tatHours)
-  return received.toISOString()
+  const receivedMs = new Date(receivedAt).getTime()
+  const deadlineMs = receivedMs + tatHours * 60 * 60 * 1000
+  return new Date(deadlineMs).toISOString()
 }
 
 

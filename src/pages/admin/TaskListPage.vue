@@ -56,6 +56,7 @@
                 <th>{{ t('taskList.headers.status') }}</th>
                 <th>{{ t('taskList.headers.urgency') }}</th>
                 <th>{{ t('taskList.headers.deadline') }}</th>
+                <th>{{ t('taskList.headers.timeInWork') }}</th>
                 <th>{{ t('taskList.headers.reportingPhysician') }}</th>
                 <th>{{ t('taskList.headers.validatingPhysician') }}</th>
                 <th>{{ t('taskList.headers.created') }}</th>
@@ -64,39 +65,38 @@
             </thead>
             <tbody>
               <tr
-                v-for="task in filteredTasks"
+                v-for="{ raw: task, study } in filteredTasks"
                 :key="task.id"
                 @click="handleRowClick(task, $event)"
                 class="cursor-pointer"
               >
-                <td class="font-mono text-xs">{{ task.study?.accession_number || 'N/A' }}</td>
+                <td class="font-mono text-xs">{{ study.accessionNumber || 'N/A' }}</td>
                 <td>
-                  <div class="text-sm" v-if="task.study">{{ task.study.patient_id }}</div>
-                  <div class="text-xs text-muted-foreground" v-if="task.study">
-                    {{ task.study.patient_sex }}/{{ task.study.patient_age }}y
+                  <div class="text-sm">{{ study.patientId }}</div>
+                  <div class="text-xs text-muted-foreground">
+                    {{ study.sex }}/{{ study.age }}y
                   </div>
                 </td>
                 <td class="text-sm">
-                  <span v-if="task.client_type">
-                    {{ formatModality(task.client_type.modality) }} / {{ formatBodyArea(task.client_type.body_area) }}
-                  </span>
-                  <span v-else class="text-muted-foreground">N/A</span>
+                  {{ study.modality }} / {{ study.bodyArea }}
                 </td>
                 <td>
-                  <StatusBadge :status="mapBackendStatusToFrontend(task.status)" />
+                  <StatusBadge :status="study.status" />
                 </td>
                 <td>
-                  <UrgencyBadge :urgency="task.urgency" />
+                  <UrgencyBadge :urgency="study.urgency" />
                 </td>
                 <td>
-                  <template v-if="task.status !== 'delivered'">
-                    <DeadlineTimer
-                      v-if="task.study && task.client_type"
-                      :deadline="calculateDeadline(task.study.study_datetime, task.client_type.expected_tat_hours)"
-                    />
-                    <span v-else class="text-muted-foreground text-sm">N/A</span>
+                  <template v-if="study.status !== 'delivered'">
+                    <DeadlineTimer :deadline="study.deadline" />
                   </template>
                   <span v-else class="text-muted-foreground text-sm">—</span>
+                </td>
+                <td>
+                  <ElapsedTimer
+                    :start-time="study.receivedAt"
+                    :end-time="study.status === 'delivered' ? study.updatedAt : undefined"
+                  />
                 </td>
                 <td class="text-sm">
                   <span v-if="task.reporting_radiologist">
@@ -150,6 +150,7 @@ import PageHeader from '@/components/layout/PageHeader.vue'
 import StatusBadge from '@/components/ui/StatusBadge.vue'
 import UrgencyBadge from '@/components/ui/UrgencyBadge.vue'
 import DeadlineTimer from '@/components/ui/DeadlineTimer.vue'
+import ElapsedTimer from '@/components/ui/ElapsedTimer.vue'
 import Button from '@/components/ui/button.vue'
 import Input from '@/components/ui/input.vue'
 import Select from '@/components/ui/select.vue'
@@ -160,14 +161,14 @@ import SelectItem from '@/components/ui/SelectItem.vue'
 import DropdownMenu from '@/components/ui/dropdown-menu.vue'
 import DropdownMenuItem from '@/components/ui/DropdownMenuItem.vue'
 import apiClient from '@/lib/api/client'
-import type { TaskWithEmbedded } from '@/types/api'
-import type { StudyStatus } from '@/types/study'
-import { formatBodyArea, calculateDeadline } from '@/lib/mappers/utils'
+import type { TaskWithEmbedded, User, ClientType } from '@/types/api'
+import type { Study } from '@/types/study'
+import { mapTaskToStudy } from '@/lib/mappers/taskMapper'
 
 const router = useRouter()
 const { t } = useI18n()
 
-const tasks = ref<TaskWithEmbedded[]>([])
+const rawTasks = ref<TaskWithEmbedded[]>([])
 const loading = ref(false)
 const error = ref<string | null>(null)
 const searchTerm = ref('')
@@ -187,33 +188,31 @@ const statusOptions = computed(() => [
   { value: 'delivered', label: t('status.delivered') },
 ])
 
-const filteredTasks = computed(() => {
-  // All filtering is now done server-side
-  return tasks.value
+interface MappedTask {
+  raw: TaskWithEmbedded
+  study: Study
+}
+
+const mappedTasks = computed<MappedTask[]>(() => {
+  return rawTasks.value
+    .filter(task => task.study && task.client_type)
+    .map(task => ({
+      raw: task,
+      study: mapTaskToStudy({
+        task,
+        study: task.study!,
+        clientType: task.client_type as ClientType,
+        client: { id: task.study!.client_id, name: '', created_at: '', updated_at: '' },
+        reportingUser: (task.reporting_radiologist as User | null) ?? undefined,
+        validatingUser: (task.validating_radiologist as User | null) ?? undefined,
+      }),
+    }))
 })
 
-// Map backend status format to frontend format
-function mapBackendStatusToFrontend(status: string): StudyStatus {
-  const statusMap: Record<string, StudyStatus> = {
-    'new': 'new',
-    'assigned': 'assigned',
-    'in_progress': 'in-progress',
-    'draft_ready': 'draft-ready',
-    'translated': 'translated',
-    'assigned_for_validation': 'assigned-for-validation',
-    'under_validation': 'under-validation',
-    'returned': 'returned',
-    'finalized': 'finalized',
-    'delivered': 'delivered',
-  }
-  return statusMap[status] || 'new'
-}
-
-// Format modality for display
-function formatModality(modality: string): string {
-  if (modality === 'MR') return 'MRI'
-  return modality
-}
+const filteredTasks = computed(() => {
+  // All filtering is now done server-side
+  return mappedTasks.value
+})
 
 async function fetchTasks() {
   loading.value = true
@@ -234,7 +233,7 @@ async function fetchTasks() {
     const response = await apiClient.get<{ items: TaskWithEmbedded[], total: number }>('/api/v1/admin/tasks', {
       params
     })
-    tasks.value = response.data.items
+    rawTasks.value = response.data.items
   } catch (err) {
     error.value = err instanceof Error ? err.message : 'Failed to fetch tasks'
     console.error('Error fetching tasks:', err)

@@ -10,6 +10,7 @@ export interface AuditFilters {
   studyId?: string
   userId?: number
   action?: string
+  accessionNumber?: string
   dateFrom?: Date
   dateTo?: Date
 }
@@ -64,11 +65,14 @@ export const auditService = {
       if (filters.action) {
         params.action = filters.action
       }
+      if (filters.accessionNumber) {
+        params.accession_number = filters.accessionNumber
+      }
       if (filters.dateFrom) {
-        params.date_from = filters.dateFrom.toISOString()
+        params.start_date = filters.dateFrom.toISOString()
       }
       if (filters.dateTo) {
-        params.date_to = filters.dateTo.toISOString()
+        params.end_date = filters.dateTo.toISOString()
       }
 
 

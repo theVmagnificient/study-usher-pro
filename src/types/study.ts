@@ -47,6 +47,8 @@ export interface Study {
   age: number;
   description: string;
   accessionNumber: string;
+  /** Task updated_at timestamp — used as delivery time for delivered tasks */
+  updatedAt?: string;
   clinicalNotes: string;
   technicalNotes: string;
   /** Group ID for multi-zone studies (same patient, multiple body areas) */

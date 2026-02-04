@@ -62,6 +62,15 @@
             <Download class="w-4 h-4 mr-2" :class="{ 'animate-bounce': isDownloading }" />
             {{ isDownloading ? t('reporting.downloading') : t('reporting.dicom') }}
           </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            @click="handleOpenViewer"
+            :disabled="isOpeningViewer"
+          >
+            <Eye class="w-4 h-4 mr-2" :class="{ 'animate-pulse': isOpeningViewer }" />
+            {{ isOpeningViewer ? t('reporting.openingViewer') : t('reporting.viewer') }}
+          </Button>
         </div>
       </div>
     </header>
@@ -693,7 +702,8 @@ import {
   ChevronDown,
   MessageCircle,
   Languages,
-  FileEdit
+  FileEdit,
+  Eye
 } from 'lucide-vue-next'
 import Button from '@/components/ui/button.vue'
 import StatusBadge from '@/components/ui/StatusBadge.vue'
@@ -803,7 +813,6 @@ const commentsExpanded = ref(true)
 const availableValidators = ref<any[]>([])
 const selectedValidatorId = ref<number | null>(null)
 
-// Edit report dialog state
 const showEditDialog = ref(false)
 const editProtocol = ref("")
 const editFindings = ref("")
@@ -1116,6 +1125,28 @@ const handleDownload = async () => {
     })
   } finally {
     isDownloading.value = false
+  }
+}
+
+// Open study in OHIF viewer
+const isOpeningViewer = ref(false)
+
+const handleOpenViewer = async () => {
+  if (!study.value || isOpeningViewer.value) return
+
+  isOpeningViewer.value = true
+
+  try {
+    await studyService.openViewer(study.value.studyId)
+  } catch (error: any) {
+    console.error('Failed to open viewer:', error)
+    toast({
+      title: t('reporting.viewerFailed'),
+      description: error.message || t('reporting.viewerErrorDescription'),
+      variant: 'destructive',
+    })
+  } finally {
+    isOpeningViewer.value = false
   }
 }
 

@@ -135,6 +135,7 @@ export function mapTaskToStudy(ctx: TaskToStudyContext): Study {
     age: study.patient_age,
     description: study.description,
     accessionNumber: study.accession_number,
+    updatedAt: task.updated_at,
     clinicalNotes: task.clinical_notes || '',
     technicalNotes: task.technical_notes || '',
     validatorCommentsCount,

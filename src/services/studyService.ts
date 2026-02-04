@@ -570,4 +570,46 @@ export const studyService = {
       throw error
     }
   },
+
+  /**
+   * Get OHIF viewer URL for a study from PACS
+   * @param studyId - Numeric study ID (not STD- prefixed)
+   * @returns Promise with viewer URL and expiration info
+   */
+  async getViewerUrl(studyId: number): Promise<{
+    url: string
+    expires_in: number
+    expires_at: string
+    study_id: number
+    study_instance_uid: string
+  }> {
+    try {
+      const response = await apiClient.get(`/api/v1/studies/${studyId}/viewer`)
+      return response.data
+    } catch (error: any) {
+      console.error(`Failed to get viewer URL for study ${studyId}:`, error)
+      if (error.response?.status === 403) {
+        throw new Error('You do not have permission to view this study')
+      } else if (error.response?.status === 404) {
+        throw new Error('Study not found')
+      } else if (error.response?.status === 503) {
+        throw new Error('PACS service is temporarily unavailable. Please try again later.')
+      }
+      throw new Error('Failed to generate viewer URL. Please try again.')
+    }
+  },
+
+  /**
+   * Open a study in OHIF viewer in a new tab
+   * @param studyId - Numeric study ID (not STD- prefixed)
+   */
+  async openViewer(studyId: number): Promise<void> {
+    try {
+      const viewerInfo = await this.getViewerUrl(studyId)
+      window.open(viewerInfo.url, '_blank')
+    } catch (error) {
+      console.error(`Failed to open viewer for study ${studyId}:`, error)
+      throw error
+    }
+  },
 }

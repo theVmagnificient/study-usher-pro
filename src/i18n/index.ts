@@ -173,7 +173,8 @@ const messages = {
         validatingPhysician: "Validating Physician",
         created: "Created",
         deadline: "Deadline",
-        modalityArea: "Modality / Area"
+        modalityArea: "Modality / Area",
+        timeInWork: "Time in Work"
       },
 
       // Actions
@@ -357,6 +358,13 @@ const messages = {
     auditLog: {
       title: "Audit Log",
       subtitle: "{count} entries",
+      searchPlaceholder: "Search by accession number...",
+      allActions: "All Actions",
+      allUsers: "All Users",
+      fromDateTime: "From date & time",
+      toDateTime: "To date & time",
+      clearFilters: "Clear",
+      noEntries: "No audit log entries found",
 
       headers: {
         timestamp: "Timestamp",
@@ -372,20 +380,31 @@ const messages = {
     sla: {
       title: "SLA / TAT Dashboard",
       subtitle: "Real-time turnaround time monitoring",
+      fromDateTime: "From date & time",
+      toDateTime: "To date & time",
+      clearFilters: "Clear",
 
       metrics: {
         activeStudies: "Active Studies",
         overdue: "Overdue",
         critical: "Critical (<1h)",
-        warning: "Warning (<4h)"
+        warning: "Warning (<4h)",
+        totalTasks: "Total Tasks",
+        onTime: "On Time",
+        late: "Late",
+        complianceRate: "Compliance Rate",
+        avgTat: "Avg TAT"
       },
 
       statusDistribution: "Status Distribution",
       overdueStudies: "Overdue Studies",
+      studiesFor: "Studies: {category}",
 
       headers: {
         studyId: "Study ID",
         client: "Client",
+        receivedAt: "Received",
+        deadline: "Deadline",
         status: "Status",
         assignedTo: "Assigned To",
         overdueBy: "Overdue By"
@@ -529,6 +548,10 @@ const messages = {
       downloadDescription: "Your DICOM study is being downloaded",
       downloadFailed: "Download Failed",
       downloadErrorDescription: "Failed to download the study. Please try again.",
+      viewer: "Viewer",
+      openingViewer: "Opening...",
+      viewerFailed: "Viewer Failed",
+      viewerErrorDescription: "Failed to open the study viewer. Please try again.",
 
       comments: "Comments",
       commentCount: "{count} comment(s)",
@@ -785,7 +808,8 @@ const messages = {
         validatingPhysician: "Валидатор",
         created: "Создано",
         deadline: "Срок",
-        modalityArea: "Модальность / Область"
+        modalityArea: "Модальность / Область",
+        timeInWork: "Время в работе"
       },
 
       // Действия
@@ -969,6 +993,13 @@ const messages = {
     auditLog: {
       title: "Журнал аудита",
       subtitle: "{count} записей | {count} запись | {count} записи",
+      searchPlaceholder: "Поиск по номеру исследования...",
+      allActions: "Все действия",
+      allUsers: "Все пользователи",
+      fromDateTime: "Дата и время от",
+      toDateTime: "Дата и время до",
+      clearFilters: "Очистить",
+      noEntries: "Записи журнала аудита не найдены",
 
       headers: {
         timestamp: "Время",
@@ -1013,20 +1044,31 @@ const messages = {
     sla: {
       title: "Панель SLA / TAT",
       subtitle: "Мониторинг времени обработки в реальном времени",
+      fromDateTime: "Дата и время от",
+      toDateTime: "Дата и время до",
+      clearFilters: "Очистить",
 
       metrics: {
         activeStudies: "Активные исследования",
         overdue: "Просрочено",
         critical: "Критичные (<1ч)",
-        warning: "Предупреждение (<4ч)"
+        warning: "Предупреждение (<4ч)",
+        totalTasks: "Всего задач",
+        onTime: "Вовремя",
+        late: "С опозданием",
+        complianceRate: "Уровень соответствия",
+        avgTat: "Сред. TAT"
       },
 
       statusDistribution: "Распределение по статусам",
       overdueStudies: "Просроченные исследования",
+      studiesFor: "Исследования: {category}",
 
       headers: {
         studyId: "ID исследования",
         client: "Клиент",
+        receivedAt: "Получено",
+        deadline: "Дедлайн",
         status: "Статус",
         assignedTo: "Назначено",
         overdueBy: "Просрочено на"
@@ -1170,6 +1212,10 @@ const messages = {
       downloadDescription: "Ваше DICOM исследование скачивается",
       downloadFailed: "Ошибка скачивания",
       downloadErrorDescription: "Не удалось скачать исследование. Пожалуйста, попробуйте снова.",
+      viewer: "Просмотр",
+      openingViewer: "Открытие...",
+      viewerFailed: "Ошибка просмотра",
+      viewerErrorDescription: "Не удалось открыть просмотрщик. Пожалуйста, попробуйте снова.",
 
       comments: "Комментарии",
       commentCount: "{count} комментарий | {count} комментария | {count} комментариев",

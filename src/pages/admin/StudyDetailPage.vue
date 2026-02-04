@@ -28,7 +28,11 @@
         </p>
       </div>
       <div class="flex items-center gap-3">
-        <DeadlineTimer :deadline="study.deadline" />
+        <DeadlineTimer v-if="study.status !== 'delivered'" :deadline="study.deadline" />
+        <ElapsedTimer
+          :start-time="study.receivedAt"
+          :end-time="study.status === 'delivered' ? study.updatedAt : undefined"
+        />
         <Button
           variant="outline"
           @click="handleDownload"
@@ -36,6 +40,14 @@
         >
           <Download class="w-4 h-4 mr-2" :class="{ 'animate-bounce': isDownloading }" />
           {{ isDownloading ? t('reporting.downloading') : t('studyDetail.dicom') }}
+        </Button>
+        <Button
+          variant="outline"
+          @click="handleOpenViewer"
+          :disabled="isOpeningViewer"
+        >
+          <Eye class="w-4 h-4 mr-2" :class="{ 'animate-pulse': isOpeningViewer }" />
+          {{ isOpeningViewer ? t('reporting.openingViewer') : t('reporting.viewer') }}
         </Button>
         <TooltipProvider>
           <Tooltip>
@@ -434,11 +446,12 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { ArrowLeft, Download, UserPlus, History, Link2, FileText, CheckCircle } from 'lucide-vue-next'
+import { ArrowLeft, Download, UserPlus, History, Link2, FileText, CheckCircle, Eye } from 'lucide-vue-next'
 import Button from '@/components/ui/button.vue'
 import StatusBadge from '@/components/ui/StatusBadge.vue'
 import UrgencyBadge from '@/components/ui/UrgencyBadge.vue'
 import DeadlineTimer from '@/components/ui/DeadlineTimer.vue'
+import ElapsedTimer from '@/components/ui/ElapsedTimer.vue'
 import { getLinkedStudies } from '@/utils/linkedStudies'
 import { useAuditStore } from '@/stores/auditStore'
 import { useTaskStore } from '@/stores/taskStore'
@@ -588,6 +601,27 @@ async function handleDownload() {
     })
   } finally {
     isDownloading.value = false
+  }
+}
+
+const isOpeningViewer = ref(false)
+
+async function handleOpenViewer() {
+  if (!study.value || isOpeningViewer.value) return
+
+  isOpeningViewer.value = true
+
+  try {
+    await studyService.openViewer(study.value.studyId)
+  } catch (error: any) {
+    console.error('Failed to open viewer:', error)
+    toast({
+      title: t('reporting.viewerFailed'),
+      description: error.message || t('reporting.viewerErrorDescription'),
+      variant: 'destructive',
+    })
+  } finally {
+    isOpeningViewer.value = false
   }
 }
 
