@@ -385,7 +385,7 @@ const messages = {
       clearFilters: "Clear",
 
       metrics: {
-        activeStudies: "Active Studies",
+        activeStudies: "Active Tasks",
         overdue: "Overdue",
         critical: "Critical (<1h)",
         warning: "Warning (<4h)",
@@ -397,12 +397,12 @@ const messages = {
       },
 
       statusDistribution: "Status Distribution",
-      overdueStudies: "Overdue Studies",
-      studiesFor: "Studies: {category}",
+      overdueStudies: "Overdue Tasks",
+      studiesFor: "Tasks: {category}",
 
       headers: {
         studyId: "Study ID",
-        client: "Client",
+        client: "Modality / Area",
         receivedAt: "Received",
         deadline: "Deadline",
         status: "Status",
@@ -1049,7 +1049,7 @@ const messages = {
       clearFilters: "Очистить",
 
       metrics: {
-        activeStudies: "Активные исследования",
+        activeStudies: "Активные задачи",
         overdue: "Просрочено",
         critical: "Критичные (<1ч)",
         warning: "Предупреждение (<4ч)",
@@ -1061,12 +1061,12 @@ const messages = {
       },
 
       statusDistribution: "Распределение по статусам",
-      overdueStudies: "Просроченные исследования",
-      studiesFor: "Исследования: {category}",
+      overdueStudies: "Просроченные задачи",
+      studiesFor: "Задачи: {category}",
 
       headers: {
         studyId: "ID исследования",
-        client: "Клиент",
+        client: "Модальность / Область",
         receivedAt: "Получено",
         deadline: "Дедлайн",
         status: "Статус",

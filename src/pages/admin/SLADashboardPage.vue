@@ -124,7 +124,15 @@
         </div>
         <div class="clinical-card-body">
           <div class="grid grid-cols-4 gap-4">
-            <div v-for="item in statusCounts" :key="item.status" class="flex items-center justify-between p-3 bg-muted/50 rounded">
+            <div
+              v-for="item in statusCounts"
+              :key="item.status"
+              :class="[
+                'flex items-center justify-between p-3 bg-muted/50 rounded cursor-pointer transition-colors hover:bg-muted',
+                selectedPanel === `status-${item.status}` ? 'ring-2 ring-primary' : ''
+              ]"
+              @click="togglePanel(`status-${item.status}`)"
+            >
               <StatusBadge :status="item.status" />
               <span class="text-lg font-semibold">{{ item.count }}</span>
             </div>
@@ -132,13 +140,18 @@
         </div>
       </div>
 
-      <!-- Studies Table -->
-      <div v-if="selectedStudies.length > 0" class="clinical-card mt-6">
+      <!-- Tasks Table -->
+      <div v-if="selectedTasks.length > 0" class="clinical-card mt-6">
         <div v-if="selectedPanel" class="clinical-card-header" :class="selectedPanel === 'overdue' ? 'bg-destructive/10' : ''">
           <div class="flex items-center justify-between w-full">
-            <h2 :class="['text-sm font-semibold', selectedPanel === 'overdue' ? 'text-destructive' : '']">
-              {{ t('sla.studiesFor', { category: selectedPanelLabel }) }}
-            </h2>
+            <div class="flex items-center gap-2">
+              <template v-if="selectedPanel.startsWith('status-')">
+                <StatusBadge :status="selectedPanel.slice(7)" />
+              </template>
+              <h2 v-else :class="['text-sm font-semibold', selectedPanel === 'overdue' ? 'text-destructive' : '']">
+                {{ t('sla.studiesFor', { category: selectedPanelLabel }) }}
+              </h2>
+            </div>
             <Button variant="ghost" size="sm" @click="selectedPanel = null">
               <X class="w-4 h-4" />
             </Button>
@@ -157,15 +170,17 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="study in selectedStudies" :key="study.id">
-              <td class="font-mono text-xs">{{ study.id }}</td>
-              <td class="text-sm">{{ study.clientName }}</td>
-              <td class="text-sm text-muted-foreground whitespace-nowrap">{{ formatDate(study.receivedAt) }}</td>
-              <td class="text-sm text-muted-foreground whitespace-nowrap">{{ study.deadline ? formatDate(study.deadline) : '-' }}</td>
-              <td><StatusBadge :status="study.status" /></td>
-              <td class="text-sm">{{ study.assignedPhysician || '-' }}</td>
-              <td :class="isOverdue(study) ? 'text-destructive font-medium' : 'text-muted-foreground'">
-                {{ getDeadlineInfo(study) }}
+            <tr v-for="task in selectedTasks" :key="task.id">
+              <td class="font-mono text-xs">{{ task.study?.accession_number || `#${task.id}` }}</td>
+              <td class="text-sm">{{ getClientLabel(task) }}</td>
+              <td class="text-sm text-muted-foreground whitespace-nowrap">{{ formatDate(task.created_at) }}</td>
+              <td class="text-sm text-muted-foreground whitespace-nowrap">
+                {{ getTaskDeadline(task) ? formatDate(getTaskDeadline(task)!.toISOString()) : '-' }}
+              </td>
+              <td><StatusBadge :status="mapTaskStatus(task.status)" /></td>
+              <td class="text-sm">{{ getAssignedPhysician(task) }}</td>
+              <td :class="isOverdue(task) ? 'text-destructive font-medium' : 'text-muted-foreground'">
+                {{ getDeadlineInfo(task) }}
               </td>
             </tr>
           </tbody>
@@ -189,15 +204,20 @@ import Button from '@/components/ui/button.vue'
 import Input from '@/components/ui/input.vue'
 import Label from '@/components/ui/label.vue'
 import { cn } from '@/lib/utils'
-import { useStudyStore } from '@/stores/studyStore'
+import { apiClient } from '@/lib/api/client'
 import { useAuditStore } from '@/stores/auditStore'
-import type { Study } from '@/types/study'
+import type { TaskWithEmbedded } from '@/types/api'
 
 const { t, locale } = useI18n()
 const dateLocale = computed(() => locale.value === 'ru' ? ru : undefined)
 const formatDate = (dateString: string) => format(new Date(dateString), 'd MMM yyyy HH:mm', { locale: dateLocale.value })
-const studyStore = useStudyStore()
 const auditStore = useAuditStore()
+
+// Local tasks state
+const allTasks = ref<TaskWithEmbedded[]>([])  // unfiltered — for stats & counts
+const tasks = ref<TaskWithEmbedded[]>([])      // may be filtered by status — for table
+const tasksLoading = ref(false)
+const tasksError = ref<string | null>(null)
 
 // Date filter state - default to last 24 hours
 const now = new Date()
@@ -208,8 +228,8 @@ const timeTo = ref(format(now, 'HH:mm'))
 
 const selectedPanel = ref<string | null>(null)
 
-const loading = computed(() => studyStore.loading || auditStore.loading)
-const error = computed(() => studyStore.error || auditStore.error)
+const loading = computed(() => tasksLoading.value || auditStore.loading)
+const error = computed(() => tasksError.value || auditStore.error)
 
 const hasCustomDateRange = computed(() => {
   if (!dateFrom.value || !dateTo.value) return false
@@ -239,12 +259,62 @@ function resetDateFilters() {
   timeTo.value = format(n, 'HH:mm')
 }
 
-async function fetchData() {
+function getSelectedBackendStatus(): string | undefined {
+  if (!selectedPanel.value?.startsWith('status-')) return undefined
+  const uiStatus = selectedPanel.value.slice(7)
+  return uiToStatus[uiStatus] || uiStatus
+}
+
+async function fetchAllTasks() {
+  const params: Record<string, any> = { per_page: 100 }
   const range = getDateRange()
-  await Promise.all([
-    studyStore.fetchStudies(),
-    auditStore.fetchSLAStats(range),
-  ])
+  if (range) {
+    params.created_from = range.from.toISOString()
+    params.created_to = range.to.toISOString()
+  }
+  const response = await apiClient.get<{ items: TaskWithEmbedded[], total: number }>('/api/v1/admin/tasks', { params })
+  allTasks.value = response.data.items
+  // If no status filter active, table shows all tasks
+  if (!getSelectedBackendStatus()) {
+    tasks.value = response.data.items
+  }
+}
+
+async function fetchFilteredTasks() {
+  const backendStatus = getSelectedBackendStatus()
+  if (!backendStatus) {
+    tasks.value = allTasks.value
+    return
+  }
+  const params: Record<string, any> = { per_page: 100 }
+  const range = getDateRange()
+  if (range) {
+    params.created_from = range.from.toISOString()
+    params.created_to = range.to.toISOString()
+  }
+  params.status = backendStatus
+  const response = await apiClient.get<{ items: TaskWithEmbedded[], total: number }>('/api/v1/admin/tasks', { params })
+  tasks.value = response.data.items
+}
+
+async function fetchData() {
+  tasksLoading.value = true
+  tasksError.value = null
+  try {
+    const range = getDateRange()
+    await Promise.all([
+      fetchAllTasks(),
+      auditStore.fetchSLAStats(range),
+    ])
+    // If status filter is active, also fetch filtered
+    if (getSelectedBackendStatus()) {
+      await fetchFilteredTasks()
+    }
+  } catch (err) {
+    tasksError.value = err instanceof Error ? err.message : 'Failed to fetch tasks'
+  } finally {
+    tasksLoading.value = false
+  }
 }
 
 // Watch date changes and refetch
@@ -252,43 +322,71 @@ let debounceTimeout: ReturnType<typeof setTimeout> | null = null
 watch([dateFrom, timeFrom, dateTo, timeTo], () => {
   if (debounceTimeout) clearTimeout(debounceTimeout)
   debounceTimeout = setTimeout(() => {
-    const range = getDateRange()
-    auditStore.fetchSLAStats(range)
+    fetchData()
   }, 500)
 })
 
-// Study-level computed
-const activeStudies = computed(() =>
-  studyStore.studies.filter(s => s.status !== 'delivered')
+// Helper to map task status to UI status (snake_case → kebab-case)
+const statusToUi: Record<string, string> = {
+  'new': 'new',
+  'assigned': 'assigned',
+  'in_progress': 'in-progress',
+  'draft_ready': 'draft-ready',
+  'translated': 'translated',
+  'assigned_for_validation': 'assigned-for-validation',
+  'under_validation': 'under-validation',
+  'returned_for_revision': 'returned',
+  'finalized': 'finalized',
+  'delivered': 'delivered',
+}
+
+// Reverse map: kebab-case → snake_case for backend
+const uiToStatus: Record<string, string> = Object.fromEntries(
+  Object.entries(statusToUi).map(([k, v]) => [v, k])
 )
 
-const overdueStudies = computed(() => {
+function mapTaskStatus(status: string): string {
+  return statusToUi[status] || status
+}
+
+// Task-level computed
+const activeTasks = computed(() =>
+  allTasks.value.filter(t => mapTaskStatus(t.status) !== 'delivered')
+)
+
+const overdueTasks = computed(() => {
   const currentTime = new Date()
-  return studyStore.studies
-    .filter(study => {
-      if (!study.deadline) return false
-      const deadline = new Date(study.deadline)
-      return deadline < currentTime && study.status !== 'delivered'
+  return allTasks.value
+    .filter(task => {
+      const tat = task.client_type?.expected_tat_hours
+      if (!tat) return false
+      const created = new Date(task.created_at)
+      const deadline = new Date(created.getTime() + tat * 60 * 60 * 1000)
+      return deadline < currentTime && mapTaskStatus(task.status) !== 'delivered'
     })
     .sort((a, b) => {
-      const aOverdue = new Date().getTime() - new Date(a.deadline!).getTime()
-      const bOverdue = new Date().getTime() - new Date(b.deadline!).getTime()
-      return bOverdue - aOverdue
+      const aDeadline = new Date(a.created_at).getTime() + (a.client_type?.expected_tat_hours || 0) * 3600000
+      const bDeadline = new Date(b.created_at).getTime() + (b.client_type?.expected_tat_hours || 0) * 3600000
+      return aDeadline - bDeadline
     })
 })
 
-const criticalStudies = computed(() =>
-  activeStudies.value.filter(s => {
-    if (!s.deadline) return false
-    const diff = new Date(s.deadline).getTime() - new Date().getTime()
+const criticalTasks = computed(() =>
+  activeTasks.value.filter(t => {
+    const tat = t.client_type?.expected_tat_hours
+    if (!tat) return false
+    const deadline = new Date(t.created_at).getTime() + tat * 3600000
+    const diff = deadline - new Date().getTime()
     return diff > 0 && diff < 60 * 60 * 1000
   })
 )
 
-const warningStudies = computed(() =>
-  activeStudies.value.filter(s => {
-    if (!s.deadline) return false
-    const diff = new Date(s.deadline).getTime() - new Date().getTime()
+const warningTasks = computed(() =>
+  activeTasks.value.filter(t => {
+    const tat = t.client_type?.expected_tat_hours
+    if (!tat) return false
+    const deadline = new Date(t.created_at).getTime() + tat * 3600000
+    const diff = deadline - new Date().getTime()
     return diff >= 60 * 60 * 1000 && diff < 4 * 60 * 60 * 1000
   })
 )
@@ -306,63 +404,105 @@ const slaMetrics = computed(() => {
   ]
 })
 
-// Study-level stats (clickable)
+// Task-level stats (clickable)
 const studyStats = computed(() => [
-  { key: 'active', label: t('sla.metrics.activeStudies'), value: activeStudies.value.length, color: 'text-primary' },
-  { key: 'overdue', label: t('sla.metrics.overdue'), value: overdueStudies.value.length, color: 'text-destructive' },
-  { key: 'critical', label: t('sla.metrics.critical'), value: criticalStudies.value.length, color: 'text-urgency-urgent' },
-  { key: 'warning', label: t('sla.metrics.warning'), value: warningStudies.value.length, color: 'text-urgency-urgent' },
+  { key: 'active', label: t('sla.metrics.activeStudies'), value: activeTasks.value.length, color: 'text-primary' },
+  { key: 'overdue', label: t('sla.metrics.overdue'), value: overdueTasks.value.length, color: 'text-destructive' },
+  { key: 'critical', label: t('sla.metrics.critical'), value: criticalTasks.value.length, color: 'text-urgency-urgent' },
+  { key: 'warning', label: t('sla.metrics.warning'), value: warningTasks.value.length, color: 'text-urgency-urgent' },
 ])
 
-const statusCounts = computed(() => [
-  { status: "new" as const, count: studyStore.studies.filter(s => s.status === 'new').length },
-  { status: "assigned" as const, count: studyStore.studies.filter(s => s.status === 'assigned').length },
-  { status: "in-progress" as const, count: studyStore.studies.filter(s => s.status === 'in-progress').length },
-  { status: "draft-ready" as const, count: studyStore.studies.filter(s => s.status === 'draft-ready').length },
-  { status: "under-validation" as const, count: studyStore.studies.filter(s => s.status === 'under-validation').length },
-  { status: "returned" as const, count: studyStore.studies.filter(s => s.status === 'returned').length },
-  { status: "finalized" as const, count: studyStore.studies.filter(s => s.status === 'finalized').length },
-  { status: "delivered" as const, count: studyStore.studies.filter(s => s.status === 'delivered').length },
-])
+const statusCounts = computed(() => {
+  const counts = (s: string) => allTasks.value.filter(t => mapTaskStatus(t.status) === s).length
+  return [
+    { status: "new" as const, count: counts('new') },
+    { status: "assigned" as const, count: counts('assigned') },
+    { status: "in-progress" as const, count: counts('in-progress') },
+    { status: "draft-ready" as const, count: counts('draft-ready') },
+    { status: "under-validation" as const, count: counts('under-validation') },
+    { status: "returned" as const, count: counts('returned') },
+    { status: "finalized" as const, count: counts('finalized') },
+    { status: "delivered" as const, count: counts('delivered') },
+  ]
+})
 
 function togglePanel(key: string) {
+  const wasStatus = selectedPanel.value?.startsWith('status-')
+  const willBeStatus = key.startsWith('status-')
+
   selectedPanel.value = selectedPanel.value === key ? null : key
+
+  // Refetch tasks when status filter changes (backend-driven)
+  if (wasStatus || willBeStatus) {
+    fetchFilteredTasks()
+  }
 }
 
 const selectedPanelLabel = computed(() => {
+  if (!selectedPanel.value) return ''
   const labels: Record<string, string> = {
     active: t('sla.metrics.activeStudies'),
     overdue: t('sla.metrics.overdue'),
     critical: t('sla.metrics.critical'),
     warning: t('sla.metrics.warning'),
   }
-  return selectedPanel.value ? labels[selectedPanel.value] || '' : ''
+  if (labels[selectedPanel.value]) return labels[selectedPanel.value]
+  // Status-based panel: "status-in-progress" → label from statusCounts
+  if (selectedPanel.value.startsWith('status-')) {
+    const status = selectedPanel.value.slice(7)
+    const item = statusCounts.value.find(s => s.status === status)
+    if (item) return item.status
+  }
+  return ''
 })
 
-const selectedStudies = computed(() => {
+const selectedTasks = computed(() => {
+  // For status panels, backend already filtered — return all loaded tasks
+  if (!selectedPanel.value || selectedPanel.value.startsWith('status-')) return tasks.value
   switch (selectedPanel.value) {
-    case 'active': return activeStudies.value
-    case 'overdue': return overdueStudies.value
-    case 'critical': return criticalStudies.value
-    case 'warning': return warningStudies.value
-    default: return studyStore.studies
+    case 'active': return activeTasks.value
+    case 'overdue': return overdueTasks.value
+    case 'critical': return criticalTasks.value
+    case 'warning': return warningTasks.value
+    default: return tasks.value
   }
 })
 
-function isOverdue(study: Study) {
-  if (!study.deadline) return false
-  return new Date(study.deadline) < new Date()
+function getTaskDeadline(task: TaskWithEmbedded): Date | null {
+  const tat = task.client_type?.expected_tat_hours
+  if (!tat) return null
+  return new Date(new Date(task.created_at).getTime() + tat * 3600000)
 }
 
-function getDeadlineInfo(study: Study) {
-  if (!study.deadline) return '-'
+function isOverdue(task: TaskWithEmbedded) {
+  if (mapTaskStatus(task.status) === 'delivered') return false
+  const deadline = getTaskDeadline(task)
+  if (!deadline) return false
+  return deadline < new Date()
+}
+
+function getDeadlineInfo(task: TaskWithEmbedded) {
+  if (mapTaskStatus(task.status) === 'delivered') return '—'
+  const deadline = getTaskDeadline(task)
+  if (!deadline) return '-'
   const currentTime = new Date()
-  const deadline = new Date(study.deadline)
   const diffMs = Math.abs(currentTime.getTime() - deadline.getTime())
   const hours = Math.floor(diffMs / (1000 * 60 * 60))
   const mins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60))
   const timeStr = hours > 0 ? `${hours}h ${mins}m` : `${mins}m`
   return deadline < currentTime ? `+${timeStr}` : `-${timeStr}`
+}
+
+function getAssignedPhysician(task: TaskWithEmbedded): string {
+  const r = task.reporting_radiologist
+  if (r) return `${r.first_name} ${r.last_name}`
+  return '-'
+}
+
+function getClientLabel(task: TaskWithEmbedded): string {
+  const ct = task.client_type
+  if (ct) return `${ct.modality} / ${ct.body_area}`
+  return '-'
 }
 
 onMounted(fetchData)
