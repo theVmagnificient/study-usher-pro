@@ -12,27 +12,27 @@
 
     <!-- Content -->
     <div v-else-if="study">
-    <!-- Header Bar -->
-    <header class="sticky top-0 z-10 bg-card border-b border-border px-4 py-3">
-      <div class="flex items-center justify-between">
-        <div class="flex items-center gap-4">
-          <Button variant="ghost" size="icon" @click="handleBack">
-            <ArrowLeft class="w-5 h-5" />
+    <!-- Header Bar: compact in PiP -->
+    <header class="sticky top-0 z-10 bg-card border-b border-border" :class="pipMode ? 'px-3 py-2' : 'px-4 py-3'">
+      <div class="flex items-center justify-between gap-2 min-w-0">
+        <div class="flex items-center gap-2 min-w-0">
+          <Button v-if="!pipMode" variant="ghost" size="icon" class="flex-shrink-0" @click="handleBack">
+            <ArrowLeft class="w-4 h-4" />
           </Button>
-          <div>
-            <div class="flex items-center gap-3">
-              <span class="font-mono text-xs text-muted-foreground">{{ study.accessionNumber }}</span>
+          <div class="min-w-0">
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class="font-mono text-xs text-muted-foreground truncate">{{ study.accessionNumber }}</span>
               <StatusBadge :status="study.status" />
-              <UrgencyBadge :urgency="study.urgency" />
+              <UrgencyBadge v-if="!pipMode" :urgency="study.urgency" />
             </div>
-            <div class="flex items-center gap-4 mt-1">
-              <span class="text-xs text-muted-foreground">{{ study.patientId }}</span>
-              <span class="text-base font-semibold text-foreground">{{ study.modality }} {{ study.bodyArea }}</span>
-              <span class="text-base font-medium text-foreground">{{ study.sex }}/{{ study.age }}y</span>
+            <div class="flex items-center gap-2 mt-0.5 text-sm truncate">
+              <span class="text-muted-foreground shrink-0">{{ study.patientId }}</span>
+              <span class="font-semibold text-foreground truncate">{{ study.modality }} {{ study.bodyArea }}</span>
+              <span class="text-muted-foreground shrink-0">{{ study.sex }}/{{ study.age }}y</span>
             </div>
           </div>
         </div>
-        <div class="flex items-center gap-4">
+        <div v-if="!pipMode" class="flex items-center gap-2 flex-shrink-0">
           <DeadlineTimer v-if="!['finalized', 'delivered'].includes(study.status)" :deadline="study.deadline" />
           <DropdownMenu v-if="linkedStudies.length > 0">
             <template #trigger>
@@ -71,12 +71,32 @@
             <Eye class="w-4 h-4 mr-2" :class="{ 'animate-pulse': isOpeningViewer }" />
             {{ isOpeningViewer ? t('reporting.openingViewer') : t('reporting.viewer') }}
           </Button>
+          <Button
+            v-if="pipSupported"
+            variant="outline"
+            size="sm"
+            @click="togglePictureInPicture"
+            :disabled="isOpeningPip"
+          >
+            <PictureInPicture2 class="w-4 h-4 mr-2" :class="{ 'animate-pulse': isOpeningPip }" />
+            {{ isPipOpen ? t('reporting.closePip') : t('reporting.openPip') }}
+          </Button>
         </div>
+        <Button
+          v-else
+          variant="outline"
+          size="sm"
+          class="flex-shrink-0"
+          @click="closePip"
+        >
+          <PictureInPicture2 class="w-4 h-4 mr-1" />
+          {{ t('reporting.closePip') }}
+        </Button>
       </div>
     </header>
 
-    <!-- Comments - Collapsible Section at Top -->
-    <div v-if="study.validatorComments && study.validatorComments.length > 0" class="mx-4 mt-4">
+    <!-- Comments - Collapsible Section at Top (hidden in PiP to save space) -->
+    <div v-if="!pipMode && study.validatorComments && study.validatorComments.length > 0" class="mx-4 mt-4">
       <button
         @click="commentsExpanded = !commentsExpanded"
         class="w-full clinical-card border-l-4 border-l-muted-foreground bg-muted/30 hover:bg-muted/50 transition-colors cursor-pointer text-left"
@@ -132,8 +152,8 @@
       </div>
     </div>
 
-    <!-- Clinical & Technical Notes -->
-    <div class="mx-4 mt-4 grid grid-cols-2 gap-4">
+    <!-- Clinical & Technical Notes (single column in PiP) -->
+    <div class="mx-4 mt-4 grid gap-4" :class="pipMode ? 'grid-cols-1' : 'grid-cols-2'">
       <button
         @click="notesExpanded = !notesExpanded"
         class="clinical-card border-l-4 border-l-primary text-left w-full hover:bg-primary/5 transition-colors cursor-pointer"
@@ -174,16 +194,16 @@
     </div>
 
     <div class="flex">
-      <!-- Main Content - Report Editor -->
-      <div class="flex-1 p-6">
-        <div class="space-y-6">
+      <!-- Main Content - Report Editor (single column in PiP) -->
+      <div class="flex-1 min-w-0 p-4" :class="{ 'p-6': !pipMode }">
+        <div class="space-y-4" :class="{ 'space-y-6': !pipMode }">
           <!-- Headers Row -->
-          <div class="grid grid-cols-2 gap-6">
+          <div class="grid gap-4" :class="pipMode ? 'grid-cols-1' : 'grid-cols-2 gap-6'">
             <div class="flex items-center gap-2">
               <span class="text-sm font-semibold text-primary">{{ t('reporting.currentReport') }}</span>
               <span class="text-xs text-muted-foreground font-mono">{{ study.id }}</span>
             </div>
-            <div v-if="selectedPrior || showEnglishTranslation" class="flex items-center justify-between">
+            <div v-if="!pipMode && (selectedPrior || showEnglishTranslation)" class="flex items-center justify-between">
               <div class="flex items-center gap-2">
                 <Languages v-if="showEnglishTranslation" class="w-4 h-4 text-blue-500" />
                 <History v-else class="w-4 h-4 text-muted-foreground" />
@@ -198,8 +218,8 @@
             </div>
           </div>
           
-          <!-- Study Protocol Row -->
-          <div class="grid grid-cols-2 gap-6">
+          <!-- Study Protocol Row (single column in PiP) -->
+          <div class="grid gap-4" :class="pipMode ? 'grid-cols-1' : 'grid-cols-2 gap-6'">
             <div>
               <label class="field-label">{{ t('reporting.protocol') }}</label>
               <Textarea
@@ -209,7 +229,7 @@
                 :readonly="study.status === 'finalized' || study.status === 'delivered' || (isTaskWithValidator && !isValidator)"
               />
             </div>
-            <div v-if="showEnglishTranslation">
+            <div v-if="!pipMode && showEnglishTranslation">
               <label class="field-label text-blue-600 dark:text-blue-400">
                 {{ t('reporting.protocolEn') }}
                 <span class="ml-2 text-xs font-normal text-muted-foreground">{{ t('reporting.protocolEnNote') }}</span>
@@ -221,7 +241,7 @@
                 :readonly="study.status === 'finalized' || study.status === 'delivered' || (isTaskWithValidator && !isValidator)"
               />
             </div>
-            <div v-else-if="selectedPrior">
+            <div v-else-if="!pipMode && selectedPrior">
               <label class="field-label text-muted-foreground">{{ t('reporting.protocol') }}</label>
               <div class="report-textarea bg-muted/50 space-y-2">
                 <p v-if="selectedPrior.protocolEn" class="text-base font-medium">{{ selectedPrior.protocolEn }}</p>
@@ -231,8 +251,8 @@
             </div>
           </div>
 
-          <!-- Findings Row -->
-          <div class="grid grid-cols-2 gap-6">
+          <!-- Findings Row (single column in PiP) -->
+          <div class="grid gap-4" :class="pipMode ? 'grid-cols-1' : 'grid-cols-2 gap-6'">
             <div>
               <label class="field-label">{{ t('reporting.findings') }}</label>
               <Textarea
@@ -242,7 +262,7 @@
                 :readonly="study.status === 'finalized' || study.status === 'delivered' || (isTaskWithValidator && !isValidator)"
               />
             </div>
-            <div v-if="showEnglishTranslation">
+            <div v-if="!pipMode && showEnglishTranslation">
               <label class="field-label text-blue-600 dark:text-blue-400">
                 {{ t('reporting.findingsEn') }}
                 <span class="ml-2 text-xs font-normal text-muted-foreground">{{ t('reporting.protocolEnNote') }}</span>
@@ -254,7 +274,7 @@
                 :readonly="study.status === 'finalized' || study.status === 'delivered' || (isTaskWithValidator && !isValidator)"
               />
             </div>
-            <div v-else-if="selectedPrior">
+            <div v-else-if="!pipMode && selectedPrior">
               <label class="field-label text-muted-foreground">{{ t('reporting.findings') }}</label>
               <div class="report-textarea bg-muted/50 space-y-2">
                 <p v-if="selectedPrior.findingsEn" class="text-base font-medium">{{ selectedPrior.findingsEn }}</p>
@@ -265,8 +285,8 @@
             </div>
           </div>
 
-          <!-- Impression Row -->
-          <div class="grid grid-cols-2 gap-6">
+          <!-- Impression Row (single column in PiP) -->
+          <div class="grid gap-4" :class="pipMode ? 'grid-cols-1' : 'grid-cols-2 gap-6'">
             <div>
               <label class="field-label">{{ t('reporting.impression') }}</label>
               <Textarea
@@ -276,7 +296,7 @@
                 :readonly="study.status === 'finalized' || study.status === 'delivered' || (isTaskWithValidator && !isValidator)"
               />
             </div>
-            <div v-if="showEnglishTranslation">
+            <div v-if="!pipMode && showEnglishTranslation">
               <label class="field-label text-blue-600 dark:text-blue-400">
                 {{ t('reporting.impressionEn') }}
                 <span class="ml-2 text-xs font-normal text-muted-foreground">{{ t('reporting.protocolEnNote') }}</span>
@@ -288,7 +308,7 @@
                 :readonly="study.status === 'finalized' || study.status === 'delivered' || (isTaskWithValidator && !isValidator)"
               />
             </div>
-            <div v-else-if="selectedPrior">
+            <div v-else-if="!pipMode && selectedPrior">
               <label class="field-label text-muted-foreground">{{ t('reporting.impression') }}</label>
               <div class="report-textarea bg-muted/50 space-y-2">
                 <p v-if="selectedPrior.impressionEn" class="text-base font-medium">{{ selectedPrior.impressionEn }}</p>
@@ -298,8 +318,8 @@
             </div>
           </div>
 
-          <!-- Validator Comment Input Section -->
-          <div v-if="isValidator" class="clinical-card border-l-4 border-l-amber-500 bg-amber-500/10 dark:bg-amber-500/20">
+          <!-- Validator Comment Input Section (hidden in PiP) -->
+          <div v-if="!pipMode && isValidator" class="clinical-card border-l-4 border-l-amber-500 bg-amber-500/10 dark:bg-amber-500/20">
             <div class="clinical-card-header">
               <h3 class="text-sm font-semibold flex items-center gap-2 text-foreground">
                 <MessageCircle class="w-4 h-4 text-amber-600 dark:text-amber-400" />
@@ -317,8 +337,8 @@
             </div>
           </div>
           
-          <div class="grid grid-cols-2 gap-6">
-            <div class="flex items-center justify-between pt-4 border-t border-border">
+          <div class="grid gap-4 pt-4 border-t border-border" :class="pipMode ? 'grid-cols-1' : 'grid-cols-2 gap-6'">
+            <div class="flex items-center justify-between">
               <div v-if="isValidator" class="flex items-center gap-3">
                 <Button
                   variant="outline"
@@ -366,7 +386,7 @@
                   : t('reporting.notAutoSaved') }}
               </p>
             </div>
-            <div v-if="selectedPrior || showEnglishTranslation" class="pt-4 border-t border-border">
+            <div v-if="!pipMode && (selectedPrior || showEnglishTranslation)" class="pt-4 border-t border-border">
               <Button v-if="selectedPrior" variant="outline" size="sm">
                 <Download class="w-4 h-4 mr-2" />
                 {{ t('common.download') }} {{ t('reporting.dicom') }}
@@ -376,8 +396,8 @@
         </div>
       </div>
 
-      <!-- Right Sidebar -->
-      <aside class="w-72 border-l border-border bg-muted/30 p-4 space-y-4 flex-shrink-0">
+      <!-- Right Sidebar (hidden in PiP) -->
+      <aside v-if="!pipMode" class="w-72 border-l border-border bg-muted/30 p-4 space-y-4 flex-shrink-0">
         <!-- Linked Body Parts -->
         <div v-if="linkedStudies.length > 0" class="clinical-card border-primary/30 bg-primary/5">
           <div class="clinical-card-header">
@@ -680,9 +700,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { useI18n } from 'vue-i18n'
+import { createApp, ref, computed, onMounted, onBeforeUnmount, watch, inject } from 'vue'
+import { useRoute, useRouter, type Router } from 'vue-router'
+import { getActivePinia, type Pinia } from 'pinia'
+import { useI18n, type I18n } from 'vue-i18n'
 import {
   ArrowLeft,
   Download,
@@ -703,7 +724,8 @@ import {
   MessageCircle,
   Languages,
   FileEdit,
-  Eye
+  Eye,
+  PictureInPicture2
 } from 'lucide-vue-next'
 import Button from '@/components/ui/button.vue'
 import StatusBadge from '@/components/ui/StatusBadge.vue'
@@ -726,12 +748,15 @@ import Textarea from '@/components/ui/textarea.vue'
 import type { PriorStudy } from '@/types/study'
 import { useToast } from '@/hooks/use-toast'
 import { studyService } from '@/services/studyService'
+import { i18n } from '@/i18n';
 
 const route = useRoute()
 const router = useRouter()
 const { t } = useI18n()
+const pinia = getActivePinia()
 const taskStore = useTaskStore()
 const { toast } = useToast()
+const pipMode = inject<boolean>('pipMode', false)
 
 const study = computed(() => {
   // Always prefer currentTask for the current route since it has full data
@@ -1131,6 +1156,118 @@ const handleDownload = async () => {
 // Open study in OHIF viewer
 const isOpeningViewer = ref(false)
 
+// Document Picture-in-Picture (PiP) — requires user gesture and secure context
+const PIP_WINDOW_SIZE = { width: 640, height: 720 } as const
+
+const pipSupported = ref(false)
+const isPipOpen = ref(false)
+const isOpeningPip = ref(false)
+
+interface DocumentPictureInPictureAPI {
+  requestWindow(options?: { width?: number; height?: number }): Promise<Window>
+  window: Window | null
+}
+
+function getDocumentPictureInPicture(): DocumentPictureInPictureAPI | null {
+  if (typeof window === 'undefined') return null
+  return (window as Window & { documentPictureInPicture?: DocumentPictureInPictureAPI }).documentPictureInPicture ?? null
+}
+
+function getPipWindow(): Window | null {
+  const api = getDocumentPictureInPicture()
+  return api?.window ?? null
+}
+
+function closePip(): void {
+  const w = getPipWindow()
+  if (w) w.close()
+}
+
+function copyStylesToPipWindow(pipWindow: Window): void {
+  try {
+    ;[...document.styleSheets].forEach((styleSheet) => {
+      try {
+        const rules = [...styleSheet.cssRules].map((r) => r.cssText).join('')
+        const style = document.createElement('style')
+        style.textContent = rules
+        pipWindow.document.head.appendChild(style)
+      } catch {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.type = styleSheet.type
+        link.media = 'all'
+        link.href = (styleSheet as CSSStyleSheet).href || ''
+        pipWindow.document.head.appendChild(link)
+      }
+    })
+  } catch {
+    const style = pipWindow.document.createElement('style')
+    style.textContent = 'body{font-family:system-ui,sans-serif;margin:0;background:var(--background,#fff);color:var(--foreground,#111)}'
+    pipWindow.document.head.appendChild(style)
+  }
+}
+
+function showPipError(): void {
+  toast({ title: t('reporting.pipFailed'), description: t('reporting.pipErrorDescription'), variant: 'destructive' })
+}
+
+async function openPipAndMountApp(router: Router, pinia: Pinia, i18n: I18n): Promise<void> {
+  const api = getDocumentPictureInPicture()
+  if (!api) return
+
+  // Must start in same tick as user gesture (transient activation)
+  const pipWindowPromise = api.requestWindow(PIP_WINDOW_SIZE)
+  const PipShell = (await import('@/pages/reporting/PipShell.vue')).default
+
+  const pipWindow = await pipWindowPromise
+  isPipOpen.value = true
+  pipWindow.document.title = `${study.value?.accessionNumber ?? study.value?.id ?? 'Report'} — PiP`
+
+  copyStylesToPipWindow(pipWindow)
+  const root = pipWindow.document.createElement('div')
+  root.id = 'pip-app'
+  pipWindow.document.body.appendChild(root)
+
+  const pipApp = createApp(PipShell)
+  pipApp.use(pinia)
+  pipApp.use(router)
+  pipApp.use(i18n)
+  pipApp.mount(root)
+
+  pipWindow.addEventListener('pagehide', () => {
+    pipApp.unmount()
+    isPipOpen.value = false
+  })
+}
+
+async function togglePictureInPicture(): Promise<void> {
+  if (!study.value || isOpeningPip.value) return
+
+  const api = getDocumentPictureInPicture()
+  if (!api) {
+    showPipError()
+    return
+  }
+
+  const existing = getPipWindow()
+  if (existing) {
+    existing.close()
+    isPipOpen.value = false
+    return
+  }
+
+  isOpeningPip.value = true
+  try {
+    // Pass app instances from component context; useRouter() must not be called after await
+    await openPipAndMountApp(router, pinia, i18n)
+  } catch {
+    isPipOpen.value = false
+    showPipError()
+  } finally {
+    isOpeningPip.value = false
+  }
+}
+
 const handleOpenViewer = async () => {
   if (!study.value || isOpeningViewer.value) return
 
@@ -1160,7 +1297,22 @@ const formatTime = (timestamp: string) => {
   return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
 }
 
+function closePipIfOpen(): void {
+  if (pipMode) return
+  const w = getPipWindow()
+  if (w) {
+    w.close()
+    isPipOpen.value = false
+  }
+}
+
+onBeforeUnmount(() => {
+  closePipIfOpen()
+})
+
 onMounted(async () => {
+  if (pipMode) return
+  pipSupported.value = typeof window !== 'undefined' && 'documentPictureInPicture' in window
   const taskId = parseInt(route.params.taskId as string, 10)
   await taskStore.fetchTaskDetails(taskId)
 
@@ -1182,24 +1334,24 @@ onMounted(async () => {
 
 // Watch for route changes to refetch task data when navigating between tasks
 watch(() => route.params.taskId, async (newTaskId) => {
-  if (newTaskId) {
-    const taskId = parseInt(newTaskId as string, 10)
-    await taskStore.fetchTaskDetails(taskId)
+  if (pipMode || !newTaskId) return
+  const taskId = parseInt(newTaskId as string, 10)
+  await taskStore.fetchTaskDetails(taskId)
 
-    // Auto-show translation for validators
-    if (isValidator.value) {
-      showEnglishTranslation.value = true
-    }
+  // Auto-show translation for validators
+  if (isValidator.value) {
+    showEnglishTranslation.value = true
+  }
 
-    // Auto-start validation if validator opens an assigned_for_validation task
-    if (isValidator.value && study.value?.status === 'assigned-for-validation') {
-      try {
-        await taskStore.startValidationTask(taskId)
-        await taskStore.fetchTaskDetails(taskId)
-      } catch (error) {
-        console.error('Failed to auto-start validation:', error)
-      }
+  // Auto-start validation if validator opens an assigned_for_validation task
+  if (isValidator.value && study.value?.status === 'assigned-for-validation') {
+    try {
+      await taskStore.startValidationTask(taskId)
+      await taskStore.fetchTaskDetails(taskId)
+    } catch (error) {
+      console.error('Failed to auto-start validation:', error)
     }
   }
 })
 </script>
+

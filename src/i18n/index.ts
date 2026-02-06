@@ -552,6 +552,10 @@ const messages = {
       openingViewer: "Opening...",
       viewerFailed: "Viewer Failed",
       viewerErrorDescription: "Failed to open the study viewer. Please try again.",
+      openPip: "Picture-in-Picture",
+      closePip: "Close PiP",
+      pipFailed: "Picture-in-Picture Failed",
+      pipErrorDescription: "Failed to open Picture-in-Picture. Not supported in this browser or context.",
 
       comments: "Comments",
       commentCount: "{count} comment(s)",
@@ -1216,6 +1220,10 @@ const messages = {
       openingViewer: "Открытие...",
       viewerFailed: "Ошибка просмотра",
       viewerErrorDescription: "Не удалось открыть просмотрщик. Пожалуйста, попробуйте снова.",
+      openPip: "Картинка в картинке",
+      closePip: "Закрыть PiP",
+      pipFailed: "Ошибка Picture-in-Picture",
+      pipErrorDescription: "Не удалось открыть окно. Функция не поддерживается в этом браузере.",
 
       comments: "Комментарии",
       commentCount: "{count} комментарий | {count} комментария | {count} комментариев",
@@ -1304,7 +1312,7 @@ const messages = {
   }
 }
 
-export function setupI18n() {
+function setupI18n() {
   const i18n = createI18n({
     legacy: false,
     locale: savedLanguage,
@@ -1314,3 +1322,5 @@ export function setupI18n() {
 
   return i18n
 }
+
+export const i18n = setupI18n();
