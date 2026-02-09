@@ -399,6 +399,7 @@ const messages = {
       statusDistribution: "Status Distribution",
       overdueStudies: "Overdue Tasks",
       studiesFor: "Tasks: {category}",
+      noResults: "No tasks matching the selected filters",
 
       headers: {
         studyId: "Study ID",
@@ -1067,6 +1068,7 @@ const messages = {
       statusDistribution: "Распределение по статусам",
       overdueStudies: "Просроченные задачи",
       studiesFor: "Задачи: {category}",
+      noResults: "Нет задач, соответствующих выбранным фильтрам",
 
       headers: {
         studyId: "ID исследования",
