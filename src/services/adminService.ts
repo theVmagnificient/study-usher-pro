@@ -33,6 +33,12 @@ export interface WorkforceMetrics {
   by_role: Record<string, { total: number, active: number, capacity: number }>
 }
 
+export interface DistributionSettings {
+  stat_max_load: number
+  urgent_max_load: number
+  routine_max_load: number
+}
+
 export const adminService = {
   // Task Types Management
   async listTaskTypes(params?: {
@@ -127,6 +133,32 @@ export const adminService = {
       return response.data
     } catch (error) {
       console.error('Failed to get workforce metrics:', error)
+      throw error
+    }
+  },
+
+  // Distribution Settings
+  async getDistributionSettings(): Promise<DistributionSettings> {
+    try {
+      const response = await apiClient.get<DistributionSettings>(
+        '/api/v1/admin/tasks/distribution-settings'
+      )
+      return response.data
+    } catch (error) {
+      console.error('Failed to get distribution settings:', error)
+      throw error
+    }
+  },
+
+  async updateDistributionSettings(data: DistributionSettings): Promise<DistributionSettings> {
+    try {
+      const response = await apiClient.put<DistributionSettings>(
+        '/api/v1/admin/tasks/distribution-settings',
+        data
+      )
+      return response.data
+    } catch (error) {
+      console.error('Failed to update distribution settings:', error)
       throw error
     }
   },

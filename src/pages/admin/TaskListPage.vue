@@ -19,7 +19,7 @@
     <div v-else>
       <!-- Filters -->
       <div class="clinical-card mb-6">
-        <div class="p-4 flex flex-wrap md:flex-nowrap gap-4">
+        <div class="p-4 flex flex-wrap md:flex-nowrap gap-4 items-center">
           <div class="w-full md:w-[330px] flex-shrink-0">
             <div class="relative">
               <Search class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -41,6 +41,36 @@
               </SelectItem>
             </SelectContent>
           </Select>
+          <div class="ml-auto">
+            <Button
+              size="sm"
+              :disabled="distributing"
+              @click="distributeAll"
+            >
+              <Zap class="w-4 h-4 mr-1.5" />
+              {{ distributing ? t('taskList.distributing') : t('taskList.distributeAll') }}
+            </Button>
+          </div>
+        </div>
+        <!-- Distribution result banner -->
+        <div
+          v-if="distributeResult"
+          class="px-4 pb-3"
+        >
+          <div :class="[
+            'text-sm px-3 py-2 rounded-md',
+            distributeResult.failed > 0
+              ? 'bg-destructive/10 text-destructive'
+              : distributeResult.distributed > 0
+                ? 'bg-green-500/10 text-green-600'
+                : 'bg-muted text-muted-foreground'
+          ]">
+            {{ t('taskList.distributeResult', {
+              distributed: distributeResult.distributed,
+              skipped: distributeResult.skipped,
+              failed: distributeResult.failed
+            }) }}
+          </div>
         </div>
       </div>
 
@@ -144,7 +174,7 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { Search, MoreHorizontal, UserPlus, FileText } from 'lucide-vue-next'
+import { Search, MoreHorizontal, UserPlus, FileText, Zap } from 'lucide-vue-next'
 import { format, parseISO } from 'date-fns'
 import PageHeader from '@/components/layout/PageHeader.vue'
 import StatusBadge from '@/components/ui/StatusBadge.vue'
@@ -173,6 +203,28 @@ const loading = ref(false)
 const error = ref<string | null>(null)
 const searchTerm = ref('')
 const statusFilter = ref<string>('all')
+
+// Distribution
+const distributing = ref(false)
+const distributeResult = ref<{ distributed: number, skipped: number, failed: number } | null>(null)
+
+async function distributeAll() {
+  distributing.value = true
+  distributeResult.value = null
+  try {
+    const response = await apiClient.post<{ distributed: number, skipped: number, failed: number }>(
+      '/api/v1/admin/tasks/distribute'
+    )
+    distributeResult.value = response.data
+    await fetchTasks()
+    setTimeout(() => { distributeResult.value = null }, 8000)
+  } catch (err) {
+    console.error('Distribution failed:', err)
+    distributeResult.value = { distributed: 0, skipped: 0, failed: 1 }
+  } finally {
+    distributing.value = false
+  }
+}
 
 const statusOptions = computed(() => [
   { value: 'all', label: t('taskList.allStatuses') },

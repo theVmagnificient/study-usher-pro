@@ -179,7 +179,10 @@ const messages = {
 
       // Actions
       viewDetails: "View Details",
-      viewReport: "View Report"
+      viewReport: "View Report",
+      distributeAll: "Distribute Tasks",
+      distributing: "Distributing...",
+      distributeResult: "Distributed: {distributed}, skipped: {skipped}, failed: {failed}"
     },
 
     // Study Detail Page
@@ -503,6 +506,21 @@ const messages = {
         critical: "Critical (≤1)",
         warning: "Warning (≤2)",
         good: "Good (>2)"
+      },
+
+      distributionSettings: {
+        title: "Distribution Settings",
+        description: "Maximum concurrent tasks per radiologist by urgency level",
+        statMaxLoad: "STAT limit",
+        urgentMaxLoad: "Urgent limit",
+        routineMaxLoad: "Routine limit",
+        statHint: "Highest priority — strictest limit",
+        urgentHint: "Time-sensitive tasks",
+        routineHint: "Standard turnaround",
+        save: "Save",
+        saving: "Saving...",
+        saved: "Settings saved",
+        error: "Failed to save settings"
       }
     },
 
@@ -819,7 +837,10 @@ const messages = {
 
       // Действия
       viewDetails: "Просмотр деталей",
-      viewReport: "Просмотр отчета"
+      viewReport: "Просмотр отчета",
+      distributeAll: "Распределить задачи",
+      distributing: "Распределение...",
+      distributeResult: "Распределено: {distributed}, пропущено: {skipped}, ошибок: {failed}"
     },
 
     // Страница детализации задачи
@@ -1172,6 +1193,21 @@ const messages = {
         critical: "Критично (≤1)",
         warning: "Предупреждение (≤2)",
         good: "Хорошо (>2)"
+      },
+
+      distributionSettings: {
+        title: "Настройки распределения",
+        description: "Максимум одновременных задач на рентгенолога по уровню срочности",
+        statMaxLoad: "Лимит STAT",
+        urgentMaxLoad: "Лимит срочных",
+        routineMaxLoad: "Лимит плановых",
+        statHint: "Высший приоритет — строжайший лимит",
+        urgentHint: "Срочные задачи",
+        routineHint: "Стандартный срок выполнения",
+        save: "Сохранить",
+        saving: "Сохранение...",
+        saved: "Настройки сохранены",
+        error: "Не удалось сохранить настройки"
       }
     },
 
