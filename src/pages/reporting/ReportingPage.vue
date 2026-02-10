@@ -700,10 +700,9 @@
 </template>
 
 <script setup lang="ts">
-import { createApp, ref, computed, onMounted, onBeforeUnmount, watch, inject } from 'vue'
-import { useRoute, useRouter, type Router } from 'vue-router'
-import { getActivePinia, type Pinia } from 'pinia'
-import { useI18n, type I18n } from 'vue-i18n'
+import { ref, computed, onMounted, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import {
   ArrowLeft,
   Download,
@@ -748,15 +747,18 @@ import Textarea from '@/components/ui/textarea.vue'
 import type { PriorStudy } from '@/types/study'
 import { useToast } from '@/hooks/use-toast'
 import { studyService } from '@/services/studyService'
-import { i18n } from '@/i18n';
+import { usePictureInPicture } from '@/composables/usePictureInPicture'
 
 const route = useRoute()
 const router = useRouter()
 const { t } = useI18n()
-const pinia = getActivePinia()
 const taskStore = useTaskStore()
 const { toast } = useToast()
-const pipMode = inject<boolean>('pipMode', false)
+const { pipSupported, isPipOpen, isOpeningPip, togglePictureInPicture, closePip, pipMode } = usePictureInPicture({
+  canOpen: () => !!study.value,
+  getWindowTitle: () => study.value?.accessionNumber ?? String(study.value?.id ?? 'Report'),
+  loadShell: () => import('@/pages/reporting/PipShell.vue').then(m => m.default),
+})
 
 const study = computed(() => {
   // Always prefer currentTask for the current route since it has full data
@@ -1156,118 +1158,6 @@ const handleDownload = async () => {
 // Open study in OHIF viewer
 const isOpeningViewer = ref(false)
 
-// Document Picture-in-Picture (PiP) — requires user gesture and secure context
-const PIP_WINDOW_SIZE = { width: 640, height: 720 } as const
-
-const pipSupported = ref(false)
-const isPipOpen = ref(false)
-const isOpeningPip = ref(false)
-
-interface DocumentPictureInPictureAPI {
-  requestWindow(options?: { width?: number; height?: number }): Promise<Window>
-  window: Window | null
-}
-
-function getDocumentPictureInPicture(): DocumentPictureInPictureAPI | null {
-  if (typeof window === 'undefined') return null
-  return (window as Window & { documentPictureInPicture?: DocumentPictureInPictureAPI }).documentPictureInPicture ?? null
-}
-
-function getPipWindow(): Window | null {
-  const api = getDocumentPictureInPicture()
-  return api?.window ?? null
-}
-
-function closePip(): void {
-  const w = getPipWindow()
-  if (w) w.close()
-}
-
-function copyStylesToPipWindow(pipWindow: Window): void {
-  try {
-    ;[...document.styleSheets].forEach((styleSheet) => {
-      try {
-        const rules = [...styleSheet.cssRules].map((r) => r.cssText).join('')
-        const style = document.createElement('style')
-        style.textContent = rules
-        pipWindow.document.head.appendChild(style)
-      } catch {
-        const link = document.createElement('link')
-        link.rel = 'stylesheet'
-        link.type = styleSheet.type
-        link.media = 'all'
-        link.href = (styleSheet as CSSStyleSheet).href || ''
-        pipWindow.document.head.appendChild(link)
-      }
-    })
-  } catch {
-    const style = pipWindow.document.createElement('style')
-    style.textContent = 'body{font-family:system-ui,sans-serif;margin:0;background:var(--background,#fff);color:var(--foreground,#111)}'
-    pipWindow.document.head.appendChild(style)
-  }
-}
-
-function showPipError(): void {
-  toast({ title: t('reporting.pipFailed'), description: t('reporting.pipErrorDescription'), variant: 'destructive' })
-}
-
-async function openPipAndMountApp(router: Router, pinia: Pinia, i18n: I18n): Promise<void> {
-  const api = getDocumentPictureInPicture()
-  if (!api) return
-
-  // Must start in same tick as user gesture (transient activation)
-  const pipWindowPromise = api.requestWindow(PIP_WINDOW_SIZE)
-  const PipShell = (await import('@/pages/reporting/PipShell.vue')).default
-
-  const pipWindow = await pipWindowPromise
-  isPipOpen.value = true
-  pipWindow.document.title = `${study.value?.accessionNumber ?? study.value?.id ?? 'Report'} — PiP`
-
-  copyStylesToPipWindow(pipWindow)
-  const root = pipWindow.document.createElement('div')
-  root.id = 'pip-app'
-  pipWindow.document.body.appendChild(root)
-
-  const pipApp = createApp(PipShell)
-  pipApp.use(pinia)
-  pipApp.use(router)
-  pipApp.use(i18n)
-  pipApp.mount(root)
-
-  pipWindow.addEventListener('pagehide', () => {
-    pipApp.unmount()
-    isPipOpen.value = false
-  })
-}
-
-async function togglePictureInPicture(): Promise<void> {
-  if (!study.value || isOpeningPip.value) return
-
-  const api = getDocumentPictureInPicture()
-  if (!api) {
-    showPipError()
-    return
-  }
-
-  const existing = getPipWindow()
-  if (existing) {
-    existing.close()
-    isPipOpen.value = false
-    return
-  }
-
-  isOpeningPip.value = true
-  try {
-    // Pass app instances from component context; useRouter() must not be called after await
-    await openPipAndMountApp(router, pinia, i18n)
-  } catch {
-    isPipOpen.value = false
-    showPipError()
-  } finally {
-    isOpeningPip.value = false
-  }
-}
-
 const handleOpenViewer = async () => {
   if (!study.value || isOpeningViewer.value) return
 
@@ -1297,22 +1187,8 @@ const formatTime = (timestamp: string) => {
   return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
 }
 
-function closePipIfOpen(): void {
-  if (pipMode) return
-  const w = getPipWindow()
-  if (w) {
-    w.close()
-    isPipOpen.value = false
-  }
-}
-
-onBeforeUnmount(() => {
-  closePipIfOpen()
-})
-
 onMounted(async () => {
   if (pipMode) return
-  pipSupported.value = typeof window !== 'undefined' && 'documentPictureInPicture' in window
   const taskId = parseInt(route.params.taskId as string, 10)
   await taskStore.fetchTaskDetails(taskId)
 
