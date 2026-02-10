@@ -10,6 +10,7 @@ export default defineConfig(({ mode }) => ({
     proxy: mode === 'development' ? {
       '/api': {
         target: 'http://localhost:8000',
+        // target: 'https://api.platform.xaidos.com',
         changeOrigin: true,
         secure: false,
       },
