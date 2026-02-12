@@ -170,7 +170,7 @@ const toggleTheme = () => {
 
 const handleLogout = () => {
   authStore.signOut()
-  router.push('/login')
+    .then(() => router.push('/login'))
 }
 </script>
 
