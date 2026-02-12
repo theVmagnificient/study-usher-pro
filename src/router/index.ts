@@ -7,7 +7,7 @@ import NotFound from '@/pages/NotFound.vue'
 
 // Admin Pages
 import TaskListPage from '@/pages/admin/TaskListPage.vue'
-import StudyListPage from '@/pages/admin/StudyListPage.vue'
+// import StudyListPage from '@/pages/admin/StudyListPage.vue'
 import StudyDetailPage from '@/pages/admin/StudyDetailPage.vue'
 import TaskTypesPage from '@/pages/admin/TaskTypesPage.vue'
 import UserManagementPage from '@/pages/admin/UserManagementPage.vue'
@@ -177,52 +177,31 @@ const routes = [
 
 const router = createRouter({
   history: createWebHistory(),
-  routes
+  routes,
 })
 
 // Navigation guard for authentication and authorization
-router.beforeEach((to, from, next) => {
+router.beforeEach(async to => {
   const authStore = useAuthStore()
 
-  // Check if route requires authentication (default is true unless explicitly false)
-  const requiresAuth = to.meta.requiresAuth !== false
-
-  if (!requiresAuth) {
-    // Public route, allow access
-    next()
+  if (to.meta.requiresAuth === false) {
     return
   }
 
-  // Check if user is authenticated
-  if (!authStore.isAuthenticated) {
-    // Save the intended destination
-    next({
-      path: '/login',
-      query: { redirect: to.fullPath }
-    })
-    return
+  if (!await authStore.isAuthenticated()) {
+    return { path: '/login', query: { redirect: to.fullPath } }
   }
 
-  // Check role-based access
-  const allowedRoles = to.meta.allowedRoles
+  const allowedRoles = to.meta.allowedRoles || []
+  const userRole = authStore.role
 
-  if (allowedRoles && allowedRoles.length > 0) {
-    const userRole = authStore.role
-
-    if (!userRole || !allowedRoles.includes(userRole)) {
-      // User doesn't have permission, redirect to their default page
-      const defaultPath = getDefaultPathForRole(userRole)
-      next(defaultPath)
-      return
-    }
+  if (allowedRoles.length && !allowedRoles.includes(userRole)) {
+    return getDefaultPathForRole(userRole)
   }
-
-  // User is authenticated and authorized
-  next()
 })
 
-function getDefaultPathForRole(role: UserRole | null): string {
-  if (!role) return '/login'
+export const getDefaultPathForRole = (role?: UserRole) => {
+  if (!role) return '/tasks'
 
   switch (role) {
     case 'admin':
@@ -232,9 +211,8 @@ function getDefaultPathForRole(role: UserRole | null): string {
     case 'validating-radiologist':
       return '/validation'
     default:
-      return '/login'
+      return '/tasks'
   }
 }
 
 export default router
-

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/authStore'
 import Button from '@/components/ui/button.vue'
@@ -10,6 +10,7 @@ import CardContent from '@/components/ui/CardContent.vue'
 import CardDescription from '@/components/ui/CardDescription.vue'
 import CardHeader from '@/components/ui/CardHeader.vue'
 import CardTitle from '@/components/ui/CardTitle.vue'
+import { getDefaultPathForRole } from '@/router'
 
 const router = useRouter()
 const route = useRoute()
@@ -21,52 +22,25 @@ const isLoading = ref(false)
 const errorMessage = ref('')
 
 const handleLogin = async () => {
-  errorMessage.value = ''
-
-  if (!email.value || !password.value) {
-    errorMessage.value = 'Please enter both email and password'
-    return
-  }
-
   isLoading.value = true
 
   try {
-    const success = await authStore.login(email.value, password.value)
-
-    if (success) {
-      // Get redirect path from query params or use role default
-      const redirectPath = (route.query.redirect as string) || getRoleDefaultPath()
-      router.push(redirectPath)
-    } else {
-      errorMessage.value = authStore.error || 'Login failed. Please check your credentials.'
-    }
-  } catch (error) {
-    errorMessage.value = 'An unexpected error occurred. Please try again.'
+    await authStore.signIn(email.value, password.value)
+    await authStore.getUserInfo()
+    router.push(route.query.redirect as string || getDefaultPathForRole(authStore.role))
+  } catch (err: any) {
+    errorMessage.value = err?.message || 'Login failed'
+    console.error(err)
   } finally {
     isLoading.value = false
   }
 }
 
-const getRoleDefaultPath = (): string => {
-  if (!authStore.role) return '/tasks'
-
-  switch (authStore.role) {
-    case 'admin':
-      return '/tasks'
-    case 'reporting-radiologist':
-      return '/queue'
-    case 'validating-radiologist':
-      return '/validation'
-    default:
-      return '/tasks'
+onMounted(async () => {
+  if (await authStore.isAuthenticated()) {
+    router.push(getDefaultPathForRole(authStore.role))
   }
-}
-
-const handleKeyPress = (event: KeyboardEvent) => {
-  if (event.key === 'Enter') {
-    handleLogin()
-  }
-}
+})
 </script>
 
 <template>
@@ -90,7 +64,7 @@ const handleKeyPress = (event: KeyboardEvent) => {
               type="email"
               placeholder="your.email@example.com"
               :disabled="isLoading"
-              @keypress="handleKeyPress"
+              @keydown.enter="handleLogin"
               autocomplete="email"
               required
             />
@@ -104,7 +78,7 @@ const handleKeyPress = (event: KeyboardEvent) => {
               type="password"
               placeholder="••••••••"
               :disabled="isLoading"
-              @keypress="handleKeyPress"
+              @keydown.enter="handleLogin"
               autocomplete="current-password"
               required
             />
