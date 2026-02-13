@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "vibecode": "vite --mode vibecoding",
     "build": "vue-tsc && vite build",
     "build:dev": "vue-tsc && vite build --mode development",
     "lint": "eslint .",
