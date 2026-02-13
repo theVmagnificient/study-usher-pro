@@ -193,7 +193,7 @@ router.beforeEach(async to => {
   }
 
   const allowedRoles = to.meta.allowedRoles || []
-  const userRole = authStore.role
+  const userRole = authStore.user.role
 
   if (allowedRoles.length && !allowedRoles.includes(userRole)) {
     return getDefaultPathForRole(userRole)
@@ -201,8 +201,6 @@ router.beforeEach(async to => {
 })
 
 export const getDefaultPathForRole = (role?: UserRole) => {
-  if (!role) return '/tasks'
-
   switch (role) {
     case 'admin':
       return '/tasks'

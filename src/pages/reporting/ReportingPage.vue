@@ -217,7 +217,7 @@
               </Button>
             </div>
           </div>
-          
+
           <!-- Study Protocol Row (single column in PiP) -->
           <div class="grid gap-4" :class="pipMode ? 'grid-cols-1' : 'grid-cols-2 gap-6'">
             <div>
@@ -336,7 +336,7 @@
               />
             </div>
           </div>
-          
+
           <div class="grid gap-4 pt-4 border-t border-border" :class="pipMode ? 'grid-cols-1' : 'grid-cols-2 gap-6'">
             <div class="flex items-center justify-between">
               <div v-if="isValidator" class="flex items-center gap-3">
@@ -890,7 +890,7 @@ const clinicalNotesText = computed(() => study.value?.clinicalNotes || t('report
 const technicalNotesText = computed(() => study.value?.technicalNotes || t('reporting.noTechnicalNotes'))
 
 const authStore = useAuthStore()
-const isValidator = computed(() => authStore.role === 'validating-radiologist')
+const isValidator = computed(() => authStore.isValidatingRadiologist)
 
 const isTaskCompleted = computed(() => {
   if (!study.value) return false

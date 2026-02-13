@@ -27,7 +27,7 @@ const handleLogin = async () => {
   try {
     await authStore.signIn(email.value, password.value)
     await authStore.getUserInfo()
-    router.push(route.query.redirect as string || getDefaultPathForRole(authStore.role))
+    router.push(route.query.redirect as string || getDefaultPathForRole(authStore.user.role))
   } catch (err: any) {
     errorMessage.value = err?.message || 'Login failed'
     console.error(err)
@@ -38,7 +38,7 @@ const handleLogin = async () => {
 
 onMounted(async () => {
   if (await authStore.isAuthenticated()) {
-    router.push(getDefaultPathForRole(authStore.role))
+    router.push(getDefaultPathForRole(authStore.user.role))
   }
 })
 </script>
