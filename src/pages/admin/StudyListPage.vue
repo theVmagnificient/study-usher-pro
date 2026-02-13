@@ -1,10 +1,22 @@
 <template>
   <div>
     <PageHeader
-      title="Study List"
-      :subtitle="`${filteredStudies.length} studies`"
+      :title="t('studyList.title')"
+      :subtitle="studyStore.loading ? t('common.loading') : t('studyList.subtitle', { count: filteredStudies.length })"
     />
 
+    <!-- Loading State -->
+    <div v-if="studyStore.loading" class="flex items-center justify-center p-8">
+      <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+    </div>
+
+    <!-- Error State -->
+    <div v-else-if="studyStore.error" class="p-4 bg-red-50 text-red-600 rounded-md mb-6">
+      {{ studyStore.error }}
+    </div>
+
+    <!-- Content -->
+    <div v-else>
     <!-- Filters -->
     <div class="clinical-card mb-6">
       <div class="p-4 flex flex-wrap md:flex-nowrap gap-4">
@@ -12,7 +24,7 @@
           <div class="relative">
             <Search class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
-              placeholder="Search by ID, Patient ID, or Client..."
+              :placeholder="t('studyList.searchPlaceholder')"
               :model-value="searchTerm"
               @update:model-value="searchTerm = $event"
               class="pl-9"
@@ -21,7 +33,7 @@
         </div>
         <Select :model-value="statusFilter" @update:model-value="statusFilter = $event as StudyStatus | 'all'">
           <SelectTrigger class="w-[120px]">
-            <SelectValue placeholder="Status" />
+            <SelectValue :placeholder="t('common.status')" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem v-for="opt in statusOptions" :key="opt.value" :value="opt.value">
@@ -31,19 +43,19 @@
         </Select>
         <Select :model-value="clientFilter" @update:model-value="clientFilter = $event">
           <SelectTrigger class="w-[180px]">
-            <SelectValue placeholder="Client" />
+            <SelectValue :placeholder="t('studyList.clientFilter')" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Clients</SelectItem>
+            <SelectItem value="all">{{ t('studyList.allClients') }}</SelectItem>
             <SelectItem v-for="c in clients" :key="c" :value="c">{{ c }}</SelectItem>
           </SelectContent>
         </Select>
         <Select :model-value="modalityFilter" @update:model-value="modalityFilter = $event">
           <SelectTrigger class="w-[120px]">
-            <SelectValue placeholder="Modality" />
+            <SelectValue :placeholder="t('studyList.modalityFilter')" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All</SelectItem>
+            <SelectItem value="all">{{ t('studyList.allModalities') }}</SelectItem>
             <SelectItem v-for="m in modalities" :key="m" :value="m">{{ m }}</SelectItem>
           </SelectContent>
         </Select>
@@ -56,7 +68,7 @@
               !dateFrom && 'text-muted-foreground'
             )">
               <Calendar class="mr-2 h-4 w-4" />
-              {{ dateFrom ? `${format(dateFrom, 'MMM d')} ${timeFrom}` : 'From date & time' }}
+              {{ dateFrom ? `${format(dateFrom, 'MMM d')} ${timeFrom}` : t('studyList.fromDateTime') }}
             </Button>
           </template>
           <CalendarComponent
@@ -64,7 +76,7 @@
             @select="dateFrom = $event"
           />
           <div class="border-t p-3">
-            <Label class="text-xs text-muted-foreground">Time</Label>
+            <Label class="text-xs text-muted-foreground">{{ t('common.time') }}</Label>
             <div class="flex items-center gap-2 mt-1">
               <Clock class="h-4 w-4 text-muted-foreground" />
               <Input
@@ -85,7 +97,7 @@
               !dateTo && 'text-muted-foreground'
             )">
               <Calendar class="mr-2 h-4 w-4" />
-              {{ dateTo ? `${format(dateTo, 'MMM d')} ${timeTo}` : 'To date & time' }}
+              {{ dateTo ? `${format(dateTo, 'MMM d')} ${timeTo}` : t('studyList.toDateTime') }}
             </Button>
           </template>
           <CalendarComponent
@@ -93,7 +105,7 @@
             @select="dateTo = $event"
           />
           <div class="border-t p-3">
-            <Label class="text-xs text-muted-foreground">Time</Label>
+            <Label class="text-xs text-muted-foreground">{{ t('common.time') }}</Label>
             <div class="flex items-center gap-2 mt-1">
               <Clock class="h-4 w-4 text-muted-foreground" />
               <Input
@@ -107,7 +119,7 @@
         </Popover>
 
         <Button v-if="dateFrom || dateTo" variant="ghost" size="sm" @click="clearDateFilters">
-          Clear
+          {{ t('studyList.clearFilters') }}
         </Button>
       </div>
     </div>
@@ -118,15 +130,15 @@
         <table class="data-table">
           <thead>
             <tr>
-              <th>Study ID</th>
-              <th>Patient</th>
-              <th>Client</th>
-              <th>Modality / Area</th>
-              <th>Received</th>
-              <th>Status</th>
-              <th>Urgency</th>
-              <th>Assigned To</th>
-              <th>Deadline</th>
+              <th>{{ t('studyList.headers.studyId') }}</th>
+              <th>{{ t('studyList.headers.patient') }}</th>
+              <th>{{ t('studyList.headers.client') }}</th>
+              <th>{{ t('studyList.headers.modalityArea') }}</th>
+              <th>{{ t('studyList.headers.received') }}</th>
+              <th>{{ t('studyList.headers.status') }}</th>
+              <th>{{ t('studyList.headers.urgency') }}</th>
+              <th>{{ t('studyList.headers.assignedTo') }}</th>
+              <th>{{ t('studyList.headers.deadline') }}</th>
               <th></th>
             </tr>
           </thead>
@@ -137,7 +149,7 @@
               @click="handleRowClick(study, $event)"
               class="cursor-pointer"
             >
-              <td class="font-mono text-xs font-medium">{{ study.id }}</td>
+              <td class="font-mono text-xs font-medium">{{ study.accessionNumber }}</td>
               <td>
                 <div class="text-sm">{{ study.patientId }}</div>
                 <div class="text-xs text-muted-foreground">
@@ -146,7 +158,7 @@
               </td>
               <td class="text-sm">{{ study.clientName }}</td>
               <td>
-                <LinkedBodyAreasDisplay :study="study" :all-studies="mockStudies" />
+                <LinkedBodyAreasDisplay :study="study" :all-studies="studyStore.studies" />
               </td>
               <td>
                 <div class="text-sm">{{ format(parseISO(study.receivedAt), 'MMM d, yyyy') }}</div>
@@ -159,7 +171,7 @@
                 <UrgencyBadge :urgency="study.urgency" />
               </td>
               <td class="text-sm">
-                {{ study.assignedPhysician || 'Unassigned' }}
+                {{ study.assignedPhysician || t('common.unassigned') }}
               </td>
               <td>
                 <DeadlineTimer :deadline="study.deadline" />
@@ -173,12 +185,12 @@
                   </template>
                   <DropdownMenuItem>
                     <Download class="w-4 h-4 mr-2" />
-                    Download DICOM
+                    {{ t('studyList.downloadDicom') }}
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem>
+                  <DropdownMenuItem @click="router.push(`/task/${study.id}`)">
                     <UserPlus class="w-4 h-4 mr-2" />
-                    Reassign
+                    {{ t('studyList.reassign') }}
                   </DropdownMenuItem>
                 </DropdownMenu>
               </td>
@@ -187,12 +199,14 @@
         </table>
       </div>
     </div>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { Search, MoreHorizontal, Download, UserPlus, Calendar, Clock } from 'lucide-vue-next'
 import { format, parseISO, isAfter, isBefore, set } from 'date-fns'
 import { cn } from '@/lib/utils'
@@ -211,25 +225,30 @@ import SelectValue from '@/components/ui/SelectValue.vue'
 import SelectItem from '@/components/ui/SelectItem.vue'
 import Popover from '@/components/ui/popover.vue'
 import CalendarComponent from '@/components/ui/calendar.vue'
-import { mockStudies } from '@/data/mockData'
 import type { StudyStatus, Study } from '@/types/study'
+import { useStudyStore } from '@/stores/studyStore'
+import { onMounted } from 'vue'
 import DropdownMenu from '@/components/ui/dropdown-menu.vue'
 import DropdownMenuItem from '@/components/ui/DropdownMenuItem.vue'
 import DropdownMenuSeparator from '@/components/ui/DropdownMenuSeparator.vue'
 
 const router = useRouter()
+const studyStore = useStudyStore()
+const { t } = useI18n()
 
-const statusOptions: { value: StudyStatus | 'all'; label: string }[] = [
-  { value: 'all', label: 'All Statuses' },
-  { value: 'new', label: 'New' },
-  { value: 'assigned', label: 'Assigned' },
-  { value: 'in-progress', label: 'In Progress' },
-  { value: 'draft-ready', label: 'Draft Ready' },
-  { value: 'under-validation', label: 'Under Validation' },
-  { value: 'returned', label: 'Returned' },
-  { value: 'finalized', label: 'Finalized' },
-  { value: 'delivered', label: 'Delivered' },
-]
+const statusOptions = computed(() => [
+  { value: 'all' as const, label: t('studyList.allStatuses') },
+  { value: 'new' as const, label: t('status.new') },
+  { value: 'assigned' as const, label: t('status.assigned') },
+  { value: 'in-progress' as const, label: t('status.inProgress') },
+  { value: 'draft-ready' as const, label: t('status.draftReady') },
+  { value: 'translated' as const, label: t('status.translated') },
+  { value: 'assigned-for-validation' as const, label: t('status.assignedForValidation') },
+  { value: 'under-validation' as const, label: t('status.underValidation') },
+  { value: 'returned' as const, label: t('status.returned') },
+  { value: 'finalized' as const, label: t('status.finalized') },
+  { value: 'delivered' as const, label: t('status.delivered') },
+])
 
 const searchTerm = ref('')
 const statusFilter = ref<StudyStatus | 'all'>('all')
@@ -240,8 +259,8 @@ const dateTo = ref<Date | undefined>(undefined)
 const timeFrom = ref<string>('00:00')
 const timeTo = ref<string>('23:59')
 
-const clients = [...new Set(mockStudies.map((s) => s.clientName))]
-const modalities = [...new Set(mockStudies.map((s) => s.modality))]
+const clients = computed(() => [...new Set(studyStore.studies.map((s) => s.clientName))])
+const modalities = computed(() => [...new Set(studyStore.studies.map((s) => s.modality))])
 
 const getDateTimeFrom = () => {
   if (!dateFrom.value) return null
@@ -256,9 +275,9 @@ const getDateTimeTo = () => {
 }
 
 const filteredStudies = computed(() => {
-  return mockStudies.filter((study) => {
+  return studyStore.studies.filter((study) => {
     const matchesSearch =
-      study.id.toLowerCase().includes(searchTerm.value.toLowerCase()) ||
+      study.id.toString().toLowerCase().includes(searchTerm.value.toLowerCase()) ||
       study.patientId.toLowerCase().includes(searchTerm.value.toLowerCase()) ||
       study.clientName.toLowerCase().includes(searchTerm.value.toLowerCase())
     const matchesStatus = statusFilter.value === 'all' || study.status === statusFilter.value
@@ -282,7 +301,7 @@ const handleRowClick = (study: Study, event: MouseEvent) => {
   if (target.closest('[role="menu"]') || target.closest('button')) {
     return
   }
-  router.push(`/study/${study.id}`)
+  router.push(`/task/${study.id}`)
 }
 
 const clearDateFilters = () => {
@@ -291,5 +310,9 @@ const clearDateFilters = () => {
   timeFrom.value = '00:00'
   timeTo.value = '23:59'
 }
+
+onMounted(async () => {
+  await studyStore.fetchStudies()
+})
 </script>
 

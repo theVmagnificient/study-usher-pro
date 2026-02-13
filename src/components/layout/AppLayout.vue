@@ -1,6 +1,6 @@
 <template>
   <div class="flex h-screen w-full bg-background overflow-hidden">
-    <AppSidebar :current-role="currentRole" @role-change="setRole" />
+    <AppSidebar />
     <div class="flex-1 flex flex-col overflow-hidden">
       <!-- Top Bar -->
       <header class="h-14 border-b border-border bg-card flex items-center justify-end px-6">
@@ -12,7 +12,7 @@
             </Button>
           </TooltipTrigger>
           <TooltipContent>
-            <p>Toggle theme (Ctrl+D)</p>
+            <p>{{ t('common.toggleTheme') }}</p>
           </TooltipContent>
         </Tooltip>
       </header>
@@ -28,6 +28,7 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted } from 'vue'
 import { RouterView } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useAppStore } from '@/stores/app'
 import { computed } from 'vue'
 import { Moon, Sun } from 'lucide-vue-next'
@@ -37,13 +38,9 @@ import Tooltip from '@/components/ui/tooltip.vue'
 import TooltipTrigger from '@/components/ui/TooltipTrigger.vue'
 import TooltipContent from '@/components/ui/TooltipContent.vue'
 
+const { t } = useI18n()
 const appStore = useAppStore()
-const currentRole = computed(() => appStore.currentRole)
 const isDark = computed(() => appStore.isDark)
-
-const setRole = (role: typeof appStore.currentRole) => {
-  appStore.setRole(role)
-}
 
 const toggleTheme = () => {
   appStore.toggleTheme()

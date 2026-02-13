@@ -1,17 +1,29 @@
 <template>
   <div class="p-6 space-y-6">
     <PageHeader
-      title="Workforce Capacity"
-      subtitle="Monitor radiologist availability and identify staffing gaps"
+      :title="t('workforce.title')"
+      :subtitle="userStore.loading ? t('common.loading') : t('workforce.subtitle')"
     />
 
+    <!-- Loading State -->
+    <div v-if="userStore.loading" class="flex items-center justify-center p-8">
+      <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+    </div>
+
+    <!-- Error State -->
+    <div v-else-if="userStore.error" class="p-4 bg-red-50 text-red-600 rounded-md mb-6">
+      {{ userStore.error }}
+    </div>
+
+    <!-- Content -->
+    <div v-else class="space-y-6">
     <!-- Summary Cards -->
     <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
       <Card class="border-destructive/50 bg-destructive/5">
         <CardContent class="pt-4">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-xs text-muted-foreground uppercase tracking-wider">Critical Days</p>
+              <p class="text-xs text-muted-foreground uppercase tracking-wider">{{ t('workforce.metrics.criticalDays') }}</p>
               <p class="text-2xl font-bold text-destructive">{{ monthStats.criticalDays }}</p>
             </div>
             <AlertTriangle class="w-8 h-8 text-destructive/60" />
@@ -23,7 +35,7 @@
         <CardContent class="pt-4">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-xs text-muted-foreground uppercase tracking-wider">Warning Days</p>
+              <p class="text-xs text-muted-foreground uppercase tracking-wider">{{ t('workforce.metrics.warningDays') }}</p>
               <p class="text-2xl font-bold text-yellow-600">{{ monthStats.warningDays }}</p>
             </div>
             <Info class="w-8 h-8 text-yellow-500/60" />
@@ -35,7 +47,7 @@
         <CardContent class="pt-4">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-xs text-muted-foreground uppercase tracking-wider">Good Coverage</p>
+              <p class="text-xs text-muted-foreground uppercase tracking-wider">{{ t('workforce.metrics.goodCoverage') }}</p>
               <p class="text-2xl font-bold text-green-600">{{ monthStats.goodDays }}</p>
             </div>
             <CheckCircle class="w-8 h-8 text-green-500/60" />
@@ -47,7 +59,7 @@
         <CardContent class="pt-4">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-xs text-muted-foreground uppercase tracking-wider">Avg. Radiologists/Day</p>
+              <p class="text-xs text-muted-foreground uppercase tracking-wider">{{ t('workforce.metrics.avgRadiologists') }}</p>
               <p class="text-2xl font-bold">{{ monthStats.avgRadiologists.toFixed(1) }}</p>
             </div>
             <Users class="w-8 h-8 text-muted-foreground/60" />
@@ -55,6 +67,81 @@
         </CardContent>
       </Card>
     </div>
+
+    <!-- Distribution Settings -->
+    <Card>
+      <CardHeader class="pb-3">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <Settings class="w-4 h-4 text-muted-foreground" />
+            <CardTitle class="text-base font-medium">{{ t('workforce.distributionSettings.title') }}</CardTitle>
+          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            @click="showDistributionSettings = !showDistributionSettings"
+          >
+            <ChevronDown :class="cn('w-4 h-4 transition-transform', showDistributionSettings && 'rotate-180')" />
+          </Button>
+        </div>
+        <p v-if="!showDistributionSettings" class="text-xs text-muted-foreground mt-1">
+          STAT: {{ distributionSettings.stat_max_load }} · {{ t('urgency.urgent') }}: {{ distributionSettings.urgent_max_load }} · {{ t('urgency.routine') }}: {{ distributionSettings.routine_max_load }}
+        </p>
+      </CardHeader>
+      <CardContent v-if="showDistributionSettings">
+        <p class="text-sm text-muted-foreground mb-4">{{ t('workforce.distributionSettings.description') }}</p>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="space-y-2">
+            <label class="text-sm font-medium">{{ t('workforce.distributionSettings.statMaxLoad') }}</label>
+            <input
+              v-model.number="distributionForm.stat_max_load"
+              type="number"
+              min="1"
+              max="50"
+              class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            />
+            <p class="text-xs text-muted-foreground">{{ t('workforce.distributionSettings.statHint') }}</p>
+          </div>
+          <div class="space-y-2">
+            <label class="text-sm font-medium">{{ t('workforce.distributionSettings.urgentMaxLoad') }}</label>
+            <input
+              v-model.number="distributionForm.urgent_max_load"
+              type="number"
+              min="1"
+              max="50"
+              class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            />
+            <p class="text-xs text-muted-foreground">{{ t('workforce.distributionSettings.urgentHint') }}</p>
+          </div>
+          <div class="space-y-2">
+            <label class="text-sm font-medium">{{ t('workforce.distributionSettings.routineMaxLoad') }}</label>
+            <input
+              v-model.number="distributionForm.routine_max_load"
+              type="number"
+              min="1"
+              max="50"
+              class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            />
+            <p class="text-xs text-muted-foreground">{{ t('workforce.distributionSettings.routineHint') }}</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-3 mt-4">
+          <Button
+            size="sm"
+            :disabled="distributionSaving || !distributionFormChanged"
+            @click="saveDistributionSettings"
+          >
+            {{ distributionSaving ? t('workforce.distributionSettings.saving') : t('workforce.distributionSettings.save') }}
+          </Button>
+          <span v-if="distributionSaveStatus === 'saved'" class="text-sm text-green-600">
+            <CheckCircle class="w-4 h-4 inline mr-1" />{{ t('workforce.distributionSettings.saved') }}
+          </span>
+          <span v-if="distributionSaveStatus === 'error'" class="text-sm text-destructive">
+            {{ t('workforce.distributionSettings.error') }}
+          </span>
+        </div>
+      </CardContent>
+    </Card>
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:h-[calc(100vh-280px)]">
       <!-- Calendar -->
@@ -116,8 +203,8 @@
               </TooltipTrigger>
               <TooltipContent side="top" class="text-xs">
                 <p class="font-medium">{{ format(day.date, "EEEE, MMM d") }}</p>
-                <p>{{ day.radiologists.length }} radiologist{{ day.radiologists.length !== 1 ? 's' : '' }}</p>
-                <p>{{ day.totalHours }} total hours</p>
+                <p>{{ t('workforce.radiologists', { count: day.radiologists.length }) }}</p>
+                <p>{{ t('workforce.totalHours', { count: day.totalHours }) }}</p>
               </TooltipContent>
             </Tooltip>
           </div>
@@ -144,7 +231,7 @@
       <Card class="lg:sticky lg:top-6 lg:self-start flex flex-col overflow-hidden lg:h-[calc(100vh-200px)]">
         <CardHeader class="pb-2 flex-shrink-0">
           <CardTitle class="text-base font-medium">
-            {{ selectedDay ? format(selectedDay.date, "EEEE, MMMM d") : "Select a day" }}
+            {{ selectedDay ? format(selectedDay.date, "EEEE, MMMM d") : t('workforce.selectDay') }}
           </CardTitle>
         </CardHeader>
         <CardContent class="flex-1 overflow-y-auto">
@@ -166,9 +253,9 @@
                   selectedDay.capacityLevel === 'warning' && 'text-yellow-600',
                   selectedDay.capacityLevel === 'good' && 'text-green-600'
                 )">
-                  <template v-if="selectedDay.capacityLevel === 'critical'">Critical - Staffing needed</template>
-                  <template v-else-if="selectedDay.capacityLevel === 'warning'">Warning - Limited coverage</template>
-                  <template v-else>Good coverage</template>
+                  <template v-if="selectedDay.capacityLevel === 'critical'">{{ t('workforce.status.critical') }}</template>
+                  <template v-else-if="selectedDay.capacityLevel === 'warning'">{{ t('workforce.status.warning') }}</template>
+                  <template v-else>{{ t('workforce.status.good') }}</template>
                 </span>
               </div>
             </div>
@@ -177,18 +264,18 @@
             <div class="grid grid-cols-2 gap-3">
               <div class="text-center p-2 bg-muted/50 rounded">
                 <p class="text-2xl font-bold">{{ selectedDay.radiologists.length }}</p>
-                <p class="text-xs text-muted-foreground">Radiologists</p>
+                <p class="text-xs text-muted-foreground">{{ t('workforce.dayDetails.radiologists') }}</p>
               </div>
               <div class="text-center p-2 bg-muted/50 rounded">
                 <p class="text-2xl font-bold">{{ selectedDay.totalHours }}</p>
-                <p class="text-xs text-muted-foreground">Total Hours</p>
+                <p class="text-xs text-muted-foreground">{{ t('workforce.dayDetails.totalHours') }}</p>
               </div>
             </div>
 
             <!-- Working Radiologists -->
             <div>
               <h4 class="text-xs font-medium text-muted-foreground uppercase mb-2">
-                Working Radiologists
+                {{ t('workforce.dayDetails.workingRadiologists') }}
               </h4>
               <div v-if="selectedDay.radiologists.length > 0" class="space-y-2">
                 <div v-for="physician in selectedDay.radiologists" :key="physician.id" class="p-2 bg-muted/30 rounded text-sm">
@@ -198,46 +285,48 @@
                   </p>
                 </div>
               </div>
-              <p v-else class="text-sm text-muted-foreground italic">No radiologists scheduled</p>
+              <p v-else class="text-sm text-muted-foreground italic">{{ t('workforce.dayDetails.noRadiologists') }}</p>
             </div>
 
             <!-- Modalities Coverage -->
             <div>
               <h4 class="text-xs font-medium text-muted-foreground uppercase mb-2">
-                Modalities Covered
+                {{ t('workforce.dayDetails.modalitiesCovered') }}
               </h4>
               <div v-if="selectedDay.modalities.size > 0" class="flex flex-wrap gap-1">
                 <Badge v-for="modality in Array.from(selectedDay.modalities)" :key="modality" variant="secondary" class="text-xs">
                   {{ modality }}
                 </Badge>
               </div>
-              <p v-else class="text-sm text-muted-foreground italic">No coverage</p>
+              <p v-else class="text-sm text-muted-foreground italic">{{ t('workforce.dayDetails.noCoverage') }}</p>
             </div>
 
             <!-- Body Areas Coverage -->
             <div>
               <h4 class="text-xs font-medium text-muted-foreground uppercase mb-2">
-                Body Areas Covered
+                {{ t('workforce.dayDetails.bodyAreasCovered') }}
               </h4>
               <div v-if="selectedDay.bodyAreas.size > 0" class="flex flex-wrap gap-1">
                 <Badge v-for="area in Array.from(selectedDay.bodyAreas)" :key="area" variant="outline" class="text-xs">
                   {{ area }}
                 </Badge>
               </div>
-              <p v-else class="text-sm text-muted-foreground italic">No coverage</p>
+              <p v-else class="text-sm text-muted-foreground italic">{{ t('workforce.dayDetails.noCoverage') }}</p>
             </div>
           </div>
           <p v-else class="text-sm text-muted-foreground">
-            Click on a day in the calendar to see detailed staffing information.
+            {{ t('workforce.dayDetails.helpText') }}
           </p>
         </CardContent>
       </Card>
+    </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import {
   format,
   startOfMonth,
@@ -252,7 +341,7 @@ import {
   subMonths
 } from 'date-fns'
 import PageHeader from '@/components/layout/PageHeader.vue'
-import { mockPhysicians } from '@/data/mockData'
+import { useUserStore } from '@/stores/userStore'
 import Badge from '@/components/ui/badge.vue'
 import Card from '@/components/ui/card.vue'
 import CardContent from '@/components/ui/CardContent.vue'
@@ -262,19 +351,42 @@ import Button from '@/components/ui/button.vue'
 import {
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   Users,
   AlertTriangle,
   CheckCircle,
-  Info
+  Info,
+  Settings
 } from 'lucide-vue-next'
 import { cn } from '@/lib/utils'
+import { adminService, type DistributionSettings } from '@/services/adminService'
 import type { Modality, BodyArea, Physician } from '@/types/study'
 import Tooltip from '@/components/ui/tooltip.vue'
 import TooltipContent from '@/components/ui/TooltipContent.vue'
 import TooltipTrigger from '@/components/ui/TooltipTrigger.vue'
 
-const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
-const fullDayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+const { t } = useI18n()
+const userStore = useUserStore()
+
+const dayNames = computed(() => [
+  t('workforce.calendar.sun'),
+  t('workforce.calendar.mon'),
+  t('workforce.calendar.tue'),
+  t('workforce.calendar.wed'),
+  t('workforce.calendar.thu'),
+  t('workforce.calendar.fri'),
+  t('workforce.calendar.sat')
+])
+
+const fullDayNames = computed(() => [
+  t('workforce.calendar.sunday'),
+  t('workforce.calendar.monday'),
+  t('workforce.calendar.tuesday'),
+  t('workforce.calendar.wednesday'),
+  t('workforce.calendar.thursday'),
+  t('workforce.calendar.friday'),
+  t('workforce.calendar.saturday')
+])
 
 const CRITICAL_THRESHOLD = 1
 const WARNING_THRESHOLD = 2
@@ -291,6 +403,45 @@ interface DayCapacity {
 const currentMonth = ref(new Date())
 const selectedDay = ref<DayCapacity | null>(null)
 
+// Distribution settings
+const showDistributionSettings = ref(false)
+const distributionSettings = ref<DistributionSettings>({ stat_max_load: 3, urgent_max_load: 5, routine_max_load: 10 })
+const distributionForm = ref<DistributionSettings>({ stat_max_load: 3, urgent_max_load: 5, routine_max_load: 10 })
+const distributionSaving = ref(false)
+const distributionSaveStatus = ref<'idle' | 'saved' | 'error'>('idle')
+
+const distributionFormChanged = computed(() =>
+  distributionForm.value.stat_max_load !== distributionSettings.value.stat_max_load ||
+  distributionForm.value.urgent_max_load !== distributionSettings.value.urgent_max_load ||
+  distributionForm.value.routine_max_load !== distributionSettings.value.routine_max_load
+)
+
+async function loadDistributionSettings() {
+  try {
+    const data = await adminService.getDistributionSettings()
+    distributionSettings.value = { ...data }
+    distributionForm.value = { ...data }
+  } catch {
+    // Keep defaults on error
+  }
+}
+
+async function saveDistributionSettings() {
+  distributionSaving.value = true
+  distributionSaveStatus.value = 'idle'
+  try {
+    const data = await adminService.updateDistributionSettings(distributionForm.value)
+    distributionSettings.value = { ...data }
+    distributionForm.value = { ...data }
+    distributionSaveStatus.value = 'saved'
+    setTimeout(() => { distributionSaveStatus.value = 'idle' }, 3000)
+  } catch {
+    distributionSaveStatus.value = 'error'
+  } finally {
+    distributionSaving.value = false
+  }
+}
+
 const monthCapacity = computed(() => {
   const monthStart = startOfMonth(currentMonth.value)
   const monthEnd = endOfMonth(currentMonth.value)
@@ -303,7 +454,7 @@ const monthCapacity = computed(() => {
     const dayOfWeek = fullDayNames[getDay(date)]
     const dateString = format(date, "yyyy-MM-dd")
     
-    const workingRadiologists = mockPhysicians.filter(physician => {
+    const workingRadiologists = userStore.users.filter(physician => {
       if (physician.customSchedule && physician.customSchedule[dateString]) {
         return physician.customSchedule[dateString].length > 0
       }
@@ -361,4 +512,11 @@ const goToPreviousMonth = () => {
 const goToNextMonth = () => {
   currentMonth.value = addMonths(currentMonth.value, 1)
 }
+
+onMounted(async () => {
+  await Promise.all([
+    userStore.fetchUsers(),
+    loadDistributionSettings(),
+  ])
+})
 </script>

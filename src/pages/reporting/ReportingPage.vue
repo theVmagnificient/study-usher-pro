@@ -1,55 +1,102 @@
 <template>
   <div class="min-h-screen bg-background">
-    <!-- Header Bar -->
-    <header class="sticky top-0 z-10 bg-card border-b border-border px-4 py-3">
-      <div class="flex items-center justify-between">
-        <div class="flex items-center gap-4">
-          <Button variant="ghost" size="icon" @click="handleBack">
-            <ArrowLeft class="w-5 h-5" />
+    <!-- Loading State -->
+    <div v-if="taskStore.loading" class="flex items-center justify-center p-8">
+      <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+    </div>
+
+    <!-- Error State -->
+    <div v-else-if="taskStore.error" class="p-4 bg-red-50 text-red-600 rounded-md m-6">
+      {{ taskStore.error }}
+    </div>
+
+    <!-- Content -->
+    <div v-else-if="study">
+    <!-- Header Bar: compact in PiP -->
+    <header class="sticky top-0 z-10 bg-card border-b border-border" :class="pipMode ? 'px-3 py-2' : 'px-4 py-3'">
+      <div class="flex items-center justify-between gap-2 min-w-0">
+        <div class="flex items-center gap-2 min-w-0">
+          <Button v-if="!pipMode" variant="ghost" size="icon" class="flex-shrink-0" @click="handleBack">
+            <ArrowLeft class="w-4 h-4" />
           </Button>
-          <div>
-            <div class="flex items-center gap-3">
-              <span class="font-mono text-xs text-muted-foreground">{{ study.id }}</span>
+          <div class="min-w-0">
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class="font-mono text-xs text-muted-foreground truncate">{{ study.accessionNumber }}</span>
               <StatusBadge :status="study.status" />
-              <UrgencyBadge :urgency="study.urgency" />
+              <UrgencyBadge v-if="!pipMode" :urgency="study.urgency" />
             </div>
-            <div class="flex items-center gap-4 mt-1">
-              <span class="text-xs text-muted-foreground">{{ study.patientId }}</span>
-              <span class="text-base font-semibold text-foreground">{{ study.modality }} {{ study.bodyArea }}</span>
-              <span class="text-base font-medium text-foreground">{{ study.sex }}/{{ study.age }}y</span>
+            <div class="flex items-center gap-2 mt-0.5 text-sm truncate">
+              <span class="text-muted-foreground shrink-0">{{ study.patientId }}</span>
+              <span class="font-semibold text-foreground truncate">{{ study.modality }} {{ study.bodyArea }}</span>
+              <span class="text-muted-foreground shrink-0">{{ study.sex }}/{{ study.age }}y</span>
             </div>
           </div>
         </div>
-        <div class="flex items-center gap-4">
-          <DeadlineTimer :deadline="study.deadline" />
+        <div v-if="!pipMode" class="flex items-center gap-2 flex-shrink-0">
+          <DeadlineTimer v-if="!['finalized', 'delivered'].includes(study.status)" :deadline="study.deadline" />
           <DropdownMenu v-if="linkedStudies.length > 0">
             <template #trigger>
               <Button variant="outline" size="sm">
                 <Download class="w-4 h-4 mr-2" />
-                DICOM
+                {{ t('reporting.dicom') }}
                 <ChevronDown class="w-3 h-3 ml-1" />
               </Button>
             </template>
             <DropdownMenuItem>
               <Download class="w-4 h-4 mr-2" />
-              Download {{ study.bodyArea }} only
+              {{ t('reporting.downloadBodyArea', { area: study.bodyArea }) }}
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem>
               <Download class="w-4 h-4 mr-2" />
-              Download all ({{ linkedStudies.length + 1 }} body parts)
+              {{ t('reporting.downloadAll', { count: linkedStudies.length + 1 }) }}
             </DropdownMenuItem>
           </DropdownMenu>
-          <Button v-else variant="outline" size="sm">
-            <Download class="w-4 h-4 mr-2" />
-            DICOM
+          <Button
+            v-else
+            variant="outline"
+            size="sm"
+            @click="handleDownload"
+            :disabled="isDownloading"
+          >
+            <Download class="w-4 h-4 mr-2" :class="{ 'animate-bounce': isDownloading }" />
+            {{ isDownloading ? t('reporting.downloading') : t('reporting.dicom') }}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            @click="handleOpenViewer"
+            :disabled="isOpeningViewer"
+          >
+            <Eye class="w-4 h-4 mr-2" :class="{ 'animate-pulse': isOpeningViewer }" />
+            {{ isOpeningViewer ? t('reporting.openingViewer') : t('reporting.viewer') }}
+          </Button>
+          <Button
+            v-if="pipSupported"
+            variant="outline"
+            size="sm"
+            @click="togglePictureInPicture"
+            :disabled="isOpeningPip"
+          >
+            <PictureInPicture2 class="w-4 h-4 mr-2" :class="{ 'animate-pulse': isOpeningPip }" />
+            {{ isPipOpen ? t('reporting.closePip') : t('reporting.openPip') }}
           </Button>
         </div>
+        <Button
+          v-else
+          variant="outline"
+          size="sm"
+          class="flex-shrink-0"
+          @click="closePip"
+        >
+          <PictureInPicture2 class="w-4 h-4 mr-1" />
+          {{ t('reporting.closePip') }}
+        </Button>
       </div>
     </header>
 
-    <!-- Comments - Collapsible Section at Top -->
-    <div v-if="study.validatorComments && study.validatorComments.length > 0" class="mx-4 mt-4">
+    <!-- Comments - Collapsible Section at Top (hidden in PiP to save space) -->
+    <div v-if="!pipMode && study.validatorComments && study.validatorComments.length > 0" class="mx-4 mt-4">
       <button
         @click="commentsExpanded = !commentsExpanded"
         class="w-full clinical-card border-l-4 border-l-muted-foreground bg-muted/30 hover:bg-muted/50 transition-colors cursor-pointer text-left"
@@ -57,18 +104,22 @@
         <div class="clinical-card-header">
           <h3 class="text-sm font-semibold flex items-center gap-2 text-foreground">
             <MessageCircle class="w-4 h-4 text-muted-foreground" />
-            Comments
+            {{ t('reporting.comments') }}
             <span class="ml-1 text-xs font-normal text-muted-foreground">
-              ({{ study.validatorComments.length }} comment{{ study.validatorComments.length !== 1 ? 's' : '' }})
+              ({{ t('reporting.commentCount', { count: study.validatorComments.length }) }})
             </span>
           </h3>
           <ChevronUp v-if="commentsExpanded" class="w-4 h-4 text-muted-foreground" />
           <ChevronDown v-else class="w-4 h-4 text-muted-foreground" />
         </div>
         <div v-if="!commentsExpanded" class="clinical-card-body">
-          <p class="text-sm text-foreground line-clamp-1">
-            {{ sortedComments[0]?.text }}
-          </p>
+          <div class="flex items-start gap-2">
+            <FileEdit v-if="sortedComments[0]?.isAction" class="w-4 h-4 text-blue-500 flex-shrink-0 mt-0.5" />
+            <MessageCircle v-else class="w-4 h-4 text-orange-500 flex-shrink-0 mt-0.5" />
+            <p class="text-sm text-foreground line-clamp-1 flex-1">
+              {{ sortedComments[0]?.text }}
+            </p>
+          </div>
           <p class="text-xs text-muted-foreground mt-1">
             — {{ sortedComments[0]?.validatorName }} • {{ formatTime(sortedComments[0]?.timestamp) }}
           </p>
@@ -82,11 +133,17 @@
             'clinical-card border-l-4',
             comment.isCritical
               ? 'border-l-destructive bg-destructive/5'
-              : 'border-l-yellow-500 bg-yellow-500/5'
+              : comment.isAction
+              ? 'border-l-blue-500 bg-blue-500/5'
+              : 'border-l-orange-500 bg-orange-500/5'
           )"
         >
           <div class="clinical-card-body">
-            <p class="text-sm text-foreground">{{ comment.text }}</p>
+            <div class="flex items-start gap-2">
+              <FileEdit v-if="comment.isAction" class="w-4 h-4 text-blue-500 flex-shrink-0 mt-0.5" />
+              <MessageCircle v-else class="w-4 h-4 text-orange-500 flex-shrink-0 mt-0.5" />
+              <p class="text-sm text-foreground whitespace-pre-line flex-1">{{ comment.text }}</p>
+            </div>
             <p class="text-xs text-muted-foreground mt-2">
               — {{ comment.validatorName }} • {{ formatDate(comment.timestamp) }} at {{ formatTime(comment.timestamp) }}
             </p>
@@ -95,8 +152,8 @@
       </div>
     </div>
 
-    <!-- Clinical & Technical Notes -->
-    <div class="mx-4 mt-4 grid grid-cols-2 gap-4">
+    <!-- Clinical & Technical Notes (single column in PiP) -->
+    <div class="mx-4 mt-4 grid gap-4" :class="pipMode ? 'grid-cols-1' : 'grid-cols-2'">
       <button
         @click="notesExpanded = !notesExpanded"
         class="clinical-card border-l-4 border-l-primary text-left w-full hover:bg-primary/5 transition-colors cursor-pointer"
@@ -104,7 +161,7 @@
         <div class="clinical-card-header">
           <h3 class="text-sm font-semibold flex items-center gap-2">
             <FileText class="w-4 h-4 text-primary" />
-            Clinical Notes
+            {{ t('reporting.clinicalNotes') }}
           </h3>
           <ChevronUp v-if="notesExpanded" class="w-4 h-4 text-muted-foreground" />
           <ChevronDown v-else class="w-4 h-4 text-muted-foreground" />
@@ -116,13 +173,14 @@
         </div>
       </button>
       <button
+        v-if="isValidator"
         @click="notesExpanded = !notesExpanded"
         class="clinical-card border-l-4 border-l-muted-foreground text-left w-full hover:bg-muted/50 transition-colors cursor-pointer"
       >
         <div class="clinical-card-header">
           <h3 class="text-sm font-semibold flex items-center gap-2">
             <MessageSquare class="w-4 h-4 text-muted-foreground" />
-            Technical Notes
+            {{ t('reporting.technicalNotes') }}
           </h3>
           <ChevronUp v-if="notesExpanded" class="w-4 h-4 text-muted-foreground" />
           <ChevronDown v-else class="w-4 h-4 text-muted-foreground" />
@@ -136,22 +194,22 @@
     </div>
 
     <div class="flex">
-      <!-- Main Content - Report Editor -->
-      <div class="flex-1 p-6">
-        <div class="space-y-6">
+      <!-- Main Content - Report Editor (single column in PiP) -->
+      <div class="flex-1 min-w-0 p-4" :class="{ 'p-6': !pipMode }">
+        <div class="space-y-4" :class="{ 'space-y-6': !pipMode }">
           <!-- Headers Row -->
-          <div class="grid grid-cols-2 gap-6">
+          <div class="grid gap-4" :class="pipMode ? 'grid-cols-1' : 'grid-cols-2 gap-6'">
             <div class="flex items-center gap-2">
-              <span class="text-sm font-semibold text-primary">Current Report</span>
+              <span class="text-sm font-semibold text-primary">{{ t('reporting.currentReport') }}</span>
               <span class="text-xs text-muted-foreground font-mono">{{ study.id }}</span>
             </div>
-            <div v-if="selectedPrior || showEnglishTranslation" class="flex items-center justify-between">
+            <div v-if="!pipMode && (selectedPrior || showEnglishTranslation)" class="flex items-center justify-between">
               <div class="flex items-center gap-2">
                 <Languages v-if="showEnglishTranslation" class="w-4 h-4 text-blue-500" />
                 <History v-else class="w-4 h-4 text-muted-foreground" />
-                <span v-if="showEnglishTranslation" class="text-sm font-semibold text-blue-600 dark:text-blue-400">English Translation</span>
-                <span v-else class="text-sm font-semibold text-muted-foreground">Prior Report</span>
-                <span v-if="showEnglishTranslation" class="text-xs text-muted-foreground">Auto-generated</span>
+                <span v-if="showEnglishTranslation" class="text-sm font-semibold text-blue-600 dark:text-blue-400">{{ t('reporting.englishTranslation') }}</span>
+                <span v-else class="text-sm font-semibold text-muted-foreground">{{ t('reporting.priorReport') }}</span>
+                <span v-if="showEnglishTranslation" class="text-xs text-muted-foreground">{{ t('reporting.manualTranslation') }}</span>
                 <span v-else class="text-xs text-muted-foreground">{{ selectedPrior?.type }} • {{ selectedPrior?.date }}</span>
               </div>
               <Button variant="ghost" size="icon" @click="showEnglishTranslation ? showEnglishTranslation = false : selectedPrior = null">
@@ -160,108 +218,127 @@
             </div>
           </div>
           
-          <!-- Study Protocol Row -->
-          <div class="grid grid-cols-2 gap-6">
+          <!-- Study Protocol Row (single column in PiP) -->
+          <div class="grid gap-4" :class="pipMode ? 'grid-cols-1' : 'grid-cols-2 gap-6'">
             <div>
-              <label class="field-label">Study Protocol</label>
+              <label class="field-label">{{ t('reporting.protocol') }}</label>
               <Textarea
                 v-model="protocol"
                 class="report-textarea"
-                placeholder="Describe the imaging technique and protocol used..."
-                :readonly="isValidator || study.status === 'finalized' || study.status === 'delivered'"
+                :placeholder="t('reporting.protocolPlaceholder')"
+                :readonly="study.status === 'finalized' || study.status === 'delivered' || (isTaskWithValidator && !isValidator)"
               />
             </div>
-            <div v-if="showEnglishTranslation">
-              <label class="field-label text-blue-600 dark:text-blue-400">Study Protocol (EN)</label>
+            <div v-if="!pipMode && showEnglishTranslation">
+              <label class="field-label text-blue-600 dark:text-blue-400">
+                {{ t('reporting.protocolEn') }}
+                <span class="ml-2 text-xs font-normal text-muted-foreground">{{ t('reporting.protocolEnNote') }}</span>
+              </label>
               <Textarea
                 v-model="englishProtocol"
                 class="report-textarea bg-blue-500/5 dark:bg-blue-500/10 border-blue-500/20"
-                :readonly="study.status === 'finalized' || study.status === 'delivered'"
+                :placeholder="t('reporting.protocolEnPlaceholder')"
+                :readonly="study.status === 'finalized' || study.status === 'delivered' || (isTaskWithValidator && !isValidator)"
               />
             </div>
-            <div v-else-if="selectedPrior">
-              <label class="field-label text-muted-foreground">Study Protocol</label>
-              <div class="report-textarea bg-muted/50">
-                <p class="text-sm text-muted-foreground italic">Protocol not available for prior studies</p>
+            <div v-else-if="!pipMode && selectedPrior">
+              <label class="field-label text-muted-foreground">{{ t('reporting.protocol') }}</label>
+              <div class="report-textarea bg-muted/50 space-y-2">
+                <p v-if="selectedPrior.protocolEn" class="text-base font-medium">{{ selectedPrior.protocolEn }}</p>
+                <p v-if="selectedPrior.protocol" class="text-xs text-muted-foreground">{{ selectedPrior.protocol }}</p>
+                <p v-if="!selectedPrior.protocolEn && !selectedPrior.protocol" class="text-sm text-muted-foreground italic">{{ t('reporting.protocolNotAvailable') }}</p>
               </div>
             </div>
           </div>
 
-          <!-- Findings Row -->
-          <div class="grid grid-cols-2 gap-6">
+          <!-- Findings Row (single column in PiP) -->
+          <div class="grid gap-4" :class="pipMode ? 'grid-cols-1' : 'grid-cols-2 gap-6'">
             <div>
-              <label class="field-label">Findings</label>
+              <label class="field-label">{{ t('reporting.findings') }}</label>
               <Textarea
                 v-model="findings"
                 class="report-textarea"
-                placeholder="Document all imaging findings in detail..."
-                :readonly="isValidator || study.status === 'finalized' || study.status === 'delivered'"
+                :placeholder="t('reporting.findingsPlaceholder')"
+                :readonly="study.status === 'finalized' || study.status === 'delivered' || (isTaskWithValidator && !isValidator)"
               />
             </div>
-            <div v-if="showEnglishTranslation">
-              <label class="field-label text-blue-600 dark:text-blue-400">Findings (EN)</label>
+            <div v-if="!pipMode && showEnglishTranslation">
+              <label class="field-label text-blue-600 dark:text-blue-400">
+                {{ t('reporting.findingsEn') }}
+                <span class="ml-2 text-xs font-normal text-muted-foreground">{{ t('reporting.protocolEnNote') }}</span>
+              </label>
               <Textarea
                 v-model="englishFindings"
                 class="report-textarea bg-blue-500/5 dark:bg-blue-500/10 border-blue-500/20"
-                :readonly="study.status === 'finalized' || study.status === 'delivered'"
+                :placeholder="t('reporting.findingsEnPlaceholder')"
+                :readonly="study.status === 'finalized' || study.status === 'delivered' || (isTaskWithValidator && !isValidator)"
               />
             </div>
-            <div v-else-if="selectedPrior">
-              <label class="field-label text-muted-foreground">Findings</label>
-              <div class="report-textarea bg-muted/50">
-                <p class="text-sm">{{ selectedPrior.reportText }}</p>
+            <div v-else-if="!pipMode && selectedPrior">
+              <label class="field-label text-muted-foreground">{{ t('reporting.findings') }}</label>
+              <div class="report-textarea bg-muted/50 space-y-2">
+                <p v-if="selectedPrior.findingsEn" class="text-base font-medium">{{ selectedPrior.findingsEn }}</p>
+                <p v-if="selectedPrior.findings" class="text-xs text-muted-foreground">{{ selectedPrior.findings }}</p>
+                <p v-else-if="selectedPrior.reportText && !selectedPrior.findings" class="text-xs text-muted-foreground">{{ selectedPrior.reportText }}</p>
+                <p v-if="!selectedPrior.findingsEn && !selectedPrior.findings && !selectedPrior.reportText" class="text-sm text-muted-foreground italic">{{ t('reporting.findingsNotAvailable') }}</p>
               </div>
             </div>
           </div>
 
-          <!-- Impression Row -->
-          <div class="grid grid-cols-2 gap-6">
+          <!-- Impression Row (single column in PiP) -->
+          <div class="grid gap-4" :class="pipMode ? 'grid-cols-1' : 'grid-cols-2 gap-6'">
             <div>
-              <label class="field-label">Impression</label>
+              <label class="field-label">{{ t('reporting.impression') }}</label>
               <Textarea
                 v-model="impression"
                 class="report-textarea"
-                placeholder="Provide a summary interpretation and recommendations..."
-                :readonly="isValidator || study.status === 'finalized' || study.status === 'delivered'"
+                :placeholder="t('reporting.impressionPlaceholder')"
+                :readonly="study.status === 'finalized' || study.status === 'delivered' || (isTaskWithValidator && !isValidator)"
               />
             </div>
-            <div v-if="showEnglishTranslation">
-              <label class="field-label text-blue-600 dark:text-blue-400">Impression (EN)</label>
+            <div v-if="!pipMode && showEnglishTranslation">
+              <label class="field-label text-blue-600 dark:text-blue-400">
+                {{ t('reporting.impressionEn') }}
+                <span class="ml-2 text-xs font-normal text-muted-foreground">{{ t('reporting.protocolEnNote') }}</span>
+              </label>
               <Textarea
                 v-model="englishImpression"
                 class="report-textarea bg-blue-500/5 dark:bg-blue-500/10 border-blue-500/20"
-                :readonly="study.status === 'finalized' || study.status === 'delivered'"
+                :placeholder="t('reporting.impressionEnPlaceholder')"
+                :readonly="study.status === 'finalized' || study.status === 'delivered' || (isTaskWithValidator && !isValidator)"
               />
             </div>
-            <div v-else-if="selectedPrior">
-              <label class="field-label text-muted-foreground">Impression</label>
-              <div class="report-textarea bg-muted/50">
-                <p class="text-sm text-muted-foreground italic">See findings above</p>
+            <div v-else-if="!pipMode && selectedPrior">
+              <label class="field-label text-muted-foreground">{{ t('reporting.impression') }}</label>
+              <div class="report-textarea bg-muted/50 space-y-2">
+                <p v-if="selectedPrior.impressionEn" class="text-base font-medium">{{ selectedPrior.impressionEn }}</p>
+                <p v-if="selectedPrior.impression" class="text-xs text-muted-foreground">{{ selectedPrior.impression }}</p>
+                <p v-if="!selectedPrior.impressionEn && !selectedPrior.impression" class="text-sm text-muted-foreground italic">{{ t('reporting.impressionNotAvailable') }}</p>
               </div>
             </div>
           </div>
 
-          <!-- Validator Comment Input Section -->
-          <div v-if="isValidator" class="clinical-card border-l-4 border-l-amber-500 bg-amber-500/10 dark:bg-amber-500/20">
+          <!-- Validator Comment Input Section (hidden in PiP) -->
+          <div v-if="!pipMode && isValidator" class="clinical-card border-l-4 border-l-amber-500 bg-amber-500/10 dark:bg-amber-500/20">
             <div class="clinical-card-header">
               <h3 class="text-sm font-semibold flex items-center gap-2 text-foreground">
                 <MessageCircle class="w-4 h-4 text-amber-600 dark:text-amber-400" />
-                Add Validator Comment
+                {{ t('reporting.addValidatorComment') }}
               </h3>
-              <span class="text-xs text-muted-foreground">Optional feedback for the reporting radiologist</span>
+              <span class="text-xs text-muted-foreground">{{ t('reporting.validatorCommentNote') }}</span>
             </div>
             <div class="clinical-card-body">
               <Textarea
                 v-model="validatorComment"
                 class="report-textarea bg-background"
-                placeholder="Leave a comment about the report quality, suggestions for improvement, or positive feedback..."
+                :placeholder="t('reporting.validatorCommentPlaceholder')"
                 :rows="3"
               />
             </div>
           </div>
           
-          <div class="grid grid-cols-2 gap-6">
-            <div class="flex items-center justify-between pt-4 border-t border-border">
+          <div class="grid gap-4 pt-4 border-t border-border" :class="pipMode ? 'grid-cols-1' : 'grid-cols-2 gap-6'">
+            <div class="flex items-center justify-between">
               <div v-if="isValidator" class="flex items-center gap-3">
                 <Button
                   variant="outline"
@@ -269,49 +346,66 @@
                   :disabled="!validatorComment.trim()"
                 >
                   <RotateCcw class="w-4 h-4 mr-2" />
-                  Return for Revision
+                  {{ t('reporting.returnForRevision') }}
+                </Button>
+                <Button
+                  variant="outline"
+                  @click="handleSaveValidatorChanges"
+                  :disabled="isSavingValidatorChanges"
+                >
+                  <div v-if="isSavingValidatorChanges" class="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
+                  <Save v-else class="w-4 h-4 mr-2" />
+                  {{ isSavingValidatorChanges ? t('reporting.saving') : t('reporting.saveChanges') }}
                 </Button>
                 <Button @click="handleApprove">
                   <CheckCircle class="w-4 h-4 mr-2" />
-                  Finalize Report
+                  {{ t('reporting.finalizeReport') }}
                 </Button>
               </div>
               <div v-else class="flex items-center gap-3">
-                <Button variant="outline" @click="handleSaveDraft">
+                <Button
+                  variant="outline"
+                  @click="handleSaveDraft"
+                  :disabled="isTaskWithValidator"
+                >
                   <Save class="w-4 h-4 mr-2" />
-                  Save Draft
+                  {{ t('reporting.saveDraft') }}
                 </Button>
-                <Button @click="showSubmitDialog = true">
+                <Button
+                  v-if="!isTaskCompleted"
+                  @click="handleOpenSubmitDialog"
+                  :disabled="isTaskWithValidator"
+                >
                   <Send class="w-4 h-4 mr-2" />
-                  Submit for Validation
+                  {{ t('reporting.submitForValidation') }}
                 </Button>
               </div>
               <p class="text-xs text-muted-foreground">
-                {{ study.status === 'finalized' || study.status === 'delivered' 
-                  ? 'This report is finalized and cannot be edited'
-                  : 'Changes are not auto-saved' }}
+                {{ study.status === 'finalized' || study.status === 'delivered'
+                  ? t('reporting.finalizedNote')
+                  : t('reporting.notAutoSaved') }}
               </p>
             </div>
-            <div v-if="selectedPrior || showEnglishTranslation" class="pt-4 border-t border-border">
+            <div v-if="!pipMode && (selectedPrior || showEnglishTranslation)" class="pt-4 border-t border-border">
               <Button v-if="selectedPrior" variant="outline" size="sm">
                 <Download class="w-4 h-4 mr-2" />
-                Download DICOM
+                {{ t('common.download') }} {{ t('reporting.dicom') }}
               </Button>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Right Sidebar -->
-      <aside class="w-72 border-l border-border bg-muted/30 p-4 space-y-4 flex-shrink-0">
+      <!-- Right Sidebar (hidden in PiP) -->
+      <aside v-if="!pipMode" class="w-72 border-l border-border bg-muted/30 p-4 space-y-4 flex-shrink-0">
         <!-- Linked Body Parts -->
         <div v-if="linkedStudies.length > 0" class="clinical-card border-primary/30 bg-primary/5">
           <div class="clinical-card-header">
             <h3 class="text-sm font-semibold flex items-center gap-2">
               <Link2 class="w-4 h-4 text-primary" />
-              Linked Body Parts
+              {{ t('reporting.linkedBodyParts') }}
             </h3>
-            <span class="text-xs text-muted-foreground">{{ linkedStudies.length + 1 }} zones</span>
+            <span class="text-xs text-muted-foreground">{{ t('reporting.zones', { count: linkedStudies.length + 1 }) }}</span>
           </div>
           <div class="divide-y divide-border">
             <div class="p-3 bg-primary/10">
@@ -320,7 +414,7 @@
                   <p class="text-sm font-medium">{{ study.bodyArea }}</p>
                   <p class="text-xs text-muted-foreground font-mono">{{ study.id }}</p>
                 </div>
-                <span class="text-xs px-2 py-0.5 rounded bg-primary/20 text-primary font-medium">Current</span>
+                <span class="text-xs px-2 py-0.5 rounded bg-primary/20 text-primary font-medium">{{ t('reporting.current') }}</span>
               </div>
             </div>
             <button
@@ -352,7 +446,7 @@
           <div class="clinical-card-header">
             <h3 class="text-sm font-semibold flex items-center gap-2">
               <Languages class="w-4 h-4 text-blue-500" />
-              Translation
+              {{ t('reporting.translation') }}
             </h3>
           </div>
           <button
@@ -365,10 +459,10 @@
             )"
           >
             <div>
-              <p class="text-sm font-medium">English Version</p>
-              <p class="text-xs text-muted-foreground">Auto-generated from Russian</p>
+              <p class="text-sm font-medium">{{ t('reporting.englishVersion') }}</p>
+              <p class="text-xs text-muted-foreground">{{ t('reporting.manualTranslationRequired') }}</p>
             </div>
-            <span v-if="showEnglishTranslation" class="text-xs text-blue-600 dark:text-blue-400 font-medium">Viewing</span>
+            <span v-if="showEnglishTranslation" class="text-xs text-blue-600 dark:text-blue-400 font-medium">{{ t('reporting.viewing') }}</span>
             <ChevronRight v-else class="w-4 h-4 text-muted-foreground" />
           </button>
         </div>
@@ -376,12 +470,12 @@
         <!-- Prior Studies -->
         <div v-if="study.hasPriors" class="clinical-card">
           <div class="clinical-card-header">
-            <h3 class="text-sm font-semibold">Prior Studies</h3>
-            <span class="text-xs text-muted-foreground">{{ mockPriorStudies.length }}</span>
+            <h3 class="text-sm font-semibold">{{ t('reporting.priorStudies') }}</h3>
+            <span class="text-xs text-muted-foreground">{{ priorStudies.length }}</span>
           </div>
           <div class="divide-y divide-border">
             <button
-              v-for="prior in mockPriorStudies"
+              v-for="prior in priorStudies"
               :key="prior.id"
               @click="handlePriorClick(prior)"
               :class="cn(
@@ -395,7 +489,7 @@
                 <p class="text-sm font-medium">{{ prior.type }}</p>
                 <p class="text-xs text-muted-foreground">{{ prior.date }}</p>
               </div>
-              <span v-if="selectedPrior?.id === prior.id" class="text-xs text-primary font-medium">Viewing</span>
+              <span v-if="selectedPrior?.id === prior.id" class="text-xs text-primary font-medium">{{ t('reporting.viewing') }}</span>
               <ChevronRight v-else class="w-4 h-4 text-muted-foreground" />
             </button>
           </div>
@@ -404,61 +498,61 @@
     </div>
 
     <!-- Patient Summary Panel -->
-    <div class="fixed bottom-4 right-4 w-80 bg-card border border-border rounded-lg shadow-lg z-20">
+    <div v-if="false" class="fixed bottom-4 right-4 w-80 bg-card border border-border rounded-lg shadow-lg z-20">
       <button
         @click="summaryExpanded = !summaryExpanded"
         class="w-full p-3 flex items-center justify-between bg-primary/5 rounded-t-lg hover:bg-primary/10 transition-colors"
       >
         <div class="flex items-center gap-2">
           <User class="w-4 h-4 text-primary" />
-          <span class="text-sm font-semibold">Patient Summary</span>
+          <span class="text-sm font-semibold">{{ t('reporting.patientSummary') }}</span>
           <span class="text-xs text-muted-foreground">{{ study.patientId }}</span>
         </div>
         <ChevronDown v-if="summaryExpanded" class="w-4 h-4 text-muted-foreground" />
         <ChevronUp v-else class="w-4 h-4 text-muted-foreground" />
       </button>
-      
+
       <div v-if="summaryExpanded" class="p-4 space-y-4 max-h-[400px] overflow-y-auto">
         <div>
-          <h4 class="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Demographics</h4>
+          <h4 class="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">{{ t('reporting.demographics') }}</h4>
           <div class="grid grid-cols-2 gap-2 text-sm">
             <div>
-              <span class="text-muted-foreground">Sex:</span>
-              <span class="ml-1 font-medium">{{ study.sex === 'M' ? 'Male' : 'Female' }}</span>
+              <span class="text-muted-foreground">{{ t('reporting.sex') }}</span>
+              <span class="ml-1 font-medium">{{ study.sex === 'M' ? t('reporting.male') : t('reporting.female') }}</span>
             </div>
             <div>
-              <span class="text-muted-foreground">Age:</span>
-              <span class="ml-1 font-medium">{{ study.age }} years</span>
+              <span class="text-muted-foreground">{{ t('reporting.age') }}</span>
+              <span class="ml-1 font-medium">{{ study.age }} {{ t('reporting.years') }}</span>
             </div>
           </div>
         </div>
         <div>
-          <h4 class="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Current Study</h4>
+          <h4 class="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">{{ t('reporting.currentStudy') }}</h4>
           <div class="text-sm space-y-1">
-            <p><span class="text-muted-foreground">Type:</span> <span class="font-medium">{{ study.modality }} {{ study.bodyArea }}</span></p>
-            <p><span class="text-muted-foreground">Client:</span> <span class="font-medium">{{ study.clientName }}</span></p>
+            <p><span class="text-muted-foreground">{{ t('reporting.type') }}</span> <span class="font-medium">{{ study.modality }} {{ study.bodyArea }}</span></p>
+            <p><span class="text-muted-foreground">{{ t('reporting.client') }}</span> <span class="font-medium">{{ study.clientName }}</span></p>
           </div>
         </div>
         <div>
-          <h4 class="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Clinical History</h4>
+          <h4 class="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">{{ t('reporting.clinicalHistory') }}</h4>
           <p class="text-sm">Persistent cough for 3 weeks. History of smoking (20 pack-years). Rule out pulmonary pathology.</p>
         </div>
-        <div v-if="study.hasPriors">
+        <div v-if="study.hasPriors && priorStudies.length > 0">
           <h4 class="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
-            Prior Imaging ({{ mockPriorStudies.length }})
+            {{ t('reporting.priorImaging', { count: priorStudies.length }) }}
           </h4>
           <div class="space-y-2">
-            <div v-for="prior in mockPriorStudies" :key="prior.id" class="text-sm p-2 bg-muted/50 rounded">
+            <div v-for="prior in priorStudies" :key="prior.id" class="text-sm p-2 bg-muted/50 rounded">
               <div class="flex justify-between items-center mb-1">
                 <span class="font-medium">{{ prior.type }}</span>
                 <span class="text-xs text-muted-foreground">{{ prior.date }}</span>
               </div>
-              <p class="text-xs text-muted-foreground line-clamp-2">{{ prior.reportText }}</p>
+              <p class="text-xs text-muted-foreground line-clamp-2">{{ prior.reportText || prior.findings || 'No report text available' }}</p>
             </div>
           </div>
         </div>
         <div>
-          <h4 class="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Key Points</h4>
+          <h4 class="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">{{ t('reporting.keyPoints') }}</h4>
           <ul class="text-sm space-y-1">
             <li class="flex items-start gap-2">
               <span class="text-primary">•</span>
@@ -481,32 +575,134 @@
     <Dialog v-model:open="showSubmitDialog">
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Submit for Validation</DialogTitle>
+          <DialogTitle>{{ t('reporting.submitDialog.title') }}</DialogTitle>
           <DialogDescription>
-            Are you sure you want to submit this report for validation? 
-            You will not be able to edit the report after it has been finalized by the validator.
+            {{ t('reporting.submitDialog.description') }}
           </DialogDescription>
         </DialogHeader>
+
         <div class="p-4 bg-muted/50 rounded-md">
           <div class="flex items-start gap-2">
             <AlertTriangle class="w-4 h-4 text-urgency-urgent flex-shrink-0 mt-0.5" />
             <p class="text-sm text-muted-foreground">
-              Please verify you have addressed all relevant body areas and prior studies before submitting.
+              {{ t('reporting.submitDialog.warning') }}
             </p>
           </div>
         </div>
+
         <DialogFooter>
-          <Button variant="outline" @click="showSubmitDialog = false">Cancel</Button>
-          <Button @click="handleSubmit">Confirm Submission</Button>
+          <Button variant="outline" @click="showSubmitDialog = false">{{ t('common.cancel') }}</Button>
+          <Button @click="handleSubmit">{{ t('reporting.submitDialog.confirmSubmission') }}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
+
+    <!-- Edit Report Dialog -->
+    <Dialog v-model:open="showEditDialog">
+      <DialogContent class="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Edit Report</DialogTitle>
+          <DialogDescription>
+            Make corrections to the report. Only the fields you modify will be updated. A new version will be created.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div class="space-y-4">
+          <div>
+            <label class="field-label">{{ t('reporting.protocol') }}</label>
+            <Textarea
+              v-model="editProtocol"
+              class="report-textarea"
+              :placeholder="protocol"
+              :rows="4"
+            />
+          </div>
+
+          <div>
+            <label class="field-label">{{ t('reporting.findings') }}</label>
+            <Textarea
+              v-model="editFindings"
+              class="report-textarea"
+              :placeholder="findings"
+              :rows="6"
+            />
+          </div>
+
+          <div>
+            <label class="field-label">{{ t('reporting.impression') }}</label>
+            <Textarea
+              v-model="editImpression"
+              class="report-textarea"
+              :placeholder="impression"
+              :rows="4"
+            />
+          </div>
+
+          <div v-if="englishProtocol || englishFindings || englishImpression" class="space-y-4 pt-4 border-t border-border">
+            <div>
+              <label class="field-label text-blue-600 dark:text-blue-400">{{ t('reporting.protocolEn') }}</label>
+              <Textarea
+                v-model="editProtocolEn"
+                class="report-textarea bg-blue-500/5 dark:bg-blue-500/10 border-blue-500/20"
+                :placeholder="englishProtocol"
+                :rows="4"
+              />
+            </div>
+
+            <div>
+              <label class="field-label text-blue-600 dark:text-blue-400">{{ t('reporting.findingsEn') }}</label>
+              <Textarea
+                v-model="editFindingsEn"
+                class="report-textarea bg-blue-500/5 dark:bg-blue-500/10 border-blue-500/20"
+                :placeholder="englishFindings"
+                :rows="6"
+              />
+            </div>
+
+            <div>
+              <label class="field-label text-blue-600 dark:text-blue-400">{{ t('reporting.impressionEn') }}</label>
+              <Textarea
+                v-model="editImpressionEn"
+                class="report-textarea bg-blue-500/5 dark:bg-blue-500/10 border-blue-500/20"
+                :placeholder="englishImpression"
+                :rows="4"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label class="field-label">Comment (optional)</label>
+            <Textarea
+              v-model="editComment"
+              class="report-textarea"
+              placeholder="Add a comment about your changes..."
+              :rows="2"
+            />
+          </div>
+
+          <div class="p-3 bg-amber-500/10 dark:bg-amber-500/20 rounded-md border border-amber-500/20">
+            <p class="text-sm text-foreground">
+              <strong>Note:</strong> Only fields you modify will be updated. Empty fields will keep their current values. This will create version {{ (study?.report?.version || 0) + 1 }} of the report.
+            </p>
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" @click="showEditDialog = false">Cancel</Button>
+          <Button @click="handleSaveEdit" :disabled="!hasEditChanges">
+            Save Changes
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import {
   ArrowLeft,
   Download,
@@ -525,13 +721,17 @@ import {
   ChevronUp,
   ChevronDown,
   MessageCircle,
-  Languages
+  Languages,
+  FileEdit,
+  Eye,
+  PictureInPicture2
 } from 'lucide-vue-next'
 import Button from '@/components/ui/button.vue'
 import StatusBadge from '@/components/ui/StatusBadge.vue'
 import UrgencyBadge from '@/components/ui/UrgencyBadge.vue'
 import DeadlineTimer from '@/components/ui/DeadlineTimer.vue'
-import { mockStudies, mockPriorStudies } from '@/data/mockData'
+import { useTaskStore } from '@/stores/taskStore'
+import { useAuthStore } from '@/stores/authStore'
 import { getLinkedStudies } from '@/utils/linkedStudies'
 import { cn } from '@/lib/utils'
 import Dialog from '@/components/ui/dialog.vue'
@@ -545,34 +745,166 @@ import DropdownMenuItem from '@/components/ui/DropdownMenuItem.vue'
 import DropdownMenuSeparator from '@/components/ui/DropdownMenuSeparator.vue'
 import Textarea from '@/components/ui/textarea.vue'
 import type { PriorStudy } from '@/types/study'
+import { useToast } from '@/hooks/use-toast'
+import { studyService } from '@/services/studyService'
+import { usePictureInPicture } from '@/composables/usePictureInPicture'
 
 const route = useRoute()
 const router = useRouter()
+const { t } = useI18n()
+const taskStore = useTaskStore()
+const { toast } = useToast()
+const { pipSupported, isPipOpen, isOpeningPip, togglePictureInPicture, closePip, pipMode } = usePictureInPicture({
+  canOpen: () => !!study.value,
+  getWindowTitle: () => study.value?.accessionNumber ?? String(study.value?.id ?? 'Report'),
+  loadShell: () => import('@/pages/reporting/PipShell.vue').then(m => m.default),
+})
 
-const study = computed(() => mockStudies.find(s => s.id === route.params.studyId) || mockStudies[0])
-const linkedStudies = computed(() => getLinkedStudies(study.value, mockStudies))
+const study = computed(() => {
+  // Always prefer currentTask for the current route since it has full data
+  const numericTaskId = parseInt(route.params.taskId as string, 10)
 
-const protocol = ref("Non-contrast CT of the chest was performed using standard departmental protocol.")
-const findings = ref("")
-const impression = ref("")
+  // Compare using taskId (not id, which is the formatted study ID)
+  if (taskStore.currentTask?.taskId === numericTaskId) {
+    console.log('study computed: using currentTask', {
+      routeTaskId: numericTaskId,
+      currentTaskId: taskStore.currentTask?.taskId,
+      hasReport: !!taskStore.currentTask?.report
+    })
+    return taskStore.currentTask
+  }
+
+  // Otherwise, return null to show loading state until currentTask is fetched
+  // We don't want to use the lightweight list data because it lacks report details
+  console.log('study computed: waiting for currentTask to load', {
+    routeTaskId: numericTaskId,
+    currentTaskId: taskStore.currentTask?.taskId
+  })
+  return null
+})
+const linkedStudies = computed(() =>
+  study.value ? getLinkedStudies(study.value, taskStore.myReportingTasks) : []
+)
+
+// Get prior studies from the study data
+const priorStudies = computed(() => study.value?.priorStudies || [])
+
+// Initialize report fields from study data
+const protocol = computed({
+  get: () => {
+    const value = study.value?.report?.protocol || ''
+    console.log('protocol computed get:', {hasStudy: !!study.value, hasReport: !!study.value?.report, protocol: value})
+    return value
+  },
+  set: (value) => {
+    if (taskStore.currentTask) {
+      if (!taskStore.currentTask.report) {
+        taskStore.currentTask.report = {}
+      }
+      taskStore.currentTask.report.protocol = value
+    }
+  }
+})
+
+const findings = computed({
+  get: () => study.value?.report?.findings || '',
+  set: (value) => {
+    if (taskStore.currentTask) {
+      if (!taskStore.currentTask.report) {
+        taskStore.currentTask.report = {}
+      }
+      taskStore.currentTask.report.findings = value
+    }
+  }
+})
+
+const impression = computed({
+  get: () => study.value?.report?.impression || '',
+  set: (value) => {
+    if (taskStore.currentTask) {
+      if (!taskStore.currentTask.report) {
+        taskStore.currentTask.report = {}
+      }
+      taskStore.currentTask.report.impression = value
+    }
+  }
+})
 const showSubmitDialog = ref(false)
 const selectedPrior = ref<PriorStudy | null>(null)
 const showEnglishTranslation = ref(false)
 const summaryExpanded = ref(true)
 const notesExpanded = ref(false)
 const validatorComment = ref("")
+const isSavingValidatorChanges = ref(false)
 const commentsExpanded = ref(true)
+const availableValidators = ref<any[]>([])
+const selectedValidatorId = ref<number | null>(null)
 
-const englishProtocol = ref("Non-contrast CT of the chest was performed using standard departmental protocol. Slice thickness 1.5mm with iterative reconstruction.")
-const englishFindings = ref("The lungs are clear bilaterally without evidence of consolidation, masses, or nodules. No pleural effusion identified. The mediastinal structures are within normal limits. Heart size is normal. No lymphadenopathy. The visualized portions of the upper abdomen are unremarkable.")
-const englishImpression = ref("Normal chest CT examination. No acute cardiopulmonary process identified. Follow-up imaging is not indicated based on current findings.")
+const showEditDialog = ref(false)
+const editProtocol = ref("")
+const editFindings = ref("")
+const editImpression = ref("")
+const editProtocolEn = ref("")
+const editFindingsEn = ref("")
+const editImpressionEn = ref("")
+const editComment = ref("")
 
-const clinicalNotesText = `Patient presents with persistent cough for 3 weeks, productive of yellowish sputum. History of smoking (20 pack-years), quit 2 years ago. Reports occasional dyspnea on exertion and mild chest discomfort. No hemoptysis. No fever or night sweats reported. Family history significant for lung cancer (father, diagnosed age 62). Previous chest X-ray from 6 months ago showed no significant abnormalities. Patient currently on ACE inhibitor for hypertension - consider ACE inhibitor-induced cough in differential. Weight loss of 5kg over past 2 months noted. Rule out pulmonary pathology including malignancy given risk factors.`
+const englishProtocol = computed({
+  get: () => study.value?.report?.protocolEn || '',
+  set: (value) => {
+    if (taskStore.currentTask) {
+      if (!taskStore.currentTask.report) {
+        taskStore.currentTask.report = {}
+      }
+      taskStore.currentTask.report.protocolEn = value
+    }
+  }
+})
 
-const technicalNotesText = `Study performed on Siemens SOMATOM Definition Edge (128-slice). Acquisition parameters: Slice thickness 1.5mm, reconstruction interval 1.0mm. kVp: 120, mAs: 180 (with tube current modulation enabled). Non-contrast examination per protocol. Pitch factor: 1.2. Scan range from lung apices to adrenal glands. Iterative reconstruction (SAFIRE strength 3) applied. Motion artifact present at lung bases - limited evaluation of lower lobes, recommend clinical correlation if persistent symptoms. Streak artifact from patient arms noted but does not significantly impact diagnostic quality. Total DLP: 385 mGy·cm. Effective dose estimate: 5.4 mSv. Images reviewed on Syngo.via workstation.`
+const englishFindings = computed({
+  get: () => study.value?.report?.findingsEn || '',
+  set: (value) => {
+    if (taskStore.currentTask) {
+      if (!taskStore.currentTask.report) {
+        taskStore.currentTask.report = {}
+      }
+      taskStore.currentTask.report.findingsEn = value
+    }
+  }
+})
 
-const isValidator = computed(() => ['draft-ready', 'under-validation'].includes(study.value.status))
-const isReturned = computed(() => study.value.status === 'returned')
+const englishImpression = computed({
+  get: () => study.value?.report?.impressionEn || '',
+  set: (value) => {
+    if (taskStore.currentTask) {
+      if (!taskStore.currentTask.report) {
+        taskStore.currentTask.report = {}
+      }
+      taskStore.currentTask.report.impressionEn = value
+    }
+  }
+})
+
+const clinicalNotesText = computed(() => study.value?.clinicalNotes || t('reporting.noClinicalNotes'))
+
+const technicalNotesText = computed(() => study.value?.technicalNotes || t('reporting.noTechnicalNotes'))
+
+const authStore = useAuthStore()
+const isValidator = computed(() => authStore.role === 'validating-radiologist')
+
+const isTaskCompleted = computed(() => {
+  if (!study.value) return false
+
+  const completedStatuses = ['finalized', 'delivered']
+  return completedStatuses.includes(study.value.status)
+})
+
+const isTaskWithValidator = computed(() => {
+  if (!study.value) return false
+
+  const validatorStatuses = ['assigned-for-validation', 'under-validation']
+  return validatorStatuses.includes(study.value.status)
+})
 
 const sortedComments = computed(() => {
   if (!study.value.validatorComments) return []
@@ -581,23 +913,268 @@ const sortedComments = computed(() => {
   )
 })
 
+const hasEditChanges = computed(() => {
+  return editProtocol.value.trim() !== '' ||
+         editFindings.value.trim() !== '' ||
+         editImpression.value.trim() !== '' ||
+         editProtocolEn.value.trim() !== '' ||
+         editFindingsEn.value.trim() !== '' ||
+         editImpressionEn.value.trim() !== ''
+})
+
 const handleBack = () => router.go(-1)
-const handleSaveDraft = () => {
-  // Visual feedback only
+
+const handleOpenEditDialog = () => {
+  // Reset edit fields
+  editProtocol.value = ""
+  editFindings.value = ""
+  editImpression.value = ""
+  editProtocolEn.value = ""
+  editFindingsEn.value = ""
+  editImpressionEn.value = ""
+  editComment.value = ""
+  showEditDialog.value = true
 }
-const handleSubmit = () => {
-  showSubmitDialog.value = false
-  router.go(-1)
+
+const handleSaveEdit = async () => {
+  if (!study.value || !hasEditChanges.value) return
+
+  try {
+    const updates: any = {}
+
+    // Only include fields that were modified
+    if (editProtocol.value.trim()) updates.protocol = editProtocol.value
+    if (editFindings.value.trim()) updates.findings = editFindings.value
+    if (editImpression.value.trim()) updates.impression = editImpression.value
+    if (editProtocolEn.value.trim()) updates.protocol_en = editProtocolEn.value
+    if (editFindingsEn.value.trim()) updates.findings_en = editFindingsEn.value
+    if (editImpressionEn.value.trim()) updates.impression_en = editImpressionEn.value
+    // Note: comment is NOT sent here - only on finalize/reject
+
+    await taskStore.editReportByValidator(study.value.taskId, updates)
+
+    // Reload task data to show new version
+    await taskStore.fetchTaskDetails(study.value.taskId)
+
+    showEditDialog.value = false
+  } catch (error) {
+    console.error('Failed to edit report:', error)
+  }
 }
-const handleApprove = () => {
-  router.go(-1)
+
+const handleOpenSubmitDialog = async () => {
+  showSubmitDialog.value = true
 }
-const handleReturn = () => {
-  router.go(-1)
+
+const handleSaveDraft = async () => {
+  if (!study.value) return
+
+  try {
+    // 1. FIRST: Collect form data BEFORE any workflow transitions
+    // This prevents data loss when fetchTaskDetails reloads from DB
+    const reportData = {
+      protocol: protocol.value,
+      findings: findings.value,
+      impression: impression.value,
+      protocol_en: englishProtocol.value,
+      findings_en: englishFindings.value,
+      impression_en: englishImpression.value,
+    }
+
+    // 2. THEN: Handle workflow transitions if needed
+    if (study.value.status === 'new') {
+      await taskStore.takeTask(study.value.taskId)
+      await taskStore.startTask(study.value.taskId)
+    } else if (study.value.status === 'assigned') {
+      await taskStore.startTask(study.value.taskId)
+    } else if (study.value.status === 'returned') {
+      await taskStore.startTask(study.value.taskId)
+    }
+
+    // 3. Save the report with data collected in step 1
+    await taskStore.submitReport(study.value.taskId, reportData)
+
+    // 4. Reload to get updated task status
+    await taskStore.fetchTaskDetails(study.value.taskId)
+
+    // 5. Show success feedback
+    toast({
+      title: t('reporting.draftSaved'),
+      description: t('reporting.draftSavedDescription'),
+      variant: 'default'
+    })
+  } catch (error) {
+    console.error('Failed to save draft:', error)
+    toast({
+      title: t('reporting.saveError'),
+      description: t('reporting.saveErrorDescription'),
+      variant: 'destructive'
+    })
+  }
 }
+
+const handleSubmit = async () => {
+  if (!study.value) return
+
+  try {
+    // If task is draft-ready or translated, submit for validation
+    // Backend will auto-assign validator from schedule
+    if (study.value.status === 'draft-ready' || study.value.status === 'translated') {
+      await taskStore.assignForValidation(study.value.taskId)
+      showSubmitDialog.value = false
+      router.go(-1)
+      return
+    }
+
+    // Handle workflow transitions before submitting
+    if (study.value.status === 'new') {
+      await taskStore.takeTask(study.value.taskId)
+      await taskStore.fetchTaskDetails(study.value.taskId)  // Reload to get updated status
+      await taskStore.startTask(study.value.taskId)
+      await taskStore.fetchTaskDetails(study.value.taskId)  // Reload again
+    } else if (study.value.status === 'assigned') {
+      await taskStore.startTask(study.value.taskId)
+      await taskStore.fetchTaskDetails(study.value.taskId)
+    } else if (study.value.status === 'returned') {
+      await taskStore.startTask(study.value.taskId)
+      await taskStore.fetchTaskDetails(study.value.taskId)
+    }
+
+    const reportData = {
+      protocol: protocol.value,
+      findings: findings.value,
+      impression: impression.value,
+      protocol_en: englishProtocol.value,
+      findings_en: englishFindings.value,
+      impression_en: englishImpression.value,
+    }
+
+    await taskStore.submitReport(study.value.taskId, reportData)
+    showSubmitDialog.value = false
+    router.go(-1)
+  } catch (error) {
+    console.error('Failed to submit report:', error)
+  }
+}
+
+const handleApprove = async () => {
+  if (!study.value) return
+
+  try {
+    // Use taskId directly instead of parsing study ID
+    // Pass validator comment if provided (optional non-critical comment)
+    const comment = validatorComment.value.trim() || undefined
+    await taskStore.finalizeTask(study.value.taskId, comment)
+    router.go(-1)
+  } catch (error) {
+    console.error('Failed to finalize task:', error)
+  }
+}
+
+const handleReturn = async () => {
+  if (!study.value || !validatorComment.value.trim()) return
+
+  try {
+    // Use taskId directly instead of parsing study ID
+    await taskStore.returnForRevision(study.value.taskId, validatorComment.value)
+    router.go(-1)
+  } catch (error) {
+    console.error('Failed to return task for revision:', error)
+  }
+}
+
+const handleSaveValidatorChanges = async () => {
+  if (!study.value) return
+
+  isSavingValidatorChanges.value = true
+
+  try {
+    const updates = {
+      protocol: protocol.value,
+      findings: findings.value,
+      impression: impression.value,
+      protocol_en: englishProtocol.value,
+      findings_en: englishFindings.value,
+      impression_en: englishImpression.value,
+      // Note: comment is NOT sent here - only on finalize/reject
+    }
+
+    await taskStore.editReportByValidator(study.value.taskId, updates)
+
+    // Reload task to get updated report (using taskId for optimized endpoint)
+    await taskStore.fetchTaskDetails(study.value.taskId)
+
+    // Note: validator comment is NOT cleared here - it will be sent only on finalize/reject
+
+    // Show success toast
+    toast({
+      title: t('reporting.changesSaved'),
+      description: t('reporting.changesSavedDescription'),
+      variant: 'default'
+    })
+  } catch (error) {
+    console.error('Failed to save validator changes:', error)
+    toast({
+      title: t('reporting.saveError'),
+      description: t('reporting.saveErrorDescription'),
+      variant: 'destructive'
+    })
+  } finally {
+    isSavingValidatorChanges.value = false
+  }
+}
+
 const handlePriorClick = (prior: PriorStudy) => {
   selectedPrior.value = selectedPrior.value?.id === prior.id ? null : prior
   if (selectedPrior.value?.id !== prior.id) showEnglishTranslation.value = false
+}
+
+// Download study from PACS
+const isDownloading = ref(false)
+
+const handleDownload = async () => {
+  if (!study.value || isDownloading.value) return
+
+  isDownloading.value = true
+
+  try {
+    await studyService.downloadStudy(study.value.studyId)
+    toast({
+      title: t('reporting.downloadStarted'),
+      description: t('reporting.downloadDescription'),
+    })
+  } catch (error: any) {
+    console.error('Failed to download study:', error)
+    toast({
+      title: t('reporting.downloadFailed'),
+      description: error.message || t('reporting.downloadErrorDescription'),
+      variant: 'destructive',
+    })
+  } finally {
+    isDownloading.value = false
+  }
+}
+
+// Open study in OHIF viewer
+const isOpeningViewer = ref(false)
+
+const handleOpenViewer = async () => {
+  if (!study.value || isOpeningViewer.value) return
+
+  isOpeningViewer.value = true
+
+  try {
+    await studyService.openViewer(study.value.studyId)
+  } catch (error: any) {
+    console.error('Failed to open viewer:', error)
+    toast({
+      title: t('reporting.viewerFailed'),
+      description: error.message || t('reporting.viewerErrorDescription'),
+      variant: 'destructive',
+    })
+  } finally {
+    isOpeningViewer.value = false
+  }
 }
 
 const formatDate = (timestamp: string) => {
@@ -609,4 +1186,48 @@ const formatTime = (timestamp: string) => {
   const date = new Date(timestamp)
   return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
 }
+
+onMounted(async () => {
+  if (pipMode) return
+  const taskId = parseInt(route.params.taskId as string, 10)
+  await taskStore.fetchTaskDetails(taskId)
+
+  // Auto-show translation for validators
+  if (isValidator.value) {
+    showEnglishTranslation.value = true
+  }
+
+  // Auto-start validation if validator opens an assigned_for_validation task
+  if (isValidator.value && study.value?.status === 'assigned-for-validation') {
+    try {
+      await taskStore.startValidationTask(taskId)
+      await taskStore.fetchTaskDetails(taskId)
+    } catch (error) {
+      console.error('Failed to auto-start validation:', error)
+    }
+  }
+})
+
+// Watch for route changes to refetch task data when navigating between tasks
+watch(() => route.params.taskId, async (newTaskId) => {
+  if (pipMode || !newTaskId) return
+  const taskId = parseInt(newTaskId as string, 10)
+  await taskStore.fetchTaskDetails(taskId)
+
+  // Auto-show translation for validators
+  if (isValidator.value) {
+    showEnglishTranslation.value = true
+  }
+
+  // Auto-start validation if validator opens an assigned_for_validation task
+  if (isValidator.value && study.value?.status === 'assigned-for-validation') {
+    try {
+      await taskStore.startValidationTask(taskId)
+      await taskStore.fetchTaskDetails(taskId)
+    } catch (error) {
+      console.error('Failed to auto-start validation:', error)
+    }
+  }
+})
 </script>
+

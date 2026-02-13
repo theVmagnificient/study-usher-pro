@@ -1,8 +1,10 @@
-export type StudyStatus = 
+export type StudyStatus =
   | 'new'
   | 'assigned'
   | 'in-progress'
   | 'draft-ready'
+  | 'translated'
+  | 'assigned-for-validation'
   | 'under-validation'
   | 'returned'
   | 'finalized'
@@ -26,7 +28,9 @@ export type BodyArea =
 export type UserRole = 'admin' | 'reporting-radiologist' | 'validating-radiologist';
 
 export interface Study {
-  id: string;
+  id: number;
+  taskId: number;
+  studyId: number;
   patientId: string;
   clientName: string;
   status: StudyStatus;
@@ -38,12 +42,32 @@ export interface Study {
   deadline: string;
   hasPriors: boolean;
   priorCount?: number;
+  priorStudies?: PriorStudy[];
   sex: 'M' | 'F';
   age: number;
+  description: string;
+  accessionNumber: string;
+  /** Task updated_at timestamp — used as delivery time for delivered tasks */
+  updatedAt?: string;
+  clinicalNotes: string;
+  technicalNotes: string;
   /** Group ID for multi-zone studies (same patient, multiple body areas) */
   linkedStudyGroup?: string;
+  /** Number of validator comments (for display badge) */
+  validatorCommentsCount?: number;
   /** Validator comments on the report quality/impressions */
   validatorComments?: ValidatorComment[];
+  /** Full audit log of all task events */
+  auditLog?: AuditLogEntry[];
+  /** Current report content */
+  report?: {
+    protocol?: string;
+    protocolEn?: string;
+    findings?: string;
+    findingsEn?: string;
+    impression?: string;
+    impressionEn?: string;
+  };
 }
 
 export interface ValidatorComment {
@@ -52,6 +76,8 @@ export interface ValidatorComment {
   validatorName: string;
   timestamp: string;
   isCritical?: boolean;
+  isAction?: boolean; // Flag to distinguish actions from regular comments
+  isNonCritical?: boolean; // Flag for non-critical comments at finalization
 }
 
 export interface TaskType {
@@ -89,15 +115,22 @@ export interface Physician {
 }
 
 export interface PriorStudy {
-  id: string;
+  id: number; // Study ID (numeric)
   type: string;
   date: string;
+  protocol?: string;
+  protocolEn?: string;
+  findings?: string;
+  findingsEn?: string;
+  impression?: string;
+  impressionEn?: string;
   reportText?: string;
 }
 
 export interface AuditLogEntry {
   id: string;
-  studyId: string;
+  studyId: number;
+  accessionNumber?: string;
   action: string;
   user: string;
   timestamp: string;

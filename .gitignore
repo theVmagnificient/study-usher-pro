@@ -22,3 +22,18 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Cache files
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.eslintcache
+.cache/
+*.cache
+*.tsbuildinfo
+
+# Nuxt/Vite cache
+.nuxt
+.output
+.nitro

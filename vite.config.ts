@@ -7,6 +7,14 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 8080,
+    proxy: mode === 'development' ? {
+      '/api': {
+        target: 'http://localhost:8000',
+        // target: 'https://api.platform.xaidos.com',
+        changeOrigin: true,
+        secure: false,
+      },
+    } : undefined,
   },
   plugins: [vue()],
   resolve: {

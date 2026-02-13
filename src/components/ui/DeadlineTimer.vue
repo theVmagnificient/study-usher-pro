@@ -27,18 +27,17 @@ const props = defineProps<Props>()
 const now = computed(() => new Date())
 const deadlineDate = computed(() => new Date(props.deadline))
 const diffMs = computed(() => deadlineDate.value.getTime() - now.value.getTime())
-const diffHours = computed(() => Math.floor(diffMs.value / (1000 * 60 * 60)))
-const diffMins = computed(() => Math.floor((diffMs.value % (1000 * 60 * 60)) / (1000 * 60)))
+const absDiffMs = computed(() => Math.abs(diffMs.value))
+const diffHours = computed(() => Math.floor(absDiffMs.value / (1000 * 60 * 60)))
+const diffMins = computed(() => Math.floor((absDiffMs.value % (1000 * 60 * 60)) / (1000 * 60)))
 
 const isOverdue = computed(() => diffMs.value < 0)
-const isCritical = computed(() => diffHours.value < 1 && !isOverdue.value)
-const isWarning = computed(() => diffHours.value < 4 && !isCritical.value && !isOverdue.value)
+const isCritical = computed(() => !isOverdue.value && diffHours.value < 1)
+const isWarning = computed(() => !isOverdue.value && diffHours.value >= 1 && diffHours.value < 4)
 
 const displayText = computed(() => {
   if (isOverdue.value) {
-    const overHours = Math.abs(diffHours.value)
-    const overMins = Math.abs(diffMins.value)
-    return overHours > 0 ? `-${overHours}h ${overMins}m` : `-${overMins}m`
+    return diffHours.value > 0 ? `-${diffHours.value}h ${diffMins.value}m` : `-${diffMins.value}m`
   } else if (diffHours.value < 1) {
     return `${diffMins.value}m`
   } else if (diffHours.value < 24) {
