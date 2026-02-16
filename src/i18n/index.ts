@@ -508,20 +508,6 @@ const messages = {
         good: "Good (>2)"
       },
 
-      distributionSettings: {
-        title: "Distribution Settings",
-        description: "Maximum concurrent tasks per radiologist by urgency level",
-        statMaxLoad: "STAT limit",
-        urgentMaxLoad: "Urgent limit",
-        routineMaxLoad: "Routine limit",
-        statHint: "Highest priority — strictest limit",
-        urgentHint: "Time-sensitive tasks",
-        routineHint: "Standard turnaround",
-        save: "Save",
-        saving: "Saving...",
-        saved: "Settings saved",
-        error: "Failed to save settings"
-      }
     },
 
     // Physician Profile Page
@@ -1195,20 +1181,6 @@ const messages = {
         good: "Хорошо (>2)"
       },
 
-      distributionSettings: {
-        title: "Настройки распределения",
-        description: "Максимум одновременных задач на рентгенолога по уровню срочности",
-        statMaxLoad: "Лимит STAT",
-        urgentMaxLoad: "Лимит срочных",
-        routineMaxLoad: "Лимит плановых",
-        statHint: "Высший приоритет — строжайший лимит",
-        urgentHint: "Срочные задачи",
-        routineHint: "Стандартный срок выполнения",
-        save: "Сохранить",
-        saving: "Сохранение...",
-        saved: "Настройки сохранены",
-        error: "Не удалось сохранить настройки"
-      }
     },
 
     // Страница профиля врача
