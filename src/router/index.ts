@@ -190,6 +190,8 @@ router.beforeEach(async to => {
 
   if (!await authStore.isAuthenticated()) {
     return { path: '/login', query: { redirect: to.fullPath } }
+  } else if (!Object.keys(authStore.user).length) {
+    await authStore.getUserInfo()
   }
 
   const allowedRoles = to.meta.allowedRoles || []

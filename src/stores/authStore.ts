@@ -27,8 +27,7 @@ export const useSupertokensAuthStore = defineStore('supertokensAuth', {
   actions: {
     async getUserInfo() {
       await superTokensAuthService.expired() && await superTokensAuthService.refresh()
-
-      superTokensAuthService.user()
+      await superTokensAuthService.user()
         .then(user => this.user = { ...user, role: ROLE_MAP[user.role] || DEFAULT_ROLE })
     },
 
