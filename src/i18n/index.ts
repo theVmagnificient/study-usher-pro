@@ -639,6 +639,10 @@ const messages = {
       priorImaging: "Prior Imaging ({count})",
       keyPoints: "Key Points",
 
+      templatePopup: {
+        noResults: "No templates found",
+      },
+
       submitDialog: {
         title: "Submit for Validation",
         description: "Submit this report for validation. An admin will assign a validator to review your work.",
@@ -1311,6 +1315,10 @@ const messages = {
       clinicalHistory: "Клиническая история",
       priorImaging: "Предыдущие визуализации ({count})",
       keyPoints: "Ключевые моменты",
+
+      templatePopup: {
+        noResults: "Шаблоны не найдены",
+      },
 
       submitDialog: {
         title: "Отправить на валидацию",

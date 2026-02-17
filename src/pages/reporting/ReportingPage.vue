@@ -253,13 +253,23 @@
 
           <!-- Findings Row (single column in PiP) -->
           <div class="grid gap-4" :class="pipMode ? 'grid-cols-1' : 'grid-cols-2 gap-6'">
-            <div>
+            <div class="relative">
               <label class="field-label">{{ t('reporting.findings') }}</label>
               <Textarea
+                ref="findingsTextareaRef"
                 v-model="findings"
                 class="report-textarea"
                 :placeholder="t('reporting.findingsPlaceholder')"
                 :readonly="study.status === 'finalized' || study.status === 'delivered' || (isTaskWithValidator && !isValidator)"
+                @keydown="findingsSlash.onKeydown"
+                @input="findingsSlash.onInput"
+              />
+              <TemplatePopup
+                :show="findingsSlash.showPopup.value"
+                :templates="findingsSlash.filteredTemplates.value"
+                :active-index="findingsSlash.activeIndex.value"
+                :empty-text="t('reporting.templatePopup.noResults')"
+                @select="findingsSlash.selectTemplate"
               />
             </div>
             <div v-if="!pipMode && showEnglishTranslation">
@@ -287,13 +297,23 @@
 
           <!-- Impression Row (single column in PiP) -->
           <div class="grid gap-4" :class="pipMode ? 'grid-cols-1' : 'grid-cols-2 gap-6'">
-            <div>
+            <div class="relative">
               <label class="field-label">{{ t('reporting.impression') }}</label>
               <Textarea
+                ref="impressionTextareaRef"
                 v-model="impression"
                 class="report-textarea"
                 :placeholder="t('reporting.impressionPlaceholder')"
                 :readonly="study.status === 'finalized' || study.status === 'delivered' || (isTaskWithValidator && !isValidator)"
+                @keydown="impressionSlash.onKeydown"
+                @input="impressionSlash.onInput"
+              />
+              <TemplatePopup
+                :show="impressionSlash.showPopup.value"
+                :templates="impressionSlash.filteredTemplates.value"
+                :active-index="impressionSlash.activeIndex.value"
+                :empty-text="t('reporting.templatePopup.noResults')"
+                @select="impressionSlash.selectTemplate"
               />
             </div>
             <div v-if="!pipMode && showEnglishTranslation">
@@ -700,7 +720,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch, type ComponentPublicInstance } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import {
@@ -748,6 +768,9 @@ import type { PriorStudy } from '@/types/study'
 import { useToast } from '@/hooks/use-toast'
 import { studyService } from '@/services/studyService'
 import { usePictureInPicture } from '@/composables/usePictureInPicture'
+import { useSlashTemplates } from '@/composables/useSlashTemplates'
+import { findingsTemplates, impressionTemplates } from '@/data/reportTemplates'
+import TemplatePopup from '@/components/ui/TemplatePopup.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -829,6 +852,27 @@ const impression = computed({
     }
   }
 })
+
+// Slash-template refs and composables
+const findingsTextareaRef = ref<ComponentPublicInstance | null>(null)
+const findingsTextareaEl = computed(() => findingsTextareaRef.value?.$el as HTMLTextAreaElement | null)
+const impressionTextareaRef = ref<ComponentPublicInstance | null>(null)
+const impressionTextareaEl = computed(() => impressionTextareaRef.value?.$el as HTMLTextAreaElement | null)
+
+const findingsSlash = useSlashTemplates({
+  templates: findingsTemplates,
+  modelValue: computed(() => findings.value) as any,
+  textareaEl: findingsTextareaEl,
+  onUpdate: (v: string) => { findings.value = v },
+})
+
+const impressionSlash = useSlashTemplates({
+  templates: impressionTemplates,
+  modelValue: computed(() => impression.value) as any,
+  textareaEl: impressionTextareaEl,
+  onUpdate: (v: string) => { impression.value = v },
+})
+
 const showSubmitDialog = ref(false)
 const selectedPrior = ref<PriorStudy | null>(null)
 const showEnglishTranslation = ref(false)
