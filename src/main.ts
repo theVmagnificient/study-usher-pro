@@ -2,15 +2,25 @@ import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import App from './App.vue'
 import router from './router'
+import Supertokens from 'supertokens-web-js'
+import EmailPassord from 'supertokens-web-js/recipe/emailpassword'
+import Session from 'supertokens-web-js/recipe/session'
 import { i18n } from './i18n'
-import './index.css'
+import '@/index.css'
 
-const app = createApp(App)
+Supertokens.init({
+  appInfo: {
+    appName: import.meta.env.VITE_ST_APP_NAME,
+    apiDomain: import.meta.env.VITE_ST_DOMAIN,
+    apiBasePath: import.meta.env.VITE_ST_API_BASE_PATH,
+  },
+  recipeList: [ EmailPassord.init(), Session.init() ],
+})
+
 const pinia = createPinia()
 
-app.use(pinia)
-app.use(router)
-app.use(i18n)
-
-app.mount('#app')
-
+createApp(App)
+  .use(router)
+  .use(pinia)
+  .use(i18n)
+  .mount('#app')

@@ -118,7 +118,7 @@
           <h2 class="text-sm font-semibold">{{ t('sla.statusDistribution') }}</h2>
         </div>
         <div class="clinical-card-body">
-          <div class="grid grid-cols-4 gap-4">
+          <div class="grid grid-cols-5 gap-4">
             <div
               v-for="item in statusCounts"
               :key="item.status"
@@ -486,6 +486,8 @@ const statusCounts = computed(() => {
     { status: "assigned" as const, count: counts('assigned') },
     { status: "in-progress" as const, count: counts('in-progress') },
     { status: "draft-ready" as const, count: counts('draft-ready') },
+    { status: "translated" as const, count: counts('translated') },
+    { status: "assigned-for-validation" as const, count: counts('assigned-for-validation') },
     { status: "under-validation" as const, count: counts('under-validation') },
     { status: "returned" as const, count: counts('returned') },
     { status: "finalized" as const, count: counts('finalized') },

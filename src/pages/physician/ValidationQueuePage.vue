@@ -42,7 +42,7 @@
             {{ t('validation.urgentAlert') }}
           </p>
         </div>
-        
+
         <div class="mb-6">
           <div class="flex items-center gap-2 mb-3">
             <Loader2 class="w-4 h-4 text-primary" />
@@ -86,7 +86,7 @@
           </div>
           <p v-else class="text-sm text-muted-foreground italic pl-6">{{ t('validation.empty.urgentInProgress') }}</p>
         </div>
-        
+
         <div class="mb-6">
           <div class="flex items-center gap-2 mb-3">
             <FileCheck class="w-4 h-4 text-muted-foreground" />
@@ -130,7 +130,7 @@
           </div>
           <p v-else class="text-sm text-muted-foreground italic pl-6">{{ t('validation.empty.urgentToValidate') }}</p>
         </div>
-        
+
         <div class="mb-6">
           <div class="flex items-center gap-2 mb-3">
             <CheckCircle class="w-4 h-4 text-status-finalized" />
@@ -183,7 +183,7 @@
             {{ t('validation.retroAlert') }}
           </p>
         </div>
-        
+
         <div class="mb-6">
           <div class="flex items-center gap-2 mb-3">
             <Loader2 class="w-4 h-4 text-primary" />
@@ -227,7 +227,7 @@
           </div>
           <p v-else class="text-sm text-muted-foreground italic pl-6">{{ t('validation.empty.retroInProgress') }}</p>
         </div>
-        
+
         <div class="mb-6">
           <div class="flex items-center gap-2 mb-3">
             <FileCheck class="w-4 h-4 text-muted-foreground" />
@@ -271,7 +271,7 @@
           </div>
           <p v-else class="text-sm text-muted-foreground italic pl-6">{{ t('validation.empty.retroToValidate') }}</p>
         </div>
-        
+
         <div class="mb-6">
           <div class="flex items-center gap-2 mb-3">
             <CheckCircle class="w-4 h-4 text-status-finalized" />
@@ -385,7 +385,7 @@ const handleStudyClick = (taskId: number) => {
 
 onMounted(async () => {
   // Admins see all validation tasks, validators see only their own
-  if (authStore.role === 'admin') {
+  if (authStore.isAdmin) {
     await taskStore.fetchAdminValidationTasks()
   } else {
     await taskStore.fetchMyValidationTasks()

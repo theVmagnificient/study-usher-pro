@@ -149,7 +149,7 @@ const authStore = useAuthStore()
 
 const collapsed = ref(false)
 const isDark = computed(() => appStore.isDark)
-const currentRole = computed(() => authStore.role)
+const currentRole = computed(() => authStore.user.role)
 
 const filteredItems = computed(() => {
   if (!currentRole.value) return []
@@ -169,8 +169,8 @@ const toggleTheme = () => {
 }
 
 const handleLogout = () => {
-  authStore.logout()
-  router.push('/login')
+  authStore.signOut()
+    .then(() => router.push('/login'))
 }
 </script>
 

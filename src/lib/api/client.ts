@@ -52,12 +52,6 @@ apiClient.interceptors.request.use(
       } as ApiError)
     }
 
-
-    const token = localStorage.getItem('auth_token')
-    if (token) {
-      config.headers.Authorization = `Basic ${token}`
-    }
-
     return config
   },
   (error) => {
@@ -160,10 +154,6 @@ function formatError(error: AxiosError): ApiError {
 
   switch (status) {
     case 401:
-
-      localStorage.removeItem('auth_token')
-      localStorage.removeItem('auth_user')
-      localStorage.removeItem('auth_role')
       if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
         window.location.href = '/login'
       }
