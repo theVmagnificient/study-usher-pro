@@ -68,81 +68,6 @@
       </Card>
     </div>
 
-    <!-- Distribution Settings -->
-    <Card>
-      <CardHeader class="pb-3">
-        <div class="flex items-center justify-between">
-          <div class="flex items-center gap-2">
-            <Settings class="w-4 h-4 text-muted-foreground" />
-            <CardTitle class="text-base font-medium">{{ t('workforce.distributionSettings.title') }}</CardTitle>
-          </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            @click="showDistributionSettings = !showDistributionSettings"
-          >
-            <ChevronDown :class="cn('w-4 h-4 transition-transform', showDistributionSettings && 'rotate-180')" />
-          </Button>
-        </div>
-        <p v-if="!showDistributionSettings" class="text-xs text-muted-foreground mt-1">
-          STAT: {{ distributionSettings.stat_max_load }} · {{ t('urgency.urgent') }}: {{ distributionSettings.urgent_max_load }} · {{ t('urgency.routine') }}: {{ distributionSettings.routine_max_load }}
-        </p>
-      </CardHeader>
-      <CardContent v-if="showDistributionSettings">
-        <p class="text-sm text-muted-foreground mb-4">{{ t('workforce.distributionSettings.description') }}</p>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div class="space-y-2">
-            <label class="text-sm font-medium">{{ t('workforce.distributionSettings.statMaxLoad') }}</label>
-            <input
-              v-model.number="distributionForm.stat_max_load"
-              type="number"
-              min="1"
-              max="50"
-              class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-            />
-            <p class="text-xs text-muted-foreground">{{ t('workforce.distributionSettings.statHint') }}</p>
-          </div>
-          <div class="space-y-2">
-            <label class="text-sm font-medium">{{ t('workforce.distributionSettings.urgentMaxLoad') }}</label>
-            <input
-              v-model.number="distributionForm.urgent_max_load"
-              type="number"
-              min="1"
-              max="50"
-              class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-            />
-            <p class="text-xs text-muted-foreground">{{ t('workforce.distributionSettings.urgentHint') }}</p>
-          </div>
-          <div class="space-y-2">
-            <label class="text-sm font-medium">{{ t('workforce.distributionSettings.routineMaxLoad') }}</label>
-            <input
-              v-model.number="distributionForm.routine_max_load"
-              type="number"
-              min="1"
-              max="50"
-              class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-            />
-            <p class="text-xs text-muted-foreground">{{ t('workforce.distributionSettings.routineHint') }}</p>
-          </div>
-        </div>
-        <div class="flex items-center gap-3 mt-4">
-          <Button
-            size="sm"
-            :disabled="distributionSaving || !distributionFormChanged"
-            @click="saveDistributionSettings"
-          >
-            {{ distributionSaving ? t('workforce.distributionSettings.saving') : t('workforce.distributionSettings.save') }}
-          </Button>
-          <span v-if="distributionSaveStatus === 'saved'" class="text-sm text-green-600">
-            <CheckCircle class="w-4 h-4 inline mr-1" />{{ t('workforce.distributionSettings.saved') }}
-          </span>
-          <span v-if="distributionSaveStatus === 'error'" class="text-sm text-destructive">
-            {{ t('workforce.distributionSettings.error') }}
-          </span>
-        </div>
-      </CardContent>
-    </Card>
-
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:h-[calc(100vh-280px)]">
       <!-- Calendar -->
       <Card class="lg:col-span-2 flex flex-col overflow-hidden">
@@ -351,15 +276,12 @@ import Button from '@/components/ui/button.vue'
 import {
   ChevronLeft,
   ChevronRight,
-  ChevronDown,
   Users,
   AlertTriangle,
   CheckCircle,
   Info,
-  Settings
 } from 'lucide-vue-next'
 import { cn } from '@/lib/utils'
-import { adminService, type DistributionSettings } from '@/services/adminService'
 import type { Modality, BodyArea, Physician } from '@/types/study'
 import Tooltip from '@/components/ui/tooltip.vue'
 import TooltipContent from '@/components/ui/TooltipContent.vue'
@@ -403,44 +325,6 @@ interface DayCapacity {
 const currentMonth = ref(new Date())
 const selectedDay = ref<DayCapacity | null>(null)
 
-// Distribution settings
-const showDistributionSettings = ref(false)
-const distributionSettings = ref<DistributionSettings>({ stat_max_load: 3, urgent_max_load: 5, routine_max_load: 10 })
-const distributionForm = ref<DistributionSettings>({ stat_max_load: 3, urgent_max_load: 5, routine_max_load: 10 })
-const distributionSaving = ref(false)
-const distributionSaveStatus = ref<'idle' | 'saved' | 'error'>('idle')
-
-const distributionFormChanged = computed(() =>
-  distributionForm.value.stat_max_load !== distributionSettings.value.stat_max_load ||
-  distributionForm.value.urgent_max_load !== distributionSettings.value.urgent_max_load ||
-  distributionForm.value.routine_max_load !== distributionSettings.value.routine_max_load
-)
-
-async function loadDistributionSettings() {
-  try {
-    const data = await adminService.getDistributionSettings()
-    distributionSettings.value = { ...data }
-    distributionForm.value = { ...data }
-  } catch {
-    // Keep defaults on error
-  }
-}
-
-async function saveDistributionSettings() {
-  distributionSaving.value = true
-  distributionSaveStatus.value = 'idle'
-  try {
-    const data = await adminService.updateDistributionSettings(distributionForm.value)
-    distributionSettings.value = { ...data }
-    distributionForm.value = { ...data }
-    distributionSaveStatus.value = 'saved'
-    setTimeout(() => { distributionSaveStatus.value = 'idle' }, 3000)
-  } catch {
-    distributionSaveStatus.value = 'error'
-  } finally {
-    distributionSaving.value = false
-  }
-}
 
 const monthCapacity = computed(() => {
   const monthStart = startOfMonth(currentMonth.value)
@@ -514,9 +398,6 @@ const goToNextMonth = () => {
 }
 
 onMounted(async () => {
-  await Promise.all([
-    userStore.fetchUsers(),
-    loadDistributionSettings(),
-  ])
+  await userStore.fetchUsers()
 })
 </script>
