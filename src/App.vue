@@ -12,4 +12,3 @@ import { RouterView } from 'vue-router'
 import Toaster from '@/components/ui/toaster.vue'
 import TooltipProvider from '@/components/ui/TooltipProvider.vue'
 </script>
-

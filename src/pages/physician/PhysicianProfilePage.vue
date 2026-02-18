@@ -63,7 +63,7 @@
             <Button
               variant="outline"
               size="sm"
-              @click="router.push(`/schedule/${authStore.userId}`)"
+              @click="router.push(`/schedule/${authStore.user.id}`)"
             >
               <CalendarClock class="w-4 h-4 mr-2" />
               {{ t('profile.manageSchedule') }}

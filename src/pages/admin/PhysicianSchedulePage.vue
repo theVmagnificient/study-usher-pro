@@ -40,7 +40,7 @@
         <Button variant="ghost" size="icon" @click="currentWeekStart = subWeeks(currentWeekStart, 1)">
           <ChevronLeft class="w-5 h-5" />
         </Button>
-        
+
         <div class="flex items-center gap-4">
           <!-- Quick week tabs -->
           <button
@@ -57,7 +57,7 @@
             {{ format(addWeeks(startOfWeek(new Date(), { weekStartsOn: 1 }), offset), "dd.MM") }} - {{ format(addDays(addWeeks(startOfWeek(new Date(), { weekStartsOn: 1 }), offset), 6), "dd.MM") }}
           </button>
         </div>
-        
+
         <Button variant="ghost" size="icon" @click="currentWeekStart = addWeeks(currentWeekStart, 1)">
           <ChevronRight class="w-5 h-5" />
         </Button>
@@ -82,7 +82,7 @@
                   {{ t('common.cancel') }}
                 </button>
               </div>
-              
+
               <!-- Hours Grid -->
               <div class="flex-1 flex p-2 gap-0.5">
                 <button
@@ -159,7 +159,7 @@ const DAY_NAMES = computed(() => [
 // Check if current user is viewing their own schedule
 const isOwnSchedule = computed(() => {
   const physicianId = route.params.physicianId
-  return authStore.userId?.toString() === physicianId?.toString()
+  return authStore.user.id.toString() === physicianId?.toString()
 })
 
 // Check if user can edit schedules (only admins can edit)
@@ -171,8 +171,8 @@ const physician = computed(() => {
   if (isOwnSchedule.value) {
     // For own schedule, use basic info from authStore
     return {
-      id: authStore.userId,
-      fullName: authStore.user?.firstName + ' ' + authStore.user?.lastName || 'User'
+      id: authStore.user.id,
+      fullName: authStore.fullName || 'User'
     }
   }
   // For admin viewing other user's schedule
@@ -201,11 +201,11 @@ const isDefaultWorkingHour = (date: Date, hour: number) => {
 const isScheduled = (date: Date, hour: number) => {
   const dateKey = format(date, "yyyy-MM-dd")
   const customHours = schedule.value[dateKey]
-  
+
   if (customHours !== undefined) {
     return customHours.includes(hour)
   }
-  
+
   return isDefaultWorkingHour(date, hour)
 }
 
@@ -223,11 +223,11 @@ const getDefaultHoursForDate = (date: Date): number[] => {
 const toggleHour = (date: Date, hour: number) => {
   const dateKey = format(date, "yyyy-MM-dd")
   const currentHours = schedule.value[dateKey] ?? getDefaultHoursForDate(date)
-  
+
   const newHours = currentHours.includes(hour)
     ? currentHours.filter(h => h !== hour)
     : [...currentHours, hour].sort((a, b) => a - b)
-  
+
   schedule.value = {
     ...schedule.value,
     [dateKey]: newHours
@@ -247,7 +247,7 @@ const loadSchedule = async () => {
 
     if (isOwnSchedule.value) {
       // Load own schedule using self-service API
-      const userId = authStore.userId
+      const userId = authStore.user.id
       if (!userId) return
 
       const slots = await userService.getSchedule(userId, {
@@ -318,7 +318,7 @@ const loadSchedule = async () => {
 const saveSchedule = async () => {
   try {
     const physicianId = route.params.physicianId as string
-    const userId = isOwnSchedule.value ? authStore.userId : parseInt(physicianId)
+    const userId = isOwnSchedule.value ? authStore.user.id : parseInt(physicianId)
 
     if (!userId) {
       console.error('No user ID available')
