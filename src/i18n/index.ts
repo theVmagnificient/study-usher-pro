@@ -215,6 +215,7 @@ const messages = {
       date: "Date",
       report: "Report",
       dicom: "DICOM",
+      viewer: "Viewer",
 
       linkedBodyParts: "Linked Body Parts",
       zones: "{count} zones",
@@ -863,6 +864,7 @@ const messages = {
       date: "Дата",
       report: "Отчет",
       dicom: "DICOM",
+      viewer: "Просмотр",
 
       linkedBodyParts: "Связанные области тела",
       zones: "{count} зон | {count} зона | {count} зоны",

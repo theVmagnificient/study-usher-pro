@@ -406,10 +406,14 @@
                   : t('reporting.notAutoSaved') }}
               </p>
             </div>
-            <div v-if="!pipMode && (selectedPrior || showEnglishTranslation)" class="pt-4 border-t border-border">
-              <Button v-if="selectedPrior" variant="outline" size="sm">
+            <div v-if="!pipMode && (selectedPrior || showEnglishTranslation)" class="pt-4 border-t border-border flex gap-2">
+              <Button v-if="selectedPrior" variant="outline" size="sm" @click="studyService.downloadStudy(selectedPrior.id)">
                 <Download class="w-4 h-4 mr-2" />
-                {{ t('common.download') }} {{ t('reporting.dicom') }}
+                {{ t('reporting.dicom') }}
+              </Button>
+              <Button v-if="selectedPrior" variant="outline" size="sm" @click="studyService.openViewer(selectedPrior.id)">
+                <Eye class="w-4 h-4 mr-2" />
+                {{ t('reporting.viewer') }}
               </Button>
             </div>
           </div>

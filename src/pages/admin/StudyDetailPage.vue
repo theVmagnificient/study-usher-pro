@@ -226,9 +226,13 @@
                     <FileText class="w-4 h-4 mr-2" />
                     {{ t('studyDetail.report') }}
                   </Button>
-                  <Button variant="ghost" size="sm" disabled>
+                  <Button variant="ghost" size="sm" @click="studyService.downloadStudy(prior.id)">
                     <Download class="w-4 h-4 mr-2" />
                     {{ t('studyDetail.dicom') }}
+                  </Button>
+                  <Button variant="ghost" size="sm" @click="studyService.openViewer(prior.id)">
+                    <Eye class="w-4 h-4 mr-2" />
+                    {{ t('studyDetail.viewer') }}
                   </Button>
                 </td>
               </tr>
