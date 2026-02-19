@@ -516,9 +516,8 @@ const availableRadiologists = computed(() => {
 const canReassign = computed(() => {
   if (!study.value) return false
 
-  // Allow reassignment for NEW (not yet assigned) and TRANSLATED (ready for validator assignment)
-  // Do NOT allow for ASSIGNED (already assigned) or other in-progress statuses
-  const allowedStatuses = ['new', 'translated']
+  // Allow reassignment for NEW, ASSIGNED (admin can reassign to another doctor), and TRANSLATED
+  const allowedStatuses = ['new', 'assigned', 'translated']
   return allowedStatuses.includes(study.value.status)
 })
 
