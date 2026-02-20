@@ -2,6 +2,7 @@ export type StudyStatus =
   | 'new'
   | 'assigned'
   | 'in-progress'
+  | 'draft-saved'
   | 'draft-ready'
   | 'translated'
   | 'assigned-for-validation'

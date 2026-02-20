@@ -74,6 +74,16 @@ export const taskService = {
   },
 
 
+  async saveDraft(taskId: number, report: ReportSubmitData): Promise<void> {
+    try {
+      const mappedReport = mapReportSubmit(report)
+      await apiClient.post(`/api/v1/tasks/${taskId}/reporting/save-draft`, mappedReport)
+    } catch (error) {
+      console.error(`Failed to save draft for task ${taskId}:`, error)
+      throw error
+    }
+  },
+
   async submitReport(taskId: number, report: ReportSubmitData, userId: number): Promise<void> {
     try {
       const mappedReport = mapReportSubmit(report)

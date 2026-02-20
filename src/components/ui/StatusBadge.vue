@@ -24,6 +24,8 @@ const statusMap: Record<string, { key: string; className: string }> = {
   'assigned': { key: 'status.assigned', className: 'status-assigned' },
   'in-progress': { key: 'status.inProgress', className: 'status-in-progress' },
   'in_progress': { key: 'status.inProgress', className: 'status-in-progress' },
+  'draft-saved': { key: 'status.draftSaved', className: 'status-in-progress' },
+  'draft_saved': { key: 'status.draftSaved', className: 'status-in-progress' },
   'draft-ready': { key: 'status.draftReady', className: 'status-draft-ready' },
   'draft_ready': { key: 'status.draftReady', className: 'status-draft-ready' },
   'under-validation': { key: 'status.underValidation', className: 'status-under-validation' },

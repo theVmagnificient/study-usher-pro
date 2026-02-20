@@ -11,6 +11,7 @@ export type TaskStatus =
   | 'new'
   | 'assigned'
   | 'in_progress'
+  | 'draft_saved'
   | 'draft_ready'
   | 'translated'
   | 'assigned_for_validation'

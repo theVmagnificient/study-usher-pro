@@ -134,6 +134,27 @@ export const useTaskStore = defineStore('task', () => {
   }
 
 
+  async function saveDraft(taskId: number, report: ReportSubmitData) {
+    loading.value = true
+    error.value = null
+
+    try {
+      if (!currentTask.value) {
+        throw new Error('No current task loaded')
+      }
+      await taskService.saveDraft(currentTask.value.taskId, report)
+
+      if (currentTask.value) await fetchTaskDetails(currentTask.value.taskId)
+      await fetchMyReportingTasks()
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : `Failed to save draft for ${taskId}`
+      console.error(`Error saving draft for ${taskId}:`, err)
+      throw err
+    } finally {
+      loading.value = false
+    }
+  }
+
   async function submitReport(taskId: number, report: ReportSubmitData) {
     loading.value = true
     error.value = null
@@ -389,6 +410,7 @@ export const useTaskStore = defineStore('task', () => {
       new: [],
       assigned: [],
       'in-progress': [],
+      'draft-saved': [],
       'draft-ready': [],
       translated: [],
       'assigned-for-validation': [],
@@ -422,6 +444,7 @@ export const useTaskStore = defineStore('task', () => {
     fetchTaskDetails,
     takeTask,
     startTask,
+    saveDraft,
     submitReport,
     assignForValidation,
     finalizeTask,

@@ -1018,8 +1018,7 @@ const handleSaveDraft = async () => {
   if (!study.value) return
 
   try {
-    // 1. FIRST: Collect form data BEFORE any workflow transitions
-    // This prevents data loss when fetchTaskDetails reloads from DB
+    // 1. Collect form data BEFORE any workflow transitions
     const reportData = {
       protocol: protocol.value,
       findings: findings.value,
@@ -1029,7 +1028,7 @@ const handleSaveDraft = async () => {
       impression_en: englishImpression.value,
     }
 
-    // 2. THEN: Handle workflow transitions if needed
+    // 2. Auto-start task if needed (take/start transitions)
     if (study.value.status === 'new') {
       await taskStore.takeTask(study.value.taskId)
       await taskStore.startTask(study.value.taskId)
@@ -1039,13 +1038,10 @@ const handleSaveDraft = async () => {
       await taskStore.startTask(study.value.taskId)
     }
 
-    // 3. Save the report with data collected in step 1
-    await taskStore.submitReport(study.value.taskId, reportData)
+    // 3. Save draft — new endpoint, no status change to draft_ready, no events
+    await taskStore.saveDraft(study.value.taskId, reportData)
 
-    // 4. Reload to get updated task status
-    await taskStore.fetchTaskDetails(study.value.taskId)
-
-    // 5. Show success feedback
+    // 4. Show success feedback
     toast({
       title: t('reporting.draftSaved'),
       description: t('reporting.draftSavedDescription'),
@@ -1065,21 +1061,12 @@ const handleSubmit = async () => {
   if (!study.value) return
 
   try {
-    // If task is draft-ready or translated, submit for validation
-    // Backend will auto-assign validator from schedule
-    if (study.value.status === 'draft-ready' || study.value.status === 'translated') {
-      await taskStore.assignForValidation(study.value.taskId)
-      showSubmitDialog.value = false
-      router.go(-1)
-      return
-    }
-
     // Handle workflow transitions before submitting
     if (study.value.status === 'new') {
       await taskStore.takeTask(study.value.taskId)
-      await taskStore.fetchTaskDetails(study.value.taskId)  // Reload to get updated status
+      await taskStore.fetchTaskDetails(study.value.taskId)
       await taskStore.startTask(study.value.taskId)
-      await taskStore.fetchTaskDetails(study.value.taskId)  // Reload again
+      await taskStore.fetchTaskDetails(study.value.taskId)
     } else if (study.value.status === 'assigned') {
       await taskStore.startTask(study.value.taskId)
       await taskStore.fetchTaskDetails(study.value.taskId)
@@ -1097,7 +1084,11 @@ const handleSubmit = async () => {
       impression_en: englishImpression.value,
     }
 
+    // submitReport creates a new version and transitions to draft_ready
+    // (works from in_progress AND draft_saved)
+    // Celery picks up draft_ready tasks, translates, and assigns validator
     await taskStore.submitReport(study.value.taskId, reportData)
+
     showSubmitDialog.value = false
     router.go(-1)
   } catch (error) {
