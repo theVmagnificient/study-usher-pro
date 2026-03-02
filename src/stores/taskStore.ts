@@ -56,7 +56,7 @@ export const useTaskStore = create<TaskState>((set, get) => ({
   async fetchMyReportingTasks() {
     set({ loading: true, error: null })
     try {
-      const tasks = await taskService.getMyReportingTasks(get().currentUserId)
+      const tasks = await taskService.getMyReportingTasks()
       set({ myReportingTasks: tasks })
     } catch (err) {
       set({ error: err instanceof Error ? err.message : 'Failed to fetch reporting tasks' })
@@ -69,7 +69,7 @@ export const useTaskStore = create<TaskState>((set, get) => ({
   async fetchMyValidationTasks() {
     set({ loading: true, error: null })
     try {
-      const tasks = await taskService.getMyValidationTasks(get().currentUserId)
+      const tasks = await taskService.getMyValidationTasks()
       set({ myValidationTasks: tasks })
     } catch (err) {
       set({ error: err instanceof Error ? err.message : 'Failed to fetch validation tasks' })

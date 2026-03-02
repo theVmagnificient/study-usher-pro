@@ -110,7 +110,7 @@ export default function PhysicianProfilePage() {
                 <div>
                   <label className="section-header">{t('profile.modalities')}</label>
                   <div className="flex flex-wrap gap-1 mt-1">
-                    {(physician.modalities || []).map(m => (
+                    {(physician.supportedModalities || []).map(m => (
                       <span key={m} className="px-2 py-0.5 text-xs bg-muted rounded">{m}</span>
                     ))}
                   </div>
@@ -118,7 +118,7 @@ export default function PhysicianProfilePage() {
                 <div>
                   <label className="section-header">{t('profile.bodyAreas')}</label>
                   <div className="flex flex-wrap gap-1 mt-1">
-                    {(physician.bodyAreas || []).map(b => (
+                    {(physician.supportedBodyAreas || []).map(b => (
                       <span key={b} className="px-2 py-0.5 text-xs bg-muted rounded">{b}</span>
                     ))}
                   </div>

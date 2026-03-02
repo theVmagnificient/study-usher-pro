@@ -12,7 +12,8 @@ import { useClientTypeStore } from '@/stores/clientTypeStore'
 import apiClient from '@/lib/api/client'
 import { parseTaskTypeId } from '@/lib/mappers/utils'
 import type { TaskType, Modality, BodyArea } from '@/types/study'
-import type { Client, ClientTypeCreateData, ClientTypeUpdateData } from '@/types/api'
+import type { Client } from '@/types/api'
+import type { ClientTypeCreateData, ClientTypeUpdateData } from '@/services/clientTypeService'
 
 export default function TaskTypesPage() {
   const { t } = useTranslation()

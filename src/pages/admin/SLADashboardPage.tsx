@@ -90,7 +90,7 @@ export default function SLADashboardPage() {
 
   async function fetchTasksFromBackend(filters: Record<string, string> = {}): Promise<TaskWithEmbedded[]> {
     const params = { per_page: 100, ...buildDateParams(), ...filters }
-    const response = await (apiClient as any).get<{ items: TaskWithEmbedded[]; total: number }>(
+    const response = await apiClient.get(
       '/api/v1/admin/tasks', { params }
     )
     return response.data.items

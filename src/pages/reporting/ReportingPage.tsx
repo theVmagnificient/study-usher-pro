@@ -574,6 +574,7 @@ export default function ReportingPage({ pipMode = false }: Props) {
                   activeIndex={findingsSlash.activeIndex}
                   emptyText={t('reporting.templatePopup.noResults')}
                   onSelect={findingsSlash.selectTemplate}
+                  onHoverIndex={(i) => { findingsSlash.activeIndex = i }}
                 />
               </div>
               {!pipMode && showEnglishTranslation && (
@@ -628,6 +629,7 @@ export default function ReportingPage({ pipMode = false }: Props) {
                   activeIndex={impressionSlash.activeIndex}
                   emptyText={t('reporting.templatePopup.noResults')}
                   onSelect={impressionSlash.selectTemplate}
+                  onHoverIndex={(i) => { impressionSlash.activeIndex = i }}
                 />
               </div>
               {!pipMode && showEnglishTranslation && (
@@ -931,7 +933,7 @@ export default function ReportingPage({ pipMode = false }: Props) {
             <div className="p-3 bg-amber-500/10 dark:bg-amber-500/20 rounded-md border border-amber-500/20">
               <p className="text-sm text-foreground">
                 <strong>Note:</strong> Only fields you modify will be updated. Empty fields keep their current values.
-                This will create version {(study?.report?.version || 0) + 1} of the report.
+                This will create a new version of the report.
               </p>
             </div>
           </div>
