@@ -1,5 +1,4 @@
-import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { create } from 'zustand'
 import type { Physician, UserRole } from '@/types/study'
 import type { ScheduleSlot } from '@/types/api'
 import {
@@ -11,358 +10,258 @@ import {
   type DateRange,
 } from '@/services/userService'
 import { parseUserId } from '@/lib/mappers/utils'
-import type { PaginatedResult } from '@/services/studyService'
 
+interface Pagination {
+  page: number
+  perPage: number
+  total: number
+  totalPages: number
+}
 
-export const useUserStore = defineStore('user', () => {
+interface UserState {
+  users: Physician[]
+  currentUser: Physician | null
+  currentProfile: Physician | null
+  schedule: ScheduleSlot[]
+  loading: boolean
+  error: string | null
+  pagination: Pagination
 
-  const users = ref<Physician[]>([])
-  const currentUser = ref<Physician | null>(null)
-  const currentProfile = ref<Physician | null>(null)
-  const schedule = ref<ScheduleSlot[]>([])
-  const loading = ref(false)
-  const error = ref<string | null>(null)
-  const pagination = ref({
-    page: 1,
-    perPage: 20,
-    total: 0,
-    totalPages: 0,
-  })
+  fetchUsers: (page?: number) => Promise<void>
+  fetchUserById: (id: number) => Promise<void>
+  fetchUserByFrontendId: (id: string) => Promise<void>
+  createUser: (data: UserCreateData) => Promise<void>
+  updateUser: (id: number, data: UserUpdateData) => Promise<void>
+  deleteUser: (id: number) => Promise<void>
+  fetchProfile: (userId: number, authUser?: { firstName: string; lastName: string; email: string }) => Promise<void>
+  updateProfile: (userId: number, data: ProfileUpdateData) => Promise<void>
+  fetchSchedule: (userId: number, dateRange?: DateRange) => Promise<void>
+  createScheduleSlot: (userId: number, slot: ScheduleSlotData) => Promise<void>
+  deleteScheduleSlot: (userId: number, slotId: number) => Promise<void>
+  bulkUpdateSchedule: (userId: number, slots: ScheduleSlotData[]) => Promise<void>
+  nextPage: () => Promise<void>
+  previousPage: () => Promise<void>
+  goToPage: (page: number) => Promise<void>
+  refresh: () => Promise<void>
 
+  usersByRole: (role: UserRole) => Physician[]
+  reportingRadiologists: () => Physician[]
+  validatingRadiologists: () => Physician[]
+  admins: () => Physician[]
+  userById: (id: string) => Physician | undefined
+  totalUsers: () => number
+  hasNextPage: () => boolean
+  hasPreviousPage: () => boolean
+  usersGroupedByRole: () => Record<UserRole, Physician[]>
+  availablePhysicians: () => Physician[]
+}
 
+export const useUserStore = create<UserState>((set, get) => ({
+  users: [],
+  currentUser: null,
+  currentProfile: null,
+  schedule: [],
+  loading: false,
+  error: null,
+  pagination: { page: 1, perPage: 20, total: 0, totalPages: 0 },
 
-  async function fetchUsers(page?: number) {
-    loading.value = true
-    error.value = null
-
+  async fetchUsers(page) {
+    set({ loading: true, error: null })
     try {
-      const pageToFetch = page !== undefined ? page : pagination.value.page
-
-      const result = await userService.getAll(pageToFetch, pagination.value.perPage)
-
-      users.value = result.items
-      pagination.value = {
-        page: result.page,
-        perPage: result.perPage,
-        total: result.total,
-        totalPages: result.totalPages,
-      }
+      const pageToFetch = page !== undefined ? page : get().pagination.page
+      const result = await userService.getAll(pageToFetch, get().pagination.perPage)
+      set({
+        users: result.items,
+        pagination: { page: result.page, perPage: result.perPage, total: result.total, totalPages: result.totalPages },
+      })
     } catch (err) {
-      error.value = err instanceof Error ? err.message : 'Failed to fetch users'
+      set({ error: err instanceof Error ? err.message : 'Failed to fetch users' })
       console.error('Error fetching users:', err)
     } finally {
-      loading.value = false
+      set({ loading: false })
     }
-  }
+  },
 
-
-  async function fetchUserById(id: number) {
-    loading.value = true
-    error.value = null
-
+  async fetchUserById(id) {
+    set({ loading: true, error: null })
     try {
       const user = await userService.getById(id)
-      currentUser.value = user
-
-
-      const index = users.value.findIndex((u) => u.id === user.id)
-      if (index !== -1) {
-        users.value[index] = user
-      }
+      set(state => ({
+        currentUser: user,
+        users: state.users.map(u => u.id === user.id ? user : u),
+      }))
     } catch (err) {
-      error.value = err instanceof Error ? err.message : `Failed to fetch user ${id}`
+      set({ error: err instanceof Error ? err.message : `Failed to fetch user ${id}` })
       console.error(`Error fetching user ${id}:`, err)
     } finally {
-      loading.value = false
+      set({ loading: false })
     }
-  }
+  },
 
+  async fetchUserByFrontendId(id) {
+    await get().fetchUserById(parseUserId(id))
+  },
 
-  async function fetchUserByFrontendId(id: string) {
-    const backendId = parseUserId(id)
-    await fetchUserById(backendId)
-  }
-
-
-  async function createUser(data: UserCreateData) {
-    loading.value = true
-    error.value = null
-
+  async createUser(data) {
+    set({ loading: true, error: null })
     try {
       await userService.create(data)
-
-
-      await fetchUsers()
+      await get().fetchUsers()
     } catch (err) {
-      error.value = err instanceof Error ? err.message : 'Failed to create user'
+      set({ error: err instanceof Error ? err.message : 'Failed to create user' })
       console.error('Error creating user:', err)
       throw err
     } finally {
-      loading.value = false
+      set({ loading: false })
     }
-  }
+  },
 
-
-  async function updateUser(id: number, data: UserUpdateData) {
-    loading.value = true
-    error.value = null
-
+  async updateUser(id, data) {
+    set({ loading: true, error: null })
     try {
       await userService.update(id, data)
-
-
-      await fetchUserById(id)
+      await get().fetchUserById(id)
     } catch (err) {
-      error.value = err instanceof Error ? err.message : `Failed to update user ${id}`
+      set({ error: err instanceof Error ? err.message : `Failed to update user ${id}` })
       console.error(`Error updating user ${id}:`, err)
       throw err
     } finally {
-      loading.value = false
+      set({ loading: false })
     }
-  }
+  },
 
-
-  async function deleteUser(id: number) {
-    loading.value = true
-    error.value = null
-
+  async deleteUser(id) {
+    set({ loading: true, error: null })
     try {
       await userService.delete(id)
-
-
-      users.value = users.value.filter((u) => parseUserId(u.id) !== id)
-
-      if (currentUser.value && parseUserId(currentUser.value.id) === id) {
-        currentUser.value = null
-      }
+      set(state => ({
+        users: state.users.filter(u => parseUserId(u.id) !== id),
+        currentUser: state.currentUser && parseUserId(state.currentUser.id) === id ? null : state.currentUser,
+      }))
     } catch (err) {
-      error.value = err instanceof Error ? err.message : `Failed to delete user ${id}`
+      set({ error: err instanceof Error ? err.message : `Failed to delete user ${id}` })
       console.error(`Error deleting user ${id}:`, err)
       throw err
     } finally {
-      loading.value = false
+      set({ loading: false })
     }
-  }
+  },
 
-
-  async function fetchProfile(userId: number, authUser?: { firstName: string; lastName: string; email: string }) {
-    loading.value = true
-    error.value = null
-
+  async fetchProfile(userId, authUser) {
+    set({ loading: true, error: null })
     try {
       const profile = await userService.getProfile(userId, authUser)
-      currentProfile.value = profile
+      set({ currentProfile: profile })
     } catch (err) {
-      error.value = err instanceof Error ? err.message : 'Failed to fetch profile'
+      set({ error: err instanceof Error ? err.message : 'Failed to fetch profile' })
       console.error('Error fetching profile:', err)
     } finally {
-      loading.value = false
+      set({ loading: false })
     }
-  }
+  },
 
-
-  async function updateProfile(userId: number, data: ProfileUpdateData) {
-    loading.value = true
-    error.value = null
-
+  async updateProfile(userId, data) {
+    set({ loading: true, error: null })
     try {
       await userService.updateProfile(userId, data)
-
-
-      await fetchProfile(userId)
+      await get().fetchProfile(userId)
     } catch (err) {
-      error.value = err instanceof Error ? err.message : 'Failed to update profile'
+      set({ error: err instanceof Error ? err.message : 'Failed to update profile' })
       console.error('Error updating profile:', err)
       throw err
     } finally {
-      loading.value = false
+      set({ loading: false })
     }
-  }
+  },
 
-
-  async function fetchSchedule(userId: number, dateRange?: DateRange) {
-    loading.value = true
-    error.value = null
-
+  async fetchSchedule(userId, dateRange) {
+    set({ loading: true, error: null })
     try {
       const scheduleData = await userService.getSchedule(userId, dateRange)
-      schedule.value = scheduleData
+      set({ schedule: scheduleData })
     } catch (err) {
-      error.value = err instanceof Error ? err.message : 'Failed to fetch schedule'
+      set({ error: err instanceof Error ? err.message : 'Failed to fetch schedule' })
       console.error('Error fetching schedule:', err)
     } finally {
-      loading.value = false
+      set({ loading: false })
     }
-  }
+  },
 
-
-  async function createScheduleSlot(userId: number, slot: ScheduleSlotData) {
-    loading.value = true
-    error.value = null
-
+  async createScheduleSlot(userId, slot) {
+    set({ loading: true, error: null })
     try {
       await userService.createScheduleSlot(userId, slot)
-
-
-      await fetchSchedule(userId)
+      await get().fetchSchedule(userId)
     } catch (err) {
-      error.value = err instanceof Error ? err.message : 'Failed to create schedule slot'
+      set({ error: err instanceof Error ? err.message : 'Failed to create schedule slot' })
       console.error('Error creating schedule slot:', err)
       throw err
     } finally {
-      loading.value = false
+      set({ loading: false })
     }
-  }
+  },
 
-
-  async function deleteScheduleSlot(userId: number, slotId: number) {
-    loading.value = true
-    error.value = null
-
+  async deleteScheduleSlot(userId, slotId) {
+    set({ loading: true, error: null })
     try {
       await userService.deleteScheduleSlot(userId, slotId)
-
-
-      schedule.value = schedule.value.filter((s) => s.id !== slotId)
+      set(state => ({ schedule: state.schedule.filter(s => s.id !== slotId) }))
     } catch (err) {
-      error.value = err instanceof Error ? err.message : 'Failed to delete schedule slot'
+      set({ error: err instanceof Error ? err.message : 'Failed to delete schedule slot' })
       console.error('Error deleting schedule slot:', err)
       throw err
     } finally {
-      loading.value = false
+      set({ loading: false })
     }
-  }
+  },
 
-
-  async function bulkUpdateSchedule(userId: number, slots: ScheduleSlotData[]) {
-    loading.value = true
-    error.value = null
-
+  async bulkUpdateSchedule(userId, slots) {
+    set({ loading: true, error: null })
     try {
       const newSlots = await userService.bulkUpdateSchedule(userId, slots)
-      schedule.value = newSlots
+      set({ schedule: newSlots })
     } catch (err) {
-      error.value = err instanceof Error ? err.message : 'Failed to bulk update schedule'
+      set({ error: err instanceof Error ? err.message : 'Failed to bulk update schedule' })
       console.error('Error bulk updating schedule:', err)
       throw err
     } finally {
-      loading.value = false
+      set({ loading: false })
     }
-  }
+  },
 
+  async nextPage() {
+    const { page, totalPages } = get().pagination
+    if (page < totalPages) await get().fetchUsers(page + 1)
+  },
 
-  async function nextPage() {
-    if (pagination.value.page < pagination.value.totalPages) {
-      await fetchUsers(pagination.value.page + 1)
-    }
-  }
+  async previousPage() {
+    const { page } = get().pagination
+    if (page > 1) await get().fetchUsers(page - 1)
+  },
 
+  async goToPage(page) {
+    const { totalPages } = get().pagination
+    if (page >= 1 && page <= totalPages) await get().fetchUsers(page)
+  },
 
-  async function previousPage() {
-    if (pagination.value.page > 1) {
-      await fetchUsers(pagination.value.page - 1)
-    }
-  }
+  async refresh() {
+    await get().fetchUsers(get().pagination.page)
+  },
 
+  usersByRole: (role) => get().users.filter(u => u.role === role),
+  reportingRadiologists: () => get().users.filter(u => u.role === 'reporting-radiologist'),
+  validatingRadiologists: () => get().users.filter(u => u.role === 'validating-radiologist'),
+  admins: () => get().users.filter(u => u.role === 'admin'),
+  userById: (id) => get().users.find(u => u.id === id),
+  totalUsers: () => get().pagination.total,
+  hasNextPage: () => get().pagination.page < get().pagination.totalPages,
+  hasPreviousPage: () => get().pagination.page > 1,
 
-  async function goToPage(page: number) {
-    if (page >= 1 && page <= pagination.value.totalPages) {
-      await fetchUsers(page)
-    }
-  }
+  usersGroupedByRole: () => ({
+    admin: get().users.filter(u => u.role === 'admin'),
+    'reporting-radiologist': get().users.filter(u => u.role === 'reporting-radiologist'),
+    'validating-radiologist': get().users.filter(u => u.role === 'validating-radiologist'),
+  }),
 
-
-  async function refresh() {
-    await fetchUsers(pagination.value.page)
-  }
-
-
-
-  const usersByRole = computed(() => {
-    return (role: UserRole) => users.value.filter((u) => u.role === role)
-  })
-
-
-  const reportingRadiologists = computed(() => {
-    return users.value.filter((u) => u.role === 'reporting-radiologist')
-  })
-
-
-  const validatingRadiologists = computed(() => {
-    return users.value.filter((u) => u.role === 'validating-radiologist')
-  })
-
-
-  const admins = computed(() => {
-    return users.value.filter((u) => u.role === 'admin')
-  })
-
-
-  const userById = computed(() => {
-    return (id: string) => users.value.find((u) => u.id === id)
-  })
-
-
-  const totalUsers = computed(() => pagination.value.total)
-
-
-  const hasNextPage = computed(() => pagination.value.page < pagination.value.totalPages)
-
-
-  const hasPreviousPage = computed(() => pagination.value.page > 1)
-
-
-  const usersGroupedByRole = computed(() => {
-    return {
-      admin: users.value.filter((u) => u.role === 'admin'),
-      'reporting-radiologist': users.value.filter((u) => u.role === 'reporting-radiologist'),
-      'validating-radiologist': users.value.filter((u) => u.role === 'validating-radiologist'),
-    }
-  })
-
-
-  const availablePhysicians = computed(() => {
-    return users.value.filter((u) => u.activeStudies < u.maxActiveStudies)
-  })
-
-  return {
-
-    users,
-    currentUser,
-    currentProfile,
-    schedule,
-    loading,
-    error,
-    pagination,
-
-
-    fetchUsers,
-    fetchUserById,
-    fetchUserByFrontendId,
-    createUser,
-    updateUser,
-    deleteUser,
-    fetchProfile,
-    updateProfile,
-    fetchSchedule,
-    createScheduleSlot,
-    deleteScheduleSlot,
-    bulkUpdateSchedule,
-    nextPage,
-    previousPage,
-    goToPage,
-    refresh,
-
-
-    usersByRole,
-    reportingRadiologists,
-    validatingRadiologists,
-    admins,
-    userById,
-    totalUsers,
-    hasNextPage,
-    hasPreviousPage,
-    usersGroupedByRole,
-    availablePhysicians,
-  }
-})
+  availablePhysicians: () => get().users.filter(u => u.activeStudies < u.maxActiveStudies),
+}))

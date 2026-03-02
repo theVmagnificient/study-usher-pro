@@ -1,5 +1,4 @@
-import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { create } from 'zustand'
 import type { TaskType, Modality, BodyArea } from '@/types/study'
 import {
   clientTypeService,
@@ -8,294 +7,194 @@ import {
   type ClientTypeUpdateData,
 } from '@/services/clientTypeService'
 import { parseTaskTypeId } from '@/lib/mappers/utils'
-import type { PaginatedResult } from '@/services/studyService'
 
+interface Pagination {
+  page: number
+  perPage: number
+  total: number
+  totalPages: number
+}
 
-export const useClientTypeStore = defineStore('clientType', () => {
+interface ClientTypeState {
+  clientTypes: TaskType[]
+  currentClientType: TaskType | null
+  loading: boolean
+  error: string | null
+  pagination: Pagination
+  filters: ClientTypeFilters
 
-  const clientTypes = ref<TaskType[]>([])
-  const currentClientType = ref<TaskType | null>(null)
-  const loading = ref(false)
-  const error = ref<string | null>(null)
-  const pagination = ref({
-    page: 1,
-    perPage: 20,
-    total: 0,
-    totalPages: 0,
-  })
-  const filters = ref<ClientTypeFilters>({})
+  fetchClientTypes: (newFilters?: ClientTypeFilters, page?: number) => Promise<void>
+  fetchClientTypeById: (id: number) => Promise<void>
+  fetchClientTypeByFrontendId: (id: string) => Promise<void>
+  createClientType: (data: ClientTypeCreateData) => Promise<void>
+  updateClientType: (id: number, data: ClientTypeUpdateData) => Promise<void>
+  deleteClientType: (id: number) => Promise<void>
+  updateFilters: (newFilters: ClientTypeFilters) => Promise<void>
+  nextPage: () => Promise<void>
+  previousPage: () => Promise<void>
+  goToPage: (page: number) => Promise<void>
+  clearFilters: () => Promise<void>
+  refresh: () => Promise<void>
 
+  clientTypesByModality: (modality: Modality) => TaskType[]
+  clientTypesByBodyArea: (bodyArea: BodyArea) => TaskType[]
+  clientTypesByClient: (clientName: string) => TaskType[]
+  clientTypeById: (id: string) => TaskType | undefined
+  totalClientTypes: () => number
+  hasNextPage: () => boolean
+  hasPreviousPage: () => boolean
+  clientTypesGroupedByModality: () => Record<string, TaskType[]>
+  clientTypesGroupedByClient: () => Record<string, TaskType[]>
+  uniqueClients: () => string[]
+  uniqueModalities: () => string[]
+}
 
+export const useClientTypeStore = create<ClientTypeState>((set, get) => ({
+  clientTypes: [],
+  currentClientType: null,
+  loading: false,
+  error: null,
+  pagination: { page: 1, perPage: 20, total: 0, totalPages: 0 },
+  filters: {},
 
-  async function fetchClientTypes(newFilters?: ClientTypeFilters, page?: number) {
-    loading.value = true
-    error.value = null
-
+  async fetchClientTypes(newFilters, page) {
+    set({ loading: true, error: null })
     try {
-
-      if (newFilters !== undefined) {
-        filters.value = newFilters
-      }
-
-
-      const pageToFetch = page !== undefined ? page : pagination.value.page
-
-
-      const result = await clientTypeService.getAll(
-        filters.value,
-        pageToFetch,
-        pagination.value.perPage
-      )
-
-
-      clientTypes.value = result.items
-      pagination.value = {
-        page: result.page,
-        perPage: result.perPage,
-        total: result.total,
-        totalPages: result.totalPages,
-      }
+      const filters = newFilters !== undefined ? newFilters : get().filters
+      if (newFilters !== undefined) set({ filters })
+      const pageToFetch = page !== undefined ? page : get().pagination.page
+      const result = await clientTypeService.getAll(filters, pageToFetch, get().pagination.perPage)
+      set({
+        clientTypes: result.items,
+        pagination: { page: result.page, perPage: result.perPage, total: result.total, totalPages: result.totalPages },
+      })
     } catch (err) {
-      error.value = err instanceof Error ? err.message : 'Failed to fetch client types'
+      set({ error: err instanceof Error ? err.message : 'Failed to fetch client types' })
       console.error('Error fetching client types:', err)
     } finally {
-      loading.value = false
+      set({ loading: false })
     }
-  }
+  },
 
-
-  async function fetchClientTypeById(id: number) {
-    loading.value = true
-    error.value = null
-
+  async fetchClientTypeById(id) {
+    set({ loading: true, error: null })
     try {
       const clientType = await clientTypeService.getById(id)
-      currentClientType.value = clientType
-
-
-      const index = clientTypes.value.findIndex((ct) => ct.id === clientType.id)
-      if (index !== -1) {
-        clientTypes.value[index] = clientType
-      }
+      set(state => ({
+        currentClientType: clientType,
+        clientTypes: state.clientTypes.map(ct => ct.id === clientType.id ? clientType : ct),
+      }))
     } catch (err) {
-      error.value = err instanceof Error ? err.message : `Failed to fetch client type ${id}`
+      set({ error: err instanceof Error ? err.message : `Failed to fetch client type ${id}` })
       console.error(`Error fetching client type ${id}:`, err)
     } finally {
-      loading.value = false
+      set({ loading: false })
     }
-  }
+  },
 
+  async fetchClientTypeByFrontendId(id) {
+    await get().fetchClientTypeById(parseTaskTypeId(id))
+  },
 
-  async function fetchClientTypeByFrontendId(id: string) {
-    const backendId = parseTaskTypeId(id)
-    await fetchClientTypeById(backendId)
-  }
-
-
-  async function createClientType(data: ClientTypeCreateData) {
-    loading.value = true
-    error.value = null
-
+  async createClientType(data) {
+    set({ loading: true, error: null })
     try {
       await clientTypeService.create(data)
-
-
-      await fetchClientTypes()
+      await get().fetchClientTypes()
     } catch (err) {
-      error.value = err instanceof Error ? err.message : 'Failed to create client type'
+      set({ error: err instanceof Error ? err.message : 'Failed to create client type' })
       console.error('Error creating client type:', err)
       throw err
     } finally {
-      loading.value = false
+      set({ loading: false })
     }
-  }
+  },
 
-
-  async function updateClientType(id: number, data: ClientTypeUpdateData) {
-    loading.value = true
-    error.value = null
-
+  async updateClientType(id, data) {
+    set({ loading: true, error: null })
     try {
       await clientTypeService.update(id, data)
-
-
-      await fetchClientTypeById(id)
+      await get().fetchClientTypeById(id)
     } catch (err) {
-      error.value = err instanceof Error ? err.message : `Failed to update client type ${id}`
+      set({ error: err instanceof Error ? err.message : `Failed to update client type ${id}` })
       console.error(`Error updating client type ${id}:`, err)
       throw err
     } finally {
-      loading.value = false
+      set({ loading: false })
     }
-  }
+  },
 
-
-  async function deleteClientType(id: number) {
-    loading.value = true
-    error.value = null
-
+  async deleteClientType(id) {
+    set({ loading: true, error: null })
     try {
       await clientTypeService.delete(id)
-
-
-      clientTypes.value = clientTypes.value.filter((ct) => parseTaskTypeId(ct.id) !== id)
-
-      if (currentClientType.value && parseTaskTypeId(currentClientType.value.id) === id) {
-        currentClientType.value = null
-      }
+      set(state => ({
+        clientTypes: state.clientTypes.filter(ct => parseTaskTypeId(ct.id) !== id),
+        currentClientType: state.currentClientType && parseTaskTypeId(state.currentClientType.id) === id ? null : state.currentClientType,
+      }))
     } catch (err) {
-      error.value = err instanceof Error ? err.message : `Failed to delete client type ${id}`
+      set({ error: err instanceof Error ? err.message : `Failed to delete client type ${id}` })
       console.error(`Error deleting client type ${id}:`, err)
       throw err
     } finally {
-      loading.value = false
+      set({ loading: false })
     }
-  }
+  },
 
+  async updateFilters(newFilters) {
+    set(state => ({ filters: newFilters, pagination: { ...state.pagination, page: 1 } }))
+    await get().fetchClientTypes(newFilters, 1)
+  },
 
-  async function updateFilters(newFilters: ClientTypeFilters) {
-    filters.value = newFilters
-    pagination.value.page = 1
-    await fetchClientTypes(newFilters, 1)
-  }
+  async nextPage() {
+    const { page, totalPages } = get().pagination
+    if (page < totalPages) await get().fetchClientTypes(get().filters, page + 1)
+  },
 
+  async previousPage() {
+    const { page } = get().pagination
+    if (page > 1) await get().fetchClientTypes(get().filters, page - 1)
+  },
 
-  async function nextPage() {
-    if (pagination.value.page < pagination.value.totalPages) {
-      await fetchClientTypes(filters.value, pagination.value.page + 1)
-    }
-  }
+  async goToPage(page) {
+    const { totalPages } = get().pagination
+    if (page >= 1 && page <= totalPages) await get().fetchClientTypes(get().filters, page)
+  },
 
+  async clearFilters() {
+    set(state => ({ filters: {}, pagination: { ...state.pagination, page: 1 } }))
+    await get().fetchClientTypes({}, 1)
+  },
 
-  async function previousPage() {
-    if (pagination.value.page > 1) {
-      await fetchClientTypes(filters.value, pagination.value.page - 1)
-    }
-  }
+  async refresh() {
+    await get().fetchClientTypes(get().filters, get().pagination.page)
+  },
 
+  clientTypesByModality: (modality) => get().clientTypes.filter(ct => ct.modality === modality),
+  clientTypesByBodyArea: (bodyArea) => get().clientTypes.filter(ct => ct.bodyArea === bodyArea),
+  clientTypesByClient: (clientName) => get().clientTypes.filter(ct => ct.client === clientName),
+  clientTypeById: (id) => get().clientTypes.find(ct => ct.id === id),
+  totalClientTypes: () => get().pagination.total,
+  hasNextPage: () => get().pagination.page < get().pagination.totalPages,
+  hasPreviousPage: () => get().pagination.page > 1,
+  uniqueClients: () => Array.from(new Set(get().clientTypes.map(ct => ct.client))).sort(),
+  uniqueModalities: () => Array.from(new Set(get().clientTypes.map(ct => ct.modality))).sort(),
 
-  async function goToPage(page: number) {
-    if (page >= 1 && page <= pagination.value.totalPages) {
-      await fetchClientTypes(filters.value, page)
-    }
-  }
-
-
-  async function clearFilters() {
-    filters.value = {}
-    pagination.value.page = 1
-    await fetchClientTypes({}, 1)
-  }
-
-
-  async function refresh() {
-    await fetchClientTypes(filters.value, pagination.value.page)
-  }
-
-
-
-  const clientTypesByModality = computed(() => {
-    return (modality: Modality) => clientTypes.value.filter((ct) => ct.modality === modality)
-  })
-
-
-  const clientTypesByBodyArea = computed(() => {
-    return (bodyArea: BodyArea) => clientTypes.value.filter((ct) => ct.bodyArea === bodyArea)
-  })
-
-
-  const clientTypesByClient = computed(() => {
-    return (clientName: string) => clientTypes.value.filter((ct) => ct.client === clientName)
-  })
-
-
-  const clientTypeById = computed(() => {
-    return (id: string) => clientTypes.value.find((ct) => ct.id === id)
-  })
-
-
-  const totalClientTypes = computed(() => pagination.value.total)
-
-
-  const hasNextPage = computed(() => pagination.value.page < pagination.value.totalPages)
-
-
-  const hasPreviousPage = computed(() => pagination.value.page > 1)
-
-
-  const clientTypesGroupedByModality = computed(() => {
+  clientTypesGroupedByModality: () => {
     const grouped: Record<string, TaskType[]> = {}
-
-    clientTypes.value.forEach((ct) => {
-      if (!grouped[ct.modality]) {
-        grouped[ct.modality] = []
-      }
+    get().clientTypes.forEach(ct => {
+      if (!grouped[ct.modality]) grouped[ct.modality] = []
       grouped[ct.modality].push(ct)
     })
-
     return grouped
-  })
+  },
 
-
-  const clientTypesGroupedByClient = computed(() => {
+  clientTypesGroupedByClient: () => {
     const grouped: Record<string, TaskType[]> = {}
-
-    clientTypes.value.forEach((ct) => {
-      if (!grouped[ct.client]) {
-        grouped[ct.client] = []
-      }
+    get().clientTypes.forEach(ct => {
+      if (!grouped[ct.client]) grouped[ct.client] = []
       grouped[ct.client].push(ct)
     })
-
     return grouped
-  })
-
-
-  const uniqueClients = computed(() => {
-    const clients = new Set(clientTypes.value.map((ct) => ct.client))
-    return Array.from(clients).sort()
-  })
-
-
-  const uniqueModalities = computed(() => {
-    const modalities = new Set(clientTypes.value.map((ct) => ct.modality))
-    return Array.from(modalities).sort()
-  })
-
-  return {
-
-    clientTypes,
-    currentClientType,
-    loading,
-    error,
-    pagination,
-    filters,
-
-
-    fetchClientTypes,
-    fetchClientTypeById,
-    fetchClientTypeByFrontendId,
-    createClientType,
-    updateClientType,
-    deleteClientType,
-    updateFilters,
-    nextPage,
-    previousPage,
-    goToPage,
-    clearFilters,
-    refresh,
-
-
-    clientTypesByModality,
-    clientTypesByBodyArea,
-    clientTypesByClient,
-    clientTypeById,
-    totalClientTypes,
-    hasNextPage,
-    hasPreviousPage,
-    clientTypesGroupedByModality,
-    clientTypesGroupedByClient,
-    uniqueClients,
-    uniqueModalities,
-  }
-})
+  },
+}))

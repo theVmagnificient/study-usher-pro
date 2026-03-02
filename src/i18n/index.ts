@@ -1,4 +1,5 @@
-import { createI18n } from 'vue-i18n'
+import i18n from 'i18next'
+import { initReactI18next } from 'react-i18next'
 
 const savedLanguage = localStorage.getItem('language') || 'ru'
 
@@ -61,7 +62,10 @@ const messages = {
       required: "Required",
       unassigned: "Unassigned",
       all: "All",
-      toggleTheme: "Toggle theme (Ctrl+D)"
+      toggleTheme: "Toggle theme (Ctrl+D)",
+      previous: "Previous",
+      next: "Next",
+      pageOf: "Page {{page}} of {{total}}"
     },
 
     // Status labels
@@ -115,7 +119,7 @@ const messages = {
       subtitle: "Sign in to access your account",
       email: "Email",
       password: "Password",
-      emailPlaceholder: "your.email{'@'}example.com",
+      emailPlaceholder: "your.email@example.com",
       passwordPlaceholder: "••••••••",
       signIn: "Sign in",
       signingIn: "Signing in...",
@@ -127,7 +131,7 @@ const messages = {
     // Study List Page
     studyList: {
       title: "Task List",
-      subtitle: "{count} tasks",
+      subtitle: "{{count}} tasks",
       searchPlaceholder: "Search by ID, Patient ID, or Client...",
       statusFilter: "Status",
       clientFilter: "Client",
@@ -159,7 +163,7 @@ const messages = {
 
     taskList: {
       title: "Tasks",
-      subtitle: "{count} tasks",
+      subtitle: "{{count}} tasks",
       searchPlaceholder: "Search by Task ID, Study ID, or Patient ID...",
       allStatuses: "All Statuses",
 
@@ -183,7 +187,7 @@ const messages = {
       viewReport: "View Report",
       distributeAll: "Distribute Tasks",
       distributing: "Distributing...",
-      distributeResult: "Distributed: {distributed}, skipped: {skipped}, failed: {failed}"
+      distributeResult: "Distributed: {{distributed}}, skipped: {{skipped}}, failed: {{failed}}"
     },
 
     // Study Detail Page
@@ -208,10 +212,11 @@ const messages = {
       noImpression: "No impression documented yet",
 
       validatorComments: "Validator Comments",
-      commentCount: "{count} comment | {count} comments",
+      commentCount_one: "{{count}} comment",
+      commentCount_other: "{{count}} comments",
 
       priorStudies: "Prior Studies",
-      available: "{count} available",
+      available: "{{count}} available",
       type: "Type",
       date: "Date",
       report: "Report",
@@ -219,7 +224,7 @@ const messages = {
       viewer: "Viewer",
 
       linkedBodyParts: "Linked Body Parts",
-      zones: "{count} zones",
+      zones: "{{count}} zones",
       current: "Current",
 
       history: "History",
@@ -246,14 +251,14 @@ const messages = {
       // Prior report dialog
       priorReportDialog: {
         title: "Prior Report",
-        subtitle: "{type}"
+        subtitle: "{{type}}"
       }
     },
 
     // User Management Page
     userManagement: {
       title: "User Management",
-      subtitle: "{count} physicians",
+      subtitle: "{{count}} physicians",
       addPhysician: "Add Physician",
       searchPlaceholder: "Search by name or ID...",
 
@@ -266,7 +271,7 @@ const messages = {
         workload: "Workload"
       },
 
-      studiesCompleted: "{count} studies completed",
+      studiesCompleted: "{{count}} studies completed",
       manageSchedule: "Manage Schedule",
       editPhysician: "Edit Physician",
       deletePhysician: "Delete Physician",
@@ -286,7 +291,7 @@ const messages = {
         lastName: "Last Name",
         lastNamePlaceholder: "Doe",
         email: "Email",
-        emailPlaceholder: "john.doe{'@'}example.com",
+        emailPlaceholder: "john.doe@example.com",
         password: "Password",
         passwordPlaceholder: "Minimum 6 characters",
         phone: "Phone",
@@ -307,7 +312,7 @@ const messages = {
     // Physician Queue Page
     queue: {
       title: "My Queue",
-      subtitle: "{count} tasks pending",
+      subtitle: "{{count}} tasks pending",
       maxWorkload: "Maximum workload reached",
       completeFirst: "Complete a study before starting a new one",
 
@@ -326,14 +331,14 @@ const messages = {
         noCompletedDesc: "Finalized reports will appear here"
       },
 
-      priors: "{count} prior(s)",
-      moreComments: "{count} more comment(s)"
+      priors: "{{count}} prior(s)",
+      moreComments: "{{count}} more comment(s)"
     },
 
     // Validation Queue Page
     validation: {
       title: "Validation Queue",
-      subtitle: "{count} tasks awaiting validation",
+      subtitle: "{{count}} tasks awaiting validation",
 
       tabs: {
         urgent: "Urgent Queue",
@@ -362,7 +367,7 @@ const messages = {
     // Audit Log Page
     auditLog: {
       title: "Audit Log",
-      subtitle: "{count} entries",
+      subtitle: "{{count}} entries",
       searchPlaceholder: "Search by accession number...",
       allActions: "All Actions",
       allUsers: "All Users",
@@ -403,7 +408,7 @@ const messages = {
 
       statusDistribution: "Status Distribution",
       overdueStudies: "Overdue Tasks",
-      studiesFor: "Tasks: {category}",
+      studiesFor: "Tasks: {{category}}",
       noResults: "No tasks matching the selected filters",
 
       headers: {
@@ -420,7 +425,7 @@ const messages = {
     // Task Types Page
     taskTypes: {
       title: "Task Types",
-      subtitle: "{count} task types",
+      subtitle: "{{count}} task types",
       addTaskType: "Add Task Type",
 
       headers: {
@@ -433,7 +438,7 @@ const messages = {
         payout: "Payout"
       },
 
-      hours: "{count}h",
+      hours: "{{count}}h",
 
       dialog: {
         titleEdit: "Edit Task Type",
@@ -483,8 +488,8 @@ const messages = {
         sat: "Sat"
       },
 
-      radiologists: "{count} radiologist(s)",
-      totalHours: "{count} total hours",
+      radiologists: "{{count}} radiologist(s)",
+      totalHours: "{{count}} total hours",
       selectDay: "Select a day",
 
       status: {
@@ -548,8 +553,8 @@ const messages = {
     // Reporting Page
     reporting: {
       dicom: "DICOM",
-      downloadBodyArea: "Download {area} only",
-      downloadAll: "Download all ({count} body parts)",
+      downloadBodyArea: "Download {{area}} only",
+      downloadAll: "Download all ({{count}} body parts)",
       downloading: "Downloading...",
       downloadStarted: "Download Started",
       downloadDescription: "Your DICOM study is being downloaded",
@@ -565,7 +570,7 @@ const messages = {
       pipErrorDescription: "Failed to open Picture-in-Picture. Not supported in this browser or context.",
 
       comments: "Comments",
-      commentCount: "{count} comment(s)",
+      commentCount: "{{count}} comment(s)",
       clinicalNotes: "Clinical Notes",
       noClinicalNotes: "No clinical notes available",
       technicalNotes: "Technical Notes",
@@ -616,7 +621,7 @@ const messages = {
       notAutoSaved: "Changes are not auto-saved",
 
       linkedBodyParts: "Linked Body Parts",
-      zones: "{count} zones",
+      zones: "{{count}} zones",
       current: "Current",
 
       translation: "Translation",
@@ -638,7 +643,7 @@ const messages = {
       type: "Type:",
       client: "Client:",
       clinicalHistory: "Clinical History",
-      priorImaging: "Prior Imaging ({count})",
+      priorImaging: "Prior Imaging ({{count}})",
       keyPoints: "Key Points",
 
       templatePopup: {
@@ -711,7 +716,10 @@ const messages = {
       required: "Обязательно",
       unassigned: "Не назначено",
       all: "Все",
-      toggleTheme: "Переключить тему (Ctrl+D)"
+      toggleTheme: "Переключить тему (Ctrl+D)",
+      previous: "Назад",
+      next: "Вперёд",
+      pageOf: "Страница {{page}} из {{total}}"
     },
 
     // Статусы
@@ -765,7 +773,7 @@ const messages = {
       subtitle: "Войдите, чтобы получить доступ к аккаунту",
       email: "Email",
       password: "Пароль",
-      emailPlaceholder: "your.email{'@'}example.com",
+      emailPlaceholder: "your.email@example.com",
       passwordPlaceholder: "••••••••",
       signIn: "Войти",
       signingIn: "Вход...",
@@ -777,7 +785,10 @@ const messages = {
     // Страница списка задач
     studyList: {
       title: "Список задач",
-      subtitle: "{count} задач | {count} задача | {count} задачи",
+      subtitle_one: "{{count}} задача",
+      subtitle_few: "{{count}} задачи",
+      subtitle_many: "{{count}} задач",
+      subtitle_other: "{{count}} задач",
       searchPlaceholder: "Поиск по ID, ID пациента или клиенту...",
       statusFilter: "Статус",
       clientFilter: "Клиент",
@@ -809,7 +820,10 @@ const messages = {
 
     taskList: {
       title: "Задачи",
-      subtitle: "{count} задач | {count} задача | {count} задачи",
+      subtitle_one: "{{count}} задача",
+      subtitle_few: "{{count}} задачи",
+      subtitle_many: "{{count}} задач",
+      subtitle_other: "{{count}} задач",
       searchPlaceholder: "Поиск по ID задачи, ID исследования или ID пациента...",
       allStatuses: "Все статусы",
 
@@ -833,7 +847,7 @@ const messages = {
       viewReport: "Просмотр отчета",
       distributeAll: "Распределить задачи",
       distributing: "Распределение...",
-      distributeResult: "Распределено: {distributed}, пропущено: {skipped}, ошибок: {failed}"
+      distributeResult: "Распределено: {{distributed}}, пропущено: {{skipped}}, ошибок: {{failed}}"
     },
 
     // Страница детализации задачи
@@ -858,10 +872,13 @@ const messages = {
       noImpression: "Заключение еще не задокументировано",
 
       validatorComments: "Комментарии валидатора",
-      commentCount: "{count} комментарий | {count} комментария | {count} комментариев",
+      commentCount_one: "{{count}} комментарий",
+      commentCount_few: "{{count}} комментария",
+      commentCount_many: "{{count}} комментариев",
+      commentCount_other: "{{count}} комментариев",
 
       priorStudies: "Предыдущие исследования",
-      available: "{count} доступно",
+      available: "{{count}} доступно",
       type: "Тип",
       date: "Дата",
       report: "Отчет",
@@ -869,7 +886,10 @@ const messages = {
       viewer: "Просмотр",
 
       linkedBodyParts: "Связанные области тела",
-      zones: "{count} зон | {count} зона | {count} зоны",
+      zones_one: "{{count}} зона",
+      zones_few: "{{count}} зоны",
+      zones_many: "{{count}} зон",
+      zones_other: "{{count}} зон",
       current: "Текущее",
 
       history: "История",
@@ -896,14 +916,17 @@ const messages = {
       // Диалог предыдущего отчета
       priorReportDialog: {
         title: "Предыдущий отчет",
-        subtitle: "{type}"
+        subtitle: "{{type}}"
       }
     },
 
     // Страница управления пользователями
     userManagement: {
       title: "Управление пользователями",
-      subtitle: "{count} врачей | {count} врач | {count} врача",
+      subtitle_one: "{{count}} врач",
+      subtitle_few: "{{count}} врача",
+      subtitle_many: "{{count}} врачей",
+      subtitle_other: "{{count}} врачей",
       addPhysician: "Добавить врача",
       searchPlaceholder: "Поиск по имени или ID...",
 
@@ -916,7 +939,7 @@ const messages = {
         workload: "Загрузка"
       },
 
-      studiesCompleted: "{count} исследований завершено",
+      studiesCompleted: "{{count}} исследований завершено",
       manageSchedule: "Управление расписанием",
       editPhysician: "Редактировать врача",
       deletePhysician: "Удалить врача",
@@ -936,7 +959,7 @@ const messages = {
         lastName: "Фамилия",
         lastNamePlaceholder: "Иванов",
         email: "Email",
-        emailPlaceholder: "ivan.ivanov{'@'}example.com",
+        emailPlaceholder: "ivan.ivanov@example.com",
         password: "Пароль",
         passwordPlaceholder: "Минимум 6 символов",
         phone: "Телефон",
@@ -957,7 +980,10 @@ const messages = {
     // Страница очереди врача
     queue: {
       title: "Моя очередь",
-      subtitle: "{count} задач ожидает | {count} задача ожидает | {count} задачи ожидают",
+      subtitle_one: "{{count}} задача ожидает",
+      subtitle_few: "{{count}} задачи ожидают",
+      subtitle_many: "{{count}} задач ожидает",
+      subtitle_other: "{{count}} задач ожидает",
       maxWorkload: "Достигнута максимальная загрузка",
       completeFirst: "Завершите исследование перед началом нового",
 
@@ -976,14 +1002,20 @@ const messages = {
         noCompletedDesc: "Здесь появятся завершенные отчеты"
       },
 
-      priors: "{count} предыдущих",
-      moreComments: "еще {count} комментарий | еще {count} комментария | еще {count} комментариев"
+      priors: "{{count}} предыдущих",
+      moreComments_one: "еще {{count}} комментарий",
+      moreComments_few: "еще {{count}} комментария",
+      moreComments_many: "еще {{count}} комментариев",
+      moreComments_other: "еще {{count}} комментариев"
     },
 
     // Страница очереди валидации
     validation: {
       title: "Очередь валидации",
-      subtitle: "{count} задач ожидают валидации | {count} задача ожидает валидации | {count} задачи ожидают валидации",
+      subtitle_one: "{{count}} задача ожидает валидации",
+      subtitle_few: "{{count}} задачи ожидают валидации",
+      subtitle_many: "{{count}} задач ожидают валидации",
+      subtitle_other: "{{count}} задач ожидают валидации",
 
       tabs: {
         urgent: "Срочная очередь",
@@ -1012,7 +1044,10 @@ const messages = {
     // Страница журнала аудита
     auditLog: {
       title: "Журнал аудита",
-      subtitle: "{count} записей | {count} запись | {count} записи",
+      subtitle_one: "{{count}} запись",
+      subtitle_few: "{{count}} записи",
+      subtitle_many: "{{count}} записей",
+      subtitle_other: "{{count}} записей",
       searchPlaceholder: "Поиск по номеру исследования...",
       allActions: "Все действия",
       allUsers: "Все пользователи",
@@ -1082,7 +1117,7 @@ const messages = {
 
       statusDistribution: "Распределение по статусам",
       overdueStudies: "Просроченные задачи",
-      studiesFor: "Задачи: {category}",
+      studiesFor: "Задачи: {{category}}",
       noResults: "Нет задач, соответствующих выбранным фильтрам",
 
       headers: {
@@ -1099,7 +1134,10 @@ const messages = {
     // Страница типов задач
     taskTypes: {
       title: "Типы задач",
-      subtitle: "{count} типов задач | {count} тип задач | {count} типа задач",
+      subtitle_one: "{{count}} тип задач",
+      subtitle_few: "{{count}} типа задач",
+      subtitle_many: "{{count}} типов задач",
+      subtitle_other: "{{count}} типов задач",
       addTaskType: "Добавить тип задачи",
 
       headers: {
@@ -1112,7 +1150,7 @@ const messages = {
         payout: "Выплата"
       },
 
-      hours: "{count}ч",
+      hours: "{{count}}ч",
 
       dialog: {
         titleEdit: "Редактировать тип задачи",
@@ -1162,8 +1200,11 @@ const messages = {
         sat: "Сб"
       },
 
-      radiologists: "{count} рентгенолог | {count} рентгенолога | {count} рентгенологов",
-      totalHours: "{count} всего часов",
+      radiologists_one: "{{count}} рентгенолог",
+      radiologists_few: "{{count}} рентгенолога",
+      radiologists_many: "{{count}} рентгенологов",
+      radiologists_other: "{{count}} рентгенологов",
+      totalHours: "{{count}} всего часов",
       selectDay: "Выберите день",
 
       status: {
@@ -1227,8 +1268,8 @@ const messages = {
     // Страница редактора отчетов
     reporting: {
       dicom: "DICOM",
-      downloadBodyArea: "Скачать только {area}",
-      downloadAll: "Скачать все ({count} частей тела)",
+      downloadBodyArea: "Скачать только {{area}}",
+      downloadAll: "Скачать все ({{count}} частей тела)",
       downloading: "Скачивание...",
       downloadStarted: "Скачивание начато",
       downloadDescription: "Ваше DICOM исследование скачивается",
@@ -1244,7 +1285,10 @@ const messages = {
       pipErrorDescription: "Не удалось открыть окно. Функция не поддерживается в этом браузере.",
 
       comments: "Комментарии",
-      commentCount: "{count} комментарий | {count} комментария | {count} комментариев",
+      commentCount_one: "{{count}} комментарий",
+      commentCount_few: "{{count}} комментария",
+      commentCount_many: "{{count}} комментариев",
+      commentCount_other: "{{count}} комментариев",
       clinicalNotes: "Клинические заметки",
       noClinicalNotes: "Клинические заметки отсутствуют",
       technicalNotes: "Технические заметки",
@@ -1295,7 +1339,10 @@ const messages = {
       notAutoSaved: "Изменения не сохраняются автоматически",
 
       linkedBodyParts: "Связанные области тела",
-      zones: "{count} зон | {count} зона | {count} зоны",
+      zones_one: "{{count}} зона",
+      zones_few: "{{count}} зоны",
+      zones_many: "{{count}} зон",
+      zones_other: "{{count}} зон",
       current: "Текущее",
 
       translation: "Перевод",
@@ -1317,7 +1364,7 @@ const messages = {
       type: "Тип:",
       client: "Клиент:",
       clinicalHistory: "Клиническая история",
-      priorImaging: "Предыдущие визуализации ({count})",
+      priorImaging: "Предыдущие визуализации ({{count}})",
       keyPoints: "Ключевые моменты",
 
       templatePopup: {
@@ -1333,16 +1380,16 @@ const messages = {
     }
   }
 }
+i18n.use(initReactI18next).init({
+  resources: {
+    en: { translation: messages.en },
+    ru: { translation: messages.ru },
+  },
+  lng: savedLanguage,
+  fallbackLng: 'en',
+  interpolation: {
+    escapeValue: false,
+  },
+})
 
-function setupI18n() {
-  const i18n = createI18n({
-    legacy: false,
-    locale: savedLanguage,
-    fallbackLocale: 'en',
-    messages
-  })
-
-  return i18n
-}
-
-export const i18n = setupI18n();
+export default i18n

@@ -1,7 +1,8 @@
 import js from "@eslint/js";
 import globals from "globals";
-import pluginVue from "eslint-plugin-vue";
 import tseslint from "typescript-eslint";
+import pluginReact from "eslint-plugin-react";
+import pluginReactHooks from "eslint-plugin-react-hooks";
 
 export default tseslint.config(
   { ignores: ["dist"] },
@@ -9,19 +10,27 @@ export default tseslint.config(
     extends: [
       js.configs.recommended,
       ...tseslint.configs.recommended,
-      ...pluginVue.configs["flat/recommended"],
     ],
-    files: ["**/*.{ts,tsx,vue}"],
+    files: ["**/*.{ts,tsx}"],
+    plugins: {
+      react: pluginReact,
+      "react-hooks": pluginReactHooks,
+    },
     languageOptions: {
       ecmaVersion: 2020,
       globals: globals.browser,
       parserOptions: {
-        parser: tseslint.parser,
+        ecmaFeatures: { jsx: true },
       },
+    },
+    settings: {
+      react: { version: "detect" },
     },
     rules: {
       "@typescript-eslint/no-unused-vars": "off",
-      "vue/multi-word-component-names": "off",
+      "react/react-in-jsx-scope": "off",
+      "react-hooks/rules-of-hooks": "error",
+      "react-hooks/exhaustive-deps": "warn",
     },
   },
 );

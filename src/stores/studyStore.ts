@@ -1,215 +1,140 @@
-import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { create } from 'zustand'
 import type { Study, StudyStatus, Modality } from '@/types/study'
 import { studyService, type StudyFilters } from '@/services/studyService'
 import type { ApiError } from '@/lib/api/client'
 
+interface Pagination {
+  page: number
+  perPage: number
+  total: number
+  totalPages: number
+}
 
-export const useStudyStore = defineStore('study', () => {
+interface StudyState {
+  studies: Study[]
+  currentStudy: Study | null
+  loading: boolean
+  error: string | null
+  pagination: Pagination
+  filters: StudyFilters
 
-  const studies = ref<Study[]>([])
-  const currentStudy = ref<Study | null>(null)
-  const loading = ref(false)
-  const error = ref<string | null>(null)
-  const pagination = ref({
-    page: 1,
-    perPage: 20,
-    total: 0,
-    totalPages: 0,
-  })
-  const filters = ref<StudyFilters>({})
+  fetchStudies: (newFilters?: StudyFilters, page?: number) => Promise<void>
+  fetchStudyById: (id: string) => Promise<void>
+  triggerProcessing: (id: string) => Promise<void>
+  updateFilters: (newFilters: StudyFilters) => Promise<void>
+  nextPage: () => Promise<void>
+  previousPage: () => Promise<void>
+  goToPage: (page: number) => Promise<void>
+  clearFilters: () => Promise<void>
+  refresh: () => Promise<void>
 
+  studiesByStatus: (status: StudyStatus) => Study[]
+  studiesByModality: (modality: Modality) => Study[]
+  studyById: (id: string) => Study | undefined
+  totalStudies: () => number
+  hasNextPage: () => boolean
+  hasPreviousPage: () => boolean
+  studiesGroupedByStatus: () => Record<StudyStatus, Study[]>
+}
 
+export const useStudyStore = create<StudyState>((set, get) => ({
+  studies: [],
+  currentStudy: null,
+  loading: false,
+  error: null,
+  pagination: { page: 1, perPage: 20, total: 0, totalPages: 0 },
+  filters: {},
 
-  async function fetchStudies(newFilters?: StudyFilters, page?: number) {
-    loading.value = true
-    error.value = null
-
+  async fetchStudies(newFilters, page) {
+    set({ loading: true, error: null })
     try {
-
-      if (newFilters !== undefined) {
-        filters.value = newFilters
-      }
-
-
-      const pageToFetch = page !== undefined ? page : pagination.value.page
-
-
-      const result = await studyService.getAll(filters.value, pageToFetch, pagination.value.perPage)
-
-
-      studies.value = result.items
-      pagination.value = {
-        page: result.page,
-        perPage: result.perPage,
-        total: result.total,
-        totalPages: result.totalPages,
-      }
+      const filters = newFilters !== undefined ? newFilters : get().filters
+      if (newFilters !== undefined) set({ filters })
+      const pageToFetch = page !== undefined ? page : get().pagination.page
+      const result = await studyService.getAll(filters, pageToFetch, get().pagination.perPage)
+      set({
+        studies: result.items,
+        pagination: { page: result.page, perPage: result.perPage, total: result.total, totalPages: result.totalPages },
+      })
     } catch (err) {
-      const apiError = err as ApiError
-      error.value = apiError.message || 'Failed to fetch studies'
-      console.error('Error fetching studies:', apiError)
+      set({ error: (err as ApiError).message || 'Failed to fetch studies' })
+      console.error('Error fetching studies:', err)
     } finally {
-      loading.value = false
+      set({ loading: false })
     }
-  }
+  },
 
-
-  async function fetchStudyById(id: string) {
-    loading.value = true
-    error.value = null
-
+  async fetchStudyById(id) {
+    set({ loading: true, error: null })
     try {
       const study = await studyService.getById(id)
-      currentStudy.value = study
-
-
-      const index = studies.value.findIndex((s) => s.id === id)
-      if (index !== -1) {
-        studies.value[index] = study
-      }
+      set(state => ({
+        currentStudy: study,
+        studies: state.studies.map(s => s.id === id ? study : s),
+      }))
     } catch (err) {
-      const apiError = err as ApiError
-      error.value = apiError.message || `Failed to fetch study ${id}`
-      console.error(`Error fetching study ${id}:`, apiError)
+      set({ error: (err as ApiError).message || `Failed to fetch study ${id}` })
+      console.error(`Error fetching study ${id}:`, err)
     } finally {
-      loading.value = false
+      set({ loading: false })
     }
-  }
+  },
 
-
-  async function triggerProcessing(id: string) {
-    loading.value = true
-    error.value = null
-
+  async triggerProcessing(id) {
+    set({ loading: true, error: null })
     try {
       await studyService.triggerProcessing(id)
-
-
-      await fetchStudyById(id)
+      await get().fetchStudyById(id)
     } catch (err) {
-      const apiError = err as ApiError
-      error.value = apiError.message || `Failed to trigger processing for ${id}`
-      console.error(`Error triggering processing for ${id}:`, apiError)
+      set({ error: (err as ApiError).message || `Failed to trigger processing for ${id}` })
+      console.error(`Error triggering processing for ${id}:`, err)
     } finally {
-      loading.value = false
+      set({ loading: false })
     }
-  }
+  },
 
+  async updateFilters(newFilters) {
+    set(state => ({ filters: newFilters, pagination: { ...state.pagination, page: 1 } }))
+    await get().fetchStudies(newFilters, 1)
+  },
 
-  async function updateFilters(newFilters: StudyFilters) {
-    filters.value = newFilters
-    pagination.value.page = 1
-    await fetchStudies(newFilters, 1)
-  }
+  async nextPage() {
+    const { page, totalPages } = get().pagination
+    if (page < totalPages) await get().fetchStudies(get().filters, page + 1)
+  },
 
+  async previousPage() {
+    const { page } = get().pagination
+    if (page > 1) await get().fetchStudies(get().filters, page - 1)
+  },
 
-  async function nextPage() {
-    if (pagination.value.page < pagination.value.totalPages) {
-      await fetchStudies(filters.value, pagination.value.page + 1)
-    }
-  }
+  async goToPage(page) {
+    const { totalPages } = get().pagination
+    if (page >= 1 && page <= totalPages) await get().fetchStudies(get().filters, page)
+  },
 
+  async clearFilters() {
+    set(state => ({ filters: {}, pagination: { ...state.pagination, page: 1 } }))
+    await get().fetchStudies({}, 1)
+  },
 
-  async function previousPage() {
-    if (pagination.value.page > 1) {
-      await fetchStudies(filters.value, pagination.value.page - 1)
-    }
-  }
+  async refresh() {
+    await get().fetchStudies(get().filters, get().pagination.page)
+  },
 
+  studiesByStatus: (status) => get().studies.filter(s => s.status === status),
+  studiesByModality: (modality) => get().studies.filter(s => s.modality === modality),
+  studyById: (id) => get().studies.find(s => s.id === id),
+  totalStudies: () => get().pagination.total,
+  hasNextPage: () => get().pagination.page < get().pagination.totalPages,
+  hasPreviousPage: () => get().pagination.page > 1,
 
-  async function goToPage(page: number) {
-    if (page >= 1 && page <= pagination.value.totalPages) {
-      await fetchStudies(filters.value, page)
-    }
-  }
-
-
-  async function clearFilters() {
-    filters.value = {}
-    pagination.value.page = 1
-    await fetchStudies({}, 1)
-  }
-
-
-  async function refresh() {
-    await fetchStudies(filters.value, pagination.value.page)
-  }
-
-
-
-  const studiesByStatus = computed(() => {
-    return (status: StudyStatus) => studies.value.filter((s) => s.status === status)
-  })
-
-
-  const studiesByModality = computed(() => {
-    return (modality: Modality) => studies.value.filter((s) => s.modality === modality)
-  })
-
-
-  const studyById = computed(() => {
-    return (id: string) => studies.value.find((s) => s.id === id)
-  })
-
-
-  const totalStudies = computed(() => pagination.value.total)
-
-
-  const hasNextPage = computed(() => pagination.value.page < pagination.value.totalPages)
-
-
-  const hasPreviousPage = computed(() => pagination.value.page > 1)
-
-
-  const studiesGroupedByStatus = computed(() => {
+  studiesGroupedByStatus: () => {
     const grouped: Record<StudyStatus, Study[]> = {
-      new: [],
-      assigned: [],
-      'in-progress': [],
-      'draft-ready': [],
-      translated: [],
-      'assigned-for-validation': [],
-      'under-validation': [],
-      returned: [],
-      finalized: [],
-      delivered: [],
+      new: [], assigned: [], 'in-progress': [], 'draft-ready': [], translated: [],
+      'assigned-for-validation': [], 'under-validation': [], returned: [], finalized: [], delivered: [],
     }
-
-    studies.value.forEach((study) => {
-      grouped[study.status].push(study)
-    })
-
+    get().studies.forEach(study => { grouped[study.status].push(study) })
     return grouped
-  })
-
-  return {
-
-    studies,
-    currentStudy,
-    loading,
-    error,
-    pagination,
-    filters,
-
-
-    fetchStudies,
-    fetchStudyById,
-    triggerProcessing,
-    updateFilters,
-    nextPage,
-    previousPage,
-    goToPage,
-    clearFilters,
-    refresh,
-
-
-    studiesByStatus,
-    studiesByModality,
-    studyById,
-    totalStudies,
-    hasNextPage,
-    hasPreviousPage,
-    studiesGroupedByStatus,
-  }
-})
+  },
+}))
