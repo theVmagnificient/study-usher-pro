@@ -169,7 +169,7 @@ export const useAuditStore = create<AuditState>((set, get) => ({
     await Promise.all([get().fetchWorkforceStats(dateRange), get().fetchSLAStats(dateRange)])
   },
 
-  entriesByStudy: (studyId) => get().auditLog.filter(e => e.studyId === studyId),
+  entriesByStudy: (studyId) => get().auditLog.filter(e => String(e.studyId) === String(studyId)),
   entriesByUser: (userName) => get().auditLog.filter(e => e.user === userName),
   entriesByAction: (action) => get().auditLog.filter(e => e.action === action),
   totalEntries: () => get().pagination.total,

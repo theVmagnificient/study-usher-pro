@@ -396,7 +396,7 @@ export const userService = {
       const physician = mapUserToPhysician({
         user,
         profile,
-        scheduleSlots: data.schedule_slots,
+        scheduleSlots: data.schedule_slots as any,
         activeTaskCount,
       })
 

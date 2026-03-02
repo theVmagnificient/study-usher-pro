@@ -70,7 +70,7 @@ export const useStudyStore = create<StudyState>((set, get) => ({
       const study = await studyService.getById(id)
       set(state => ({
         currentStudy: study,
-        studies: state.studies.map(s => s.id === id ? study : s),
+        studies: state.studies.map(s => String(s.id) === String(id) ? study : s),
       }))
     } catch (err) {
       set({ error: (err as ApiError).message || `Failed to fetch study ${id}` })
@@ -124,14 +124,14 @@ export const useStudyStore = create<StudyState>((set, get) => ({
 
   studiesByStatus: (status) => get().studies.filter(s => s.status === status),
   studiesByModality: (modality) => get().studies.filter(s => s.modality === modality),
-  studyById: (id) => get().studies.find(s => s.id === id),
+  studyById: (id) => get().studies.find(s => String(s.id) === String(id)),
   totalStudies: () => get().pagination.total,
   hasNextPage: () => get().pagination.page < get().pagination.totalPages,
   hasPreviousPage: () => get().pagination.page > 1,
 
   studiesGroupedByStatus: () => {
     const grouped: Record<StudyStatus, Study[]> = {
-      new: [], assigned: [], 'in-progress': [], 'draft-ready': [], translated: [],
+      new: [], assigned: [], 'in-progress': [], 'draft-saved': [], 'draft-ready': [], translated: [],
       'assigned-for-validation': [], 'under-validation': [], returned: [], finalized: [], delivered: [],
     }
     get().studies.forEach(study => { grouped[study.status].push(study) })

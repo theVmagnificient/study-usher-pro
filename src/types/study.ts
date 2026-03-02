@@ -95,7 +95,8 @@ export interface TaskType {
 export interface Physician {
   id: string;
   fullName: string;
-  phone: string;
+  email?: string;
+  phone?: string;
   telegram?: string;
   role: UserRole;
   schedule: {
