@@ -10,7 +10,7 @@ export default defineConfig(({ mode }) => ({
     port: 8080,
     proxy: {
       '/api': {
-        target: mode === 'vibecoding' ? 'https://api.platform.xaidos.com' : 'http://localhost:8000',
+        target: 'https://api.platform.xaidos.com',
         changeOrigin: true,
         secure: false,
       },
