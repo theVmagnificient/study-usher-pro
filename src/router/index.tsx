@@ -42,10 +42,14 @@ function RequireAuth({ roles }: { roles?: UserRole[] }) {
   useEffect(() => {
     let cancelled = false
     async function check() {
-      const ok = await isAuthenticated()
-      if (!ok) { if (!cancelled) { setAuthed(false); setChecking(false) } return }
-      if (!Object.keys(user).length) await getUserInfo()
-      if (!cancelled) { setAuthed(true); setChecking(false) }
+      try {
+        const ok = await isAuthenticated()
+        if (!ok) { if (!cancelled) { setAuthed(false); setChecking(false) } return }
+        if (!Object.keys(user).length) await getUserInfo()
+        if (!cancelled) { setAuthed(true); setChecking(false) }
+      } catch {
+        if (!cancelled) { setAuthed(false); setChecking(false) }
+      }
     }
     check()
     return () => { cancelled = true }
