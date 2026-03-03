@@ -9,6 +9,10 @@ export interface SessionUser {
   role: string
 }
 
+// In-memory cache for user payload after sign-in
+// (workaround for cross-origin cookie issues where front-token can't be persisted)
+let cachedPayload: Record<string, any> | null = null
+
 export const superTokensAuthService = {
   async signIn(username: string, password: string) {
     const response = await signIn({
@@ -16,6 +20,14 @@ export const superTokensAuthService = {
     })
 
     if (response.status === 'OK') {
+      // Try to cache the access token payload right after sign-in
+      // while it's still in memory
+      try {
+        cachedPayload = await Session.getAccessTokenPayloadSecurely()
+      } catch {
+        // If it fails, we'll try again later
+        cachedPayload = null
+      }
       return
     }
 
@@ -30,19 +42,32 @@ export const superTokensAuthService = {
   },
 
   async user(): Promise<SessionUser> {
-    return Session.getAccessTokenPayloadSecurely()
-      .then(payload => ({
-        id: payload?.user_id,
-        firstname: payload?.first_name,
-        lastname: payload?.last_name,
-        email: payload?.email,
-        role: payload?.role,
-      }))
+    // Use cached payload if available (for cross-origin scenarios)
+    let payload = cachedPayload
+    if (!payload) {
+      try {
+        payload = await Session.getAccessTokenPayloadSecurely()
+      } catch {
+        throw Error('No session exists')
+      }
+    }
+    return {
+      id: payload?.user_id,
+      firstname: payload?.first_name,
+      lastname: payload?.last_name,
+      email: payload?.email,
+      role: payload?.role,
+    }
   },
 
   async signOut() {
-    await signOut()
-    await Session.signOut()
+    cachedPayload = null
+    try {
+      await signOut()
+      await Session.signOut()
+    } catch {
+      // Ignore errors during sign-out (session may already be invalid)
+    }
   },
 
   async refresh() {
@@ -50,6 +75,13 @@ export const superTokensAuthService = {
   },
 
   async expired() {
-    return !await Session.doesSessionExist()
+    // First check if we have a cached payload (from recent sign-in)
+    if (cachedPayload) return false
+    // Then try the SDK method, but catch errors from cookie issues
+    try {
+      return !await Session.doesSessionExist()
+    } catch {
+      return true
+    }
   },
 }
