@@ -13,7 +13,7 @@ Supertokens.init({
     apiDomain: import.meta.env.VITE_ST_DOMAIN,
     apiBasePath: import.meta.env.VITE_ST_API_BASE_PATH,
   },
-  recipeList: [EmailPassword.init(), Session.init()],
+  recipeList: [EmailPassword.init(), Session.init({ tokenTransferMethod: 'header' })],
 })
 
 ReactDOM.createRoot(document.getElementById('app')!).render(
