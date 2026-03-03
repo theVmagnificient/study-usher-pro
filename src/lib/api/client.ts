@@ -1,5 +1,5 @@
 import axios, { type AxiosInstance, type InternalAxiosRequestConfig, type AxiosError } from 'axios'
-import Session from 'supertokens-web-js/recipe/session'
+import { superTokensAuthService } from '@/services/stAuthService'
 
 
 export enum ApiErrorType {
@@ -37,8 +37,14 @@ export const apiClient: AxiosInstance = axios.create({
   },
 })
 
-// SuperTokens interceptors: automatically attach/save JWT tokens on requests/responses
-Session.addAxiosInterceptors(apiClient)
+// Attach stored access token to every request
+apiClient.interceptors.request.use((config: InternalAxiosRequestConfig) => {
+  const token = superTokensAuthService.getAccessToken()
+  if (token) {
+    config.headers.set('Authorization', `Bearer ${token}`)
+  }
+  return config
+})
 
 
 export const isOnline = () => {

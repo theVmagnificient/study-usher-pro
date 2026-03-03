@@ -18,9 +18,8 @@ export default function LoginPage() {
   const [errorMessage, setErrorMessage] = useState('')
 
   useEffect(() => {
-    authStore.isAuthenticated().then(authed => {
-      if (authed) navigate(getDefaultPathForRole(authStore.user.role as any))
-    })
+    const token = localStorage.getItem('st-access-token')
+    if (token) navigate(getDefaultPathForRole(authStore.user.role as any))
   }, [])
 
   async function handleLogin(e: FormEvent) {
