@@ -41,6 +41,8 @@ export interface ReportSubmitData {
   protocol_en?: string
   findings_en?: string
   impression_en?: string
+  transcript?: string
+  confirmed_normal_phrases?: string[]
 }
 
 

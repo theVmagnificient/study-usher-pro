@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import {
   LayoutDashboard, FileText, Users, ClipboardList, CheckSquare,
   CalendarDays, Activity, FolderCog, ChevronLeft, ChevronRight,
-  User, LogOut, Moon, Sun,
+  User, LogOut, Moon, Sun, LayoutTemplate,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAppStore } from '@/stores/app'
@@ -22,6 +22,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { labelKey: 'nav.studyList', path: '/tasks', icon: FileText, roles: ['admin'] },
   { labelKey: 'nav.taskTypes', path: '/task-types', icon: FolderCog, roles: ['admin'] },
+  { labelKey: 'nav.templates', path: '/templates', icon: LayoutTemplate, roles: ['admin'] },
   { labelKey: 'nav.userManagement', path: '/users', icon: Users, roles: ['admin'] },
   { labelKey: 'nav.workforceCapacity', path: '/workforce', icon: CalendarDays, roles: ['admin'] },
   { labelKey: 'nav.auditLog', path: '/audit', icon: Activity, roles: ['admin'] },

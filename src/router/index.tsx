@@ -15,6 +15,7 @@ import PhysicianSchedulePage from '@/pages/admin/PhysicianSchedulePage'
 import AuditLogPage from '@/pages/admin/AuditLogPage'
 import SLADashboardPage from '@/pages/admin/SLADashboardPage'
 import WorkforceCapacityPage from '@/pages/admin/WorkforceCapacityPage'
+import TemplatesPage from '@/pages/admin/TemplatesPage'
 
 // Physician Pages
 import PhysicianQueuePage from '@/pages/physician/PhysicianQueuePage'
@@ -86,6 +87,7 @@ export const router = createBrowserRouter([
       { path: '/audit', element: <AppLayout><AuditLogPage /></AppLayout> },
       { path: '/sla', element: <AppLayout><SLADashboardPage /></AppLayout> },
       { path: '/workforce', element: <AppLayout><WorkforceCapacityPage /></AppLayout> },
+      { path: '/templates', element: <AppLayout><TemplatesPage /></AppLayout> },
     ],
   },
 

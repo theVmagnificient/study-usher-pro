@@ -104,6 +104,8 @@ export interface Report {
   protocol_en: string | null
   findings_en: string | null
   impression_en: string | null
+  transcript?: string | null
+  confirmed_normal_phrases?: string | null // JSON array stored as string
   created_at: string
   updated_at: string
 }

@@ -9,6 +9,7 @@ const messages = {
     nav: {
       studyList: "Task List",
       taskTypes: "Task Types",
+      templates: "Templates",
       userManagement: "User Management",
       workforceCapacity: "Workforce Capacity",
       auditLog: "Audit Log",
@@ -58,11 +59,16 @@ const messages = {
       yes: "Yes",
       no: "No",
       close: "Close",
+      error: "An error occurred",
       optional: "Optional",
       required: "Required",
       unassigned: "Unassigned",
       all: "All",
       toggleTheme: "Toggle theme (Ctrl+D)",
+      lightMode: "Light Mode",
+      darkMode: "Dark Mode",
+      undo: "Undo",
+      redo: "Redo",
       previous: "Previous",
       next: "Next",
       pageOf: "Page {{page}} of {{total}}"
@@ -459,6 +465,36 @@ const messages = {
       }
     },
 
+    // Templates Page
+    templates: {
+      title: "Templates",
+      subtitle: "Manage report templates",
+      placeholder: "No templates yet. Create one to get started.",
+      addTemplate: "Create new template",
+      dialogTitle: "New template",
+      form: {
+        client: "Client",
+        clientPlaceholder: "Select client",
+        modality: "Modality",
+        modalityPlaceholder: "Select modality",
+        bodyArea: "Body area",
+        bodyAreaPlaceholder: "Select body area",
+        hasIvContrast: "IV contrast",
+        name: "Name",
+        namePlaceholder: "e.g. CT Chest",
+        constructor: "Report template"
+      },
+      table: {
+        name: "Name",
+        client: "Client",
+        modality: "Modality",
+        zone: "Zone",
+        ivContrast: "IV contrast",
+        addedBy: "Added by",
+        dateAdded: "Date added"
+      }
+    },
+
     // Workforce Capacity Page
     workforce: {
       title: "Workforce Capacity",
@@ -600,6 +636,18 @@ const messages = {
       impressionEnPlaceholder: "Manually translate the impression to English...",
       impressionNotAvailable: "No impression available for this prior study",
 
+      transcript: "Transcript",
+      transcriptPlaceholder: "Dictate findings or type AI commands starting with /...",
+      processReport: "Process Report",
+      finalReport: "Final Report",
+      addSection: "Section",
+      addBlock: "Block",
+      newSectionDefault: "NEW SECTION",
+      newBlockDefault: "New block",
+      addImpressionSection: "Add Impression",
+      loadDemoReport: "Load demo report",
+      previewWithHighlighting: "Preview with highlighting",
+
       addValidatorComment: "Add Validator Comment",
       validatorCommentNote: "Optional feedback for the reporting radiologist",
       validatorCommentPlaceholder: "Leave a comment about the report quality, suggestions for improvement, or positive feedback...",
@@ -663,6 +711,7 @@ const messages = {
     nav: {
       studyList: "Список задач",
       taskTypes: "Типы задач",
+      templates: "Шаблоны",
       userManagement: "Управление пользователями",
       workforceCapacity: "Планирование ресурсов",
       auditLog: "Журнал аудита",
@@ -712,11 +761,16 @@ const messages = {
       yes: "Да",
       no: "Нет",
       close: "Закрыть",
+      error: "Произошла ошибка",
       optional: "Необязательно",
       required: "Обязательно",
       unassigned: "Не назначено",
       all: "Все",
       toggleTheme: "Переключить тему (Ctrl+D)",
+      lightMode: "Светлая тема",
+      darkMode: "Тёмная тема",
+      undo: "Отменить",
+      redo: "Повторить",
       previous: "Назад",
       next: "Вперёд",
       pageOf: "Страница {{page}} из {{total}}"
@@ -1171,6 +1225,36 @@ const messages = {
       }
     },
 
+    // Страница шаблонов
+    templates: {
+      title: "Шаблоны",
+      subtitle: "Управление шаблонами отчётов",
+      placeholder: "Шаблонов пока нет. Создайте первый.",
+      addTemplate: "Создать новый шаблон",
+      dialogTitle: "Новый шаблон",
+      form: {
+        client: "Клиент",
+        clientPlaceholder: "Выберите клиента",
+        modality: "Модальность",
+        modalityPlaceholder: "Выберите модальность",
+        bodyArea: "Зона",
+        bodyAreaPlaceholder: "Выберите зону",
+        hasIvContrast: "Внутривенный контраст",
+        name: "Название",
+        namePlaceholder: "напр. КТ грудная клетка",
+        constructor: "Шаблон отчёта"
+      },
+      table: {
+        name: "Название",
+        client: "Клиент",
+        modality: "Модальность",
+        zone: "Зона",
+        ivContrast: "В/в контраст",
+        addedBy: "Добавил",
+        dateAdded: "Дата добавления"
+      }
+    },
+
     // Страница планирования ресурсов
     workforce: {
       title: "Планирование ресурсов",
@@ -1317,6 +1401,18 @@ const messages = {
       impressionEn: "Заключение (EN)",
       impressionEnPlaceholder: "Переведите вручную заключение на английский...",
       impressionNotAvailable: "Заключение недоступно для этого предыдущего исследования",
+
+      transcript: "Транскрипт",
+      transcriptPlaceholder: "Диктуйте находки или вводите AI-команды, начиная с /...",
+      processReport: "Обработать отчёт",
+      finalReport: "Финальное описание",
+      addSection: "Раздел",
+      addBlock: "Блок",
+      newSectionDefault: "НОВЫЙ РАЗДЕЛ",
+      newBlockDefault: "Новый блок",
+      addImpressionSection: "Добавить заключение",
+      loadDemoReport: "Загрузить демо-отчёт",
+      previewWithHighlighting: "Предпросмотр с подсветкой",
 
       addValidatorComment: "Добавить комментарий валидатора",
       validatorCommentNote: "Необязательный отзыв для рентгенолога-описателя",

@@ -68,6 +68,8 @@ export interface Study {
     findingsEn?: string;
     impression?: string;
     impressionEn?: string;
+    transcript?: string;
+    confirmedNormalPhrases?: string[];
   };
 }
 
@@ -90,6 +92,22 @@ export interface TaskType {
   expectedTAT: number; // in hours
   price: number;
   physicianPayout: number;
+}
+
+export interface ReportTemplate {
+  id: string;
+  name: string;
+  clientId: string;
+  clientName: string;
+  modality: Modality;
+  bodyArea: BodyArea;
+  hasIvContrast: boolean;
+  protocol: string;
+  findings: string;
+  impression: string;
+  reportDocument?: import('@/types/finalReport').FinalReportData;
+  createdBy: string;
+  createdAt: string;
 }
 
 export interface Physician {

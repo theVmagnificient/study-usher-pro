@@ -3,6 +3,23 @@ import type { Study, StudyStatus } from '@/types/study'
 import { taskService } from '@/services/taskService'
 import type { ReportSubmitData } from '@/lib/mappers/reportMapper'
 
+function extractErrorMessage(err: unknown, fallback: string): string {
+  if (err instanceof Error) return err.message
+  if (err && typeof err === 'object' && 'message' in err) {
+    const msg = (err as any).message
+    if (typeof msg === 'string') return msg
+    if (Array.isArray(msg)) {
+      const texts = msg.map((item: any) => (typeof item?.msg === 'string' ? item.msg : String(item)))
+      return texts.join('; ') || fallback
+    }
+  }
+  return fallback
+}
+
+function toError(err: unknown, fallback: string): Error {
+  return new Error(extractErrorMessage(err, fallback))
+}
+
 interface TaskState {
   myReportingTasks: Study[]
   myValidationTasks: Study[]
@@ -59,7 +76,7 @@ export const useTaskStore = create<TaskState>((set, get) => ({
       const tasks = await taskService.getMyReportingTasks()
       set({ myReportingTasks: tasks })
     } catch (err) {
-      set({ error: err instanceof Error ? err.message : 'Failed to fetch reporting tasks' })
+      set({ error: extractErrorMessage(err, 'Failed to fetch reporting tasks') })
       console.error('Error fetching reporting tasks:', err)
     } finally {
       set({ loading: false })
@@ -72,7 +89,7 @@ export const useTaskStore = create<TaskState>((set, get) => ({
       const tasks = await taskService.getMyValidationTasks()
       set({ myValidationTasks: tasks })
     } catch (err) {
-      set({ error: err instanceof Error ? err.message : 'Failed to fetch validation tasks' })
+      set({ error: extractErrorMessage(err, 'Failed to fetch validation tasks') })
       console.error('Error fetching validation tasks:', err)
     } finally {
       set({ loading: false })
@@ -85,7 +102,7 @@ export const useTaskStore = create<TaskState>((set, get) => ({
       const tasks = await taskService.getAdminValidationTasks()
       set({ myValidationTasks: tasks })
     } catch (err) {
-      set({ error: err instanceof Error ? err.message : 'Failed to fetch admin validation tasks' })
+      set({ error: extractErrorMessage(err, 'Failed to fetch admin validation tasks') })
       console.error('Error fetching admin validation tasks:', err)
     } finally {
       set({ loading: false })
@@ -100,7 +117,7 @@ export const useTaskStore = create<TaskState>((set, get) => ({
       console.log('Fetched task from optimized endpoint:', { id: task.id, hasReport: !!task.report, report: task.report })
       set({ currentTask: task })
     } catch (err) {
-      set({ error: err instanceof Error ? err.message : `Failed to fetch task ${taskId}` })
+      set({ error: extractErrorMessage(err, `Failed to fetch task ${taskId}`) })
       console.error(`Error fetching task ${taskId}:`, err)
     } finally {
       set({ loading: false })
@@ -115,9 +132,9 @@ export const useTaskStore = create<TaskState>((set, get) => ({
       await taskService.takeTask(currentTask.taskId, currentUserId)
       await get().fetchMyReportingTasks()
     } catch (err) {
-      set({ error: err instanceof Error ? err.message : `Failed to take task ${taskId}` })
+      set({ error: extractErrorMessage(err, `Failed to take task ${taskId}`) })
       console.error(`Error taking task ${taskId}:`, err)
-      throw err
+      throw toError(err, `Failed to take task ${taskId}`)
     } finally {
       set({ loading: false })
     }
@@ -132,9 +149,9 @@ export const useTaskStore = create<TaskState>((set, get) => ({
       await get().fetchTaskDetails(currentTask.taskId)
       await get().fetchMyReportingTasks()
     } catch (err) {
-      set({ error: err instanceof Error ? err.message : `Failed to start task ${taskId}` })
+      set({ error: extractErrorMessage(err, `Failed to start task ${taskId}`) })
       console.error(`Error starting task ${taskId}:`, err)
-      throw err
+      throw toError(err, `Failed to start task ${taskId}`)
     } finally {
       set({ loading: false })
     }
@@ -149,9 +166,9 @@ export const useTaskStore = create<TaskState>((set, get) => ({
       await get().fetchTaskDetails(currentTask.taskId)
       await get().fetchMyReportingTasks()
     } catch (err) {
-      set({ error: err instanceof Error ? err.message : `Failed to save draft for ${taskId}` })
+      set({ error: extractErrorMessage(err, `Failed to save draft for ${taskId}`) })
       console.error(`Error saving draft for ${taskId}:`, err)
-      throw err
+      throw toError(err, `Failed to save draft for ${taskId}`)
     } finally {
       set({ loading: false })
     }
@@ -166,9 +183,9 @@ export const useTaskStore = create<TaskState>((set, get) => ({
       await get().fetchTaskDetails(currentTask.taskId)
       await get().fetchMyReportingTasks()
     } catch (err) {
-      set({ error: err instanceof Error ? err.message : `Failed to submit report for ${taskId}` })
+      set({ error: extractErrorMessage(err, `Failed to submit report for ${taskId}`) })
       console.error(`Error submitting report for ${taskId}:`, err)
-      throw err
+      throw toError(err, `Failed to submit report for ${taskId}`)
     } finally {
       set({ loading: false })
     }
@@ -182,9 +199,9 @@ export const useTaskStore = create<TaskState>((set, get) => ({
       await taskService.submitForValidation(currentTask.taskId)
       await get().fetchMyReportingTasks()
     } catch (err) {
-      set({ error: err instanceof Error ? err.message : `Failed to submit task ${taskId} for validation` })
+      set({ error: extractErrorMessage(err, `Failed to submit task ${taskId} for validation`) })
       console.error(`Error submitting task ${taskId} for validation:`, err)
-      throw err
+      throw toError(err, `Failed to submit task ${taskId} for validation`)
     } finally {
       set({ loading: false })
     }
@@ -198,9 +215,9 @@ export const useTaskStore = create<TaskState>((set, get) => ({
       await taskService.finalizeTask(currentTask.taskId, currentUserId, comment)
       await get().fetchMyValidationTasks()
     } catch (err) {
-      set({ error: err instanceof Error ? err.message : `Failed to finalize task ${taskId}` })
+      set({ error: extractErrorMessage(err, `Failed to finalize task ${taskId}`) })
       console.error(`Error finalizing task ${taskId}:`, err)
-      throw err
+      throw toError(err, `Failed to finalize task ${taskId}`)
     } finally {
       set({ loading: false })
     }
@@ -214,9 +231,9 @@ export const useTaskStore = create<TaskState>((set, get) => ({
       await taskService.returnForRevision(currentTask.taskId, comment, currentUserId)
       await get().fetchMyValidationTasks()
     } catch (err) {
-      set({ error: err instanceof Error ? err.message : `Failed to return task ${taskId}` })
+      set({ error: extractErrorMessage(err, `Failed to return task ${taskId}`) })
       console.error(`Error returning task ${taskId}:`, err)
-      throw err
+      throw toError(err, `Failed to return task ${taskId}`)
     } finally {
       set({ loading: false })
     }
@@ -228,9 +245,9 @@ export const useTaskStore = create<TaskState>((set, get) => ({
       await taskService.editReportByValidator(taskId, updates)
       await get().fetchMyValidationTasks()
     } catch (err) {
-      set({ error: err instanceof Error ? err.message : `Failed to edit report for task ${taskId}` })
+      set({ error: extractErrorMessage(err, `Failed to edit report for task ${taskId}`) })
       console.error(`Error editing report for task ${taskId}:`, err)
-      throw err
+      throw toError(err, `Failed to edit report for task ${taskId}`)
     } finally {
       set({ loading: false })
     }
@@ -250,9 +267,9 @@ export const useTaskStore = create<TaskState>((set, get) => ({
       await taskService.startValidation(currentTask.taskId)
       await get().fetchMyValidationTasks()
     } catch (err) {
-      set({ error: err instanceof Error ? err.message : `Failed to start validation for ${taskId}` })
+      set({ error: extractErrorMessage(err, `Failed to start validation for ${taskId}`) })
       console.error(`Error starting validation for ${taskId}:`, err)
-      throw err
+      throw toError(err, `Failed to start validation for ${taskId}`)
     } finally {
       set({ loading: false })
     }
@@ -266,9 +283,9 @@ export const useTaskStore = create<TaskState>((set, get) => ({
       await taskService.markTranslated(currentTask.taskId)
       await get().fetchMyReportingTasks()
     } catch (err) {
-      set({ error: err instanceof Error ? err.message : `Failed to mark task ${taskId} as translated` })
+      set({ error: extractErrorMessage(err, `Failed to mark task ${taskId} as translated`) })
       console.error(`Error marking task ${taskId} as translated:`, err)
-      throw err
+      throw toError(err, `Failed to mark task ${taskId} as translated`)
     } finally {
       set({ loading: false })
     }
@@ -282,9 +299,9 @@ export const useTaskStore = create<TaskState>((set, get) => ({
       await taskService.markDelivered(currentTask.taskId)
       if (get().currentTask) await get().fetchTaskDetails(currentTask.taskId)
     } catch (err) {
-      set({ error: err instanceof Error ? err.message : `Failed to mark task ${taskId} as delivered` })
+      set({ error: extractErrorMessage(err, `Failed to mark task ${taskId} as delivered`) })
       console.error(`Error marking task ${taskId} as delivered:`, err)
-      throw err
+      throw toError(err, `Failed to mark task ${taskId} as delivered`)
     } finally {
       set({ loading: false })
     }
