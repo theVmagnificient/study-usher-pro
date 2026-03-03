@@ -1,5 +1,3 @@
-import { signOut } from 'supertokens-web-js/recipe/emailpassword'
-import Session from 'supertokens-web-js/recipe/session'
 import axios from 'axios'
 
 export interface SessionUser {
@@ -106,12 +104,6 @@ export const superTokensAuthService = {
 
   async signOut() {
     clearStoredTokens()
-    try {
-      await signOut()
-      await Session.signOut()
-    } catch {
-      // Ignore errors during sign-out
-    }
   },
 
   async refresh() {
