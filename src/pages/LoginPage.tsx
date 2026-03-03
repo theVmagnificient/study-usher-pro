@@ -29,9 +29,8 @@ export default function LoginPage() {
     setErrorMessage('')
     try {
       await authStore.signIn(email, password)
-      await authStore.getUserInfo()
       const redirect = searchParams.get('redirect')
-      navigate(redirect || getDefaultPathForRole(authStore.user.role as any))
+      navigate(redirect || '/tasks', { replace: true })
     } catch (err: any) {
       console.error('[Login] Error:', err)
       setErrorMessage(err?.message || 'Login failed')
