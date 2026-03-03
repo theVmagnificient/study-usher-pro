@@ -1,4 +1,5 @@
 import axios, { type AxiosInstance, type InternalAxiosRequestConfig, type AxiosError } from 'axios'
+import Session from 'supertokens-web-js/recipe/session'
 
 
 export enum ApiErrorType {
@@ -28,13 +29,16 @@ const retryCountMap = new Map<string, number>()
 
 
 export const apiClient: AxiosInstance = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || "",
+  baseURL: import.meta.env.VITE_API_BASE_URL || '',
   timeout: 30000,
   withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
   },
 })
+
+// SuperTokens interceptors: automatically attach/save JWT tokens on requests/responses
+Session.addAxiosInterceptors(apiClient)
 
 
 export const isOnline = () => {
