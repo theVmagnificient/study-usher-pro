@@ -30,7 +30,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   user: {} as Partial<User>,
 
   async getUserInfo() {
-    await superTokensAuthService.expired() && await superTokensAuthService.refresh()
     const user = await superTokensAuthService.user()
     set({ user: { ...user, role: ROLE_MAP[user.role] || DEFAULT_ROLE } })
   },
