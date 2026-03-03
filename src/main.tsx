@@ -13,7 +13,16 @@ Supertokens.init({
     apiDomain: import.meta.env.VITE_ST_DOMAIN,
     apiBasePath: import.meta.env.VITE_ST_API_BASE_PATH,
   },
-  recipeList: [EmailPassword.init(), Session.init({ tokenTransferMethod: 'header' })],
+  recipeList: [EmailPassword.init(), Session.init({
+    tokenTransferMethod: 'header',
+    sessionTokenBackendDomain: import.meta.env.VITE_ST_DOMAIN?.replace(/^https?:\/\//, '').replace(/\/.*$/, ''),
+    override: {
+      functions: (originalImplementation) => ({
+        ...originalImplementation,
+        shouldDoInterceptionBasedOnUrl: () => false,
+      }),
+    },
+  })],
 })
 
 ReactDOM.createRoot(document.getElementById('app')!).render(
