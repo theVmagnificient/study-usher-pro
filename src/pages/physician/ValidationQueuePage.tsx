@@ -35,7 +35,8 @@ export default function ValidationQueuePage() {
     else taskStore.fetchMyValidationTasks()
   }, [])
 
-  const allValidationStudies = myValidationTasks
+  const VALIDATION_STATUSES = ['assigned-for-validation', 'under-validation', 'finalized', 'delivered']
+  const allValidationStudies = myValidationTasks.filter(s => VALIDATION_STATUSES.includes(s.status))
 
   const urgent = allValidationStudies.filter(isUrgentValidation)
   const retro = allValidationStudies.filter(s => !isUrgentValidation(s))
