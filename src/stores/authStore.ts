@@ -35,9 +35,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   async signIn(username, password) {
-    if (!await get().isAuthenticated()) {
-      await superTokensAuthService.signIn(username, password)
-    }
+    await superTokensAuthService.signIn(username, password)
   },
 
   async signOut() {
