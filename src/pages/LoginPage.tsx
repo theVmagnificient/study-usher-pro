@@ -28,13 +28,19 @@ export default function LoginPage() {
     setIsLoading(true)
     setErrorMessage('')
     try {
+      console.log('[Login] Starting sign-in...')
       await authStore.signIn(email, password)
+      console.log('[Login] Sign-in complete, checking session...')
+      const exists = await authStore.isAuthenticated()
+      console.log('[Login] Session exists:', exists)
+      console.log('[Login] Fetching user info...')
       await authStore.getUserInfo()
+      console.log('[Login] User info:', authStore.user)
       const redirect = searchParams.get('redirect')
       navigate(redirect || getDefaultPathForRole(authStore.user.role as any))
     } catch (err: any) {
+      console.error('[Login] Error:', err)
       setErrorMessage(err?.message || 'Login failed')
-      console.error(err)
     } finally {
       setIsLoading(false)
     }
