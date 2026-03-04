@@ -24,7 +24,7 @@ const TOKEN_KEYS = {
 } as const
 
 function getApiUrl(): string {
-  const domain = import.meta.env.VITE_ST_DOMAIN || ''
+  const domain = import.meta.env.VITE_ST_DOMAIN || window.location.origin
   const basePath = import.meta.env.VITE_ST_API_BASE_PATH || '/api/v1/auth'
   return `${domain}${basePath}`
 }
