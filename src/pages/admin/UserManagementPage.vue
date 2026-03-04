@@ -47,6 +47,7 @@
                 <th>{{ t('userManagement.headers.contact') }}</th>
                 <th>{{ t('userManagement.headers.modalities') }}</th>
                 <th>{{ t('userManagement.headers.workload') }}</th>
+                <th>{{ t('userManagement.headers.registered') }}</th>
                 <th></th>
               </tr>
             </thead>
@@ -129,6 +130,12 @@
                       />
                     </div>
                   </div>
+                </td>
+                <td>
+                  <div v-if="physician.createdAt" class="text-sm text-muted-foreground whitespace-nowrap">
+                    {{ formatDate(physician.createdAt) }}
+                  </div>
+                  <div v-else class="text-sm text-muted-foreground">—</div>
                 </td>
                 <td @click.stop>
                   <div class="flex items-center gap-1">
@@ -310,6 +317,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { format } from 'date-fns'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { Plus, Edit2, Calendar, Clock, CalendarClock, Shield, Search, Trash2 } from 'lucide-vue-next'
@@ -363,6 +371,14 @@ const formData = ref({
   password: '',
   role: 'reporting-radiologist' as UserRole
 })
+
+const formatDate = (iso: string) => {
+  try {
+    return format(new Date(iso), 'dd MMM yyyy')
+  } catch {
+    return iso
+  }
+}
 
 const filteredPhysicians = computed(() => {
   const query = searchQuery.value.toLowerCase()
