@@ -1,11 +1,11 @@
 import type { AuditLogEntry, StudyStatus } from '@/types/study'
-import type { TaskEvent, User } from '@/types/api'
+import type { TaskEventWithEmbedded, User } from '@/types/api'
 import { formatPhysicianName } from './utils'
 import { mapTaskStatus } from './taskMapper'
 
 
 export interface TaskEventToAuditContext {
-  taskEvent: TaskEvent
+  taskEvent: TaskEventWithEmbedded
   studyId: number
   user?: User
 }

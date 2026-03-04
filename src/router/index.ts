@@ -177,7 +177,7 @@ const routes = [
 
 const router = createRouter({
   history: createWebHistory(),
-  routes,
+  routes: routes as any,
 })
 
 // Navigation guard for authentication and authorization

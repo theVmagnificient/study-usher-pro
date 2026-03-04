@@ -19,7 +19,7 @@ export function mapUserToPhysician(ctx: UserToPhysicianContext): Physician {
   return {
     id: formatUserId(user.id),
     fullName: formatPhysicianName(user.first_name, user.last_name),
-    email: user.email,
+    phone: user.email, // Use email as contact fallback
     telegram: undefined,
     role: mapUserRole(profile?.role),
     schedule: deriveScheduleFromSlots(scheduleSlots),
@@ -41,7 +41,7 @@ export function mapUserWithDetailsToPhysician(userData: UserWithDetails): Physic
   return {
     id: formatUserId(userData.id),
     fullName: formatPhysicianName(userData.first_name, userData.last_name),
-    email: userData.email,
+    phone: userData.email, // Use email as contact fallback
     telegram: undefined,
     role: mapUserRole(userData.role),
     schedule: deriveScheduleFromEmbeddedSlots(userData.schedule_slots),
