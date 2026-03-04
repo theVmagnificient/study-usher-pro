@@ -108,6 +108,7 @@ export interface Physician {
   supportedBodyAreas: BodyArea[];
   activeStudies: number;
   maxActiveStudies: number;
+  createdAt?: string;
   statistics: {
     total: number;
     byModality: Record<Modality, number>;

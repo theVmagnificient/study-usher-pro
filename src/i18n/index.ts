@@ -263,7 +263,8 @@ const messages = {
         role: "Role",
         contact: "Contact",
         modalities: "Modalities",
-        workload: "Workload"
+        workload: "Workload",
+        registered: "Registered"
       },
 
       studiesCompleted: "{count} studies completed",
@@ -913,7 +914,8 @@ const messages = {
         role: "Роль",
         contact: "Контакты",
         modalities: "Модальности",
-        workload: "Загрузка"
+        workload: "Загрузка",
+        registered: "Регистрация"
       },
 
       studiesCompleted: "{count} исследований завершено",

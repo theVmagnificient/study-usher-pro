@@ -28,6 +28,7 @@ export function mapUserToPhysician(ctx: UserToPhysicianContext): Physician {
     supportedBodyAreas: ['Chest', 'Abdomen'],
     activeStudies: activeTaskCount,
     maxActiveStudies: 5,
+    createdAt: user.created_at,
     statistics: {
       total: ctx.tasksByModality ? Object.values(ctx.tasksByModality).reduce((a, b) => a + b, 0) : 0,
       byModality: (ctx.tasksByModality || {}) as Record<Modality, number>,
@@ -50,6 +51,7 @@ export function mapUserWithDetailsToPhysician(userData: UserWithDetails): Physic
     supportedBodyAreas: ['Chest', 'Abdomen'],
     activeStudies: userData.active_task_count,
     maxActiveStudies: 5,
+    createdAt: userData.created_at,
     statistics: {
       total: 0,
       byModality: {} as Record<Modality, number>,
