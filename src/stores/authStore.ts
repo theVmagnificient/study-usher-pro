@@ -25,15 +25,14 @@ export const useSupertokensAuthStore = defineStore('supertokensAuth', {
   },
 
   actions: {
-    async getUserInfo() {
-      const sessionUser = await superTokensAuthService.user()
+    getUserInfo() {
+      const sessionUser = superTokensAuthService.user()
       this.user = { ...sessionUser, role: ROLE_MAP[sessionUser.role] || DEFAULT_ROLE }
     },
 
     async signIn(username: string, password: string) {
-      if (await this.isAuthenticated()) return
+      if (!this.expired()) return
       await superTokensAuthService.signIn(username, password)
-      // After successful sign-in, session tokens are already set by the SDK
     },
 
     async signOut() {
@@ -42,7 +41,13 @@ export const useSupertokensAuthStore = defineStore('supertokensAuth', {
     },
 
     async isAuthenticated() {
-      return !await superTokensAuthService.expired()
+      if (!superTokensAuthService.expired()) return true
+      // Try refresh
+      return await superTokensAuthService.refresh()
+    },
+
+    expired() {
+      return superTokensAuthService.expired()
     },
   },
 })
