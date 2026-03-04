@@ -64,7 +64,7 @@ export const useStudyStore = defineStore('study', () => {
       currentStudy.value = study
 
 
-      const index = studies.value.findIndex((s) => s.id === id)
+      const index = studies.value.findIndex((s) => String(s.id) === id)
       if (index !== -1) {
         studies.value[index] = study
       }
@@ -149,7 +149,7 @@ export const useStudyStore = defineStore('study', () => {
 
 
   const studyById = computed(() => {
-    return (id: string) => studies.value.find((s) => s.id === id)
+    return (id: string) => studies.value.find((s) => String(s.id) === id)
   })
 
 
@@ -167,6 +167,7 @@ export const useStudyStore = defineStore('study', () => {
       new: [],
       assigned: [],
       'in-progress': [],
+      'draft-saved': [],
       'draft-ready': [],
       translated: [],
       'assigned-for-validation': [],

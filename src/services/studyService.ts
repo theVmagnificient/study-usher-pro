@@ -167,10 +167,11 @@ export const studyService = {
           if (!tasksMap.has(task.study_id)) {
             // Populate cache with embedded data to avoid additional API calls
             if (task.client_type) {
-              lookupCache.setClientType({
+            lookupCache.setClientType({
                 id: task.client_type.id,
                 modality: task.client_type.modality,
                 body_area: task.client_type.body_area,
+                has_priors: false,
                 expected_tat_hours: task.client_type.expected_tat_hours,
                 client_id: task.study?.client_id || 0,
                 price: 0,

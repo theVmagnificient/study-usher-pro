@@ -201,7 +201,7 @@ export const useAuditStore = defineStore('audit', () => {
 
 
   const entriesByStudy = computed(() => {
-    return (studyId: string) => auditLog.value.filter((entry) => entry.studyId === studyId)
+    return (studyId: string) => auditLog.value.filter((entry) => String(entry.studyId) === studyId)
   })
 
 

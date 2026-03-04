@@ -23,7 +23,7 @@ export const useTaskStore = defineStore('task', () => {
     error.value = null
 
     try {
-      const tasks = await taskService.getMyReportingTasks(currentUserId.value)
+      const tasks = await taskService.getMyReportingTasks()
       myReportingTasks.value = tasks
     } catch (err) {
       error.value = err instanceof Error ? err.message : 'Failed to fetch reporting tasks'
@@ -39,7 +39,7 @@ export const useTaskStore = defineStore('task', () => {
     error.value = null
 
     try {
-      const tasks = await taskService.getMyValidationTasks(currentUserId.value)
+      const tasks = await taskService.getMyValidationTasks()
       myValidationTasks.value = tasks
     } catch (err) {
       error.value = err instanceof Error ? err.message : 'Failed to fetch validation tasks'

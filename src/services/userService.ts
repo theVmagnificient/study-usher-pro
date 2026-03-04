@@ -393,10 +393,18 @@ export const userService = {
       const activeTaskCount = 0
 
       // Map to Physician
+      // Convert embedded slots to full ScheduleSlot format
+      const fullSlots: ScheduleSlot[] = data.schedule_slots.map(slot => ({
+        ...slot,
+        user_id: data.user_id,
+        created_at: '',
+        updated_at: '',
+      }))
+
       const physician = mapUserToPhysician({
         user,
         profile,
-        scheduleSlots: data.schedule_slots,
+        scheduleSlots: fullSlots,
         activeTaskCount,
       })
 
