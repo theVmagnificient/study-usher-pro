@@ -171,7 +171,6 @@ export const studyService = {
                 id: task.client_type.id,
                 modality: task.client_type.modality,
                 body_area: task.client_type.body_area,
-                has_priors: false,
                 expected_tat_hours: task.client_type.expected_tat_hours,
                 client_id: task.study?.client_id || 0,
                 price: 0,

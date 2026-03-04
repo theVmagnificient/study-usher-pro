@@ -1,10 +1,10 @@
-import { create } from 'zustand'
+import { defineStore } from 'pinia'
 import { superTokensAuthService, type SessionUser } from '@/services/stAuthService'
 import type { UserRole } from '@/types/study'
 
 interface User extends SessionUser { role: UserRole }
 
-const ROLE_MAP: Record<string, UserRole> = {
+const ROLE_MAP: { [k: string]: UserRole } = {
   'admin': 'admin',
   'reporting_radiologist': 'reporting-radiologist',
   'validating_radiologist': 'validating-radiologist',
@@ -14,46 +14,35 @@ const ROLE_MAP: Record<string, UserRole> = {
 
 const DEFAULT_ROLE: UserRole = 'reporting-radiologist'
 
-interface AuthState {
-  user: Partial<User>
-  getUserInfo: () => Promise<void>
-  signIn: (username: string, password: string) => Promise<void>
-  signOut: () => Promise<void>
-  isAuthenticated: () => Promise<boolean>
-  isAdmin: () => boolean
-  isReportingRadiologist: () => boolean
-  isValidatingRadiologist: () => boolean
-  fullName: () => string
-}
+export const useSupertokensAuthStore = defineStore('supertokensAuth', {
+  state: () => ({ user: {} as User }),
 
-export const useAuthStore = create<AuthState>((set, get) => ({
-  user: {} as Partial<User>,
-
-  async getUserInfo() {
-    const user = await superTokensAuthService.user()
-    set({ user: { ...user, role: ROLE_MAP[user.role] || DEFAULT_ROLE } })
+  getters: {
+    isAdmin: (state) => state.user.role === 'admin',
+    isReporingRadiologist: (state) => state.user.role === 'reporting-radiologist',
+    isValidatingRadiologist: (state) => state.user.role === 'validating-radiologist',
+    fullName: (state) => state.user ? `${state.user.firstname} ${state.user.lastname}` : '',
   },
 
-  async signIn(username, password) {
-    await superTokensAuthService.signIn(username, password)
-  },
+  actions: {
+    async getUserInfo() {
+      await superTokensAuthService.expired() && await superTokensAuthService.refresh()
+      await superTokensAuthService.user()
+        .then(user => this.user = { ...user, role: ROLE_MAP[user.role] || DEFAULT_ROLE })
+    },
 
-  async signOut() {
-    await superTokensAuthService.signOut()
-    set({ user: {} as Partial<User> })
-  },
+    async signIn(username: string, password: string) {
+      !await this.isAuthenticated() && await superTokensAuthService.signIn(username, password)
+    },
 
-  async isAuthenticated() {
-    return !await superTokensAuthService.expired()
-  },
+    async signOut() {
+      await superTokensAuthService.signOut()
+    },
 
-  isAdmin: () => get().user.role === 'admin',
-  isReportingRadiologist: () => get().user.role === 'reporting-radiologist',
-  isValidatingRadiologist: () => get().user.role === 'validating-radiologist',
-  fullName: () => {
-    const u = get().user
-    return u ? `${u.firstname ?? ''} ${u.lastname ?? ''}`.trim() : ''
+    async isAuthenticated() {
+      return !await superTokensAuthService.expired()
+    },
   },
-}))
+})
 
-export { useAuthStore as useSupertokensAuthStore }
+export { useSupertokensAuthStore as useAuthStore }

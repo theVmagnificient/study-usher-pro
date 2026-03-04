@@ -1,18 +1,28 @@
-import { useState, useEffect } from 'react'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 
 const MOBILE_BREAKPOINT = 768
 
-export function useIsMobile(): boolean {
-  const [isMobile, setIsMobile] = useState<boolean>(
-    typeof window !== 'undefined' ? window.innerWidth < MOBILE_BREAKPOINT : false
-  )
+export function useIsMobile() {
+  const isMobile = ref<boolean | undefined>(undefined)
 
-  useEffect(() => {
-    const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`)
-    const handler = () => setIsMobile(mql.matches)
-    mql.addEventListener('change', handler)
-    return () => mql.removeEventListener('change', handler)
-  }, [])
+  const checkMobile = () => {
+    isMobile.value = window.innerWidth < MOBILE_BREAKPOINT
+  }
 
-  return isMobile
+  let mql: MediaQueryList | null = null
+
+  onMounted(() => {
+    mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`)
+    checkMobile()
+    mql.addEventListener('change', checkMobile)
+  })
+
+  onUnmounted(() => {
+    if (mql) {
+      mql.removeEventListener('change', checkMobile)
+    }
+  })
+
+  return computed(() => !!isMobile.value)
 }
+

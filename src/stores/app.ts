@@ -1,47 +1,55 @@
-import { create } from 'zustand'
+import { defineStore } from 'pinia'
+import { ref, computed } from 'vue'
 import type { UserRole } from '@/types/study'
 
-interface AppState {
-  currentRole: UserRole
-  theme: 'light' | 'dark' | 'system'
-  isDark: () => boolean
-  setRole: (role: UserRole) => void
-  setTheme: (theme: 'light' | 'dark' | 'system') => void
-  toggleTheme: () => void
-}
+export const useAppStore = defineStore('app', () => {
+  const currentRole = ref<UserRole>('admin')
+  const theme = ref<'light' | 'dark' | 'system'>('system')
 
-function applyTheme(theme: 'light' | 'dark' | 'system') {
-  if (theme !== 'system') {
-    document.documentElement.classList.toggle('dark', theme === 'dark')
-  } else {
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
-    document.documentElement.classList.toggle('dark', prefersDark)
+  const isDark = computed(() => {
+    if (theme.value === 'system') {
+      return window.matchMedia('(prefers-color-scheme: dark)').matches
+    }
+    return theme.value === 'dark'
+  })
+
+  function setRole(role: UserRole) {
+    currentRole.value = role
   }
-  localStorage.setItem('theme', theme)
-}
 
-const savedTheme = (localStorage.getItem('theme') as 'light' | 'dark' | 'system' | null) ?? 'system'
-applyTheme(savedTheme)
+  function setTheme(newTheme: 'light' | 'dark' | 'system') {
+    theme.value = newTheme
+    if (newTheme !== 'system') {
+      document.documentElement.classList.toggle('dark', newTheme === 'dark')
+    } else {
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+      document.documentElement.classList.toggle('dark', prefersDark)
+    }
+    localStorage.setItem('theme', newTheme)
+  }
 
-export const useAppStore = create<AppState>((set, get) => ({
-  currentRole: 'admin',
-  theme: savedTheme,
+  function toggleTheme() {
+    const current = isDark.value ? 'dark' : 'light'
+    setTheme(current === 'dark' ? 'light' : 'dark')
+  }
 
-  isDark: () => {
-    const { theme } = get()
-    if (theme === 'system') return window.matchMedia('(prefers-color-scheme: dark)').matches
-    return theme === 'dark'
-  },
+  // Initialize theme
+  if (typeof window !== 'undefined') {
+    const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | 'system' | null
+    if (savedTheme) {
+      setTheme(savedTheme)
+    } else {
+      setTheme('system')
+    }
+  }
 
-  setRole: (role) => set({ currentRole: role }),
+  return {
+    currentRole,
+    theme,
+    isDark,
+    setRole,
+    setTheme,
+    toggleTheme
+  }
+})
 
-  setTheme: (newTheme) => {
-    applyTheme(newTheme)
-    set({ theme: newTheme })
-  },
-
-  toggleTheme: () => {
-    const current = get().isDark() ? 'dark' : 'light'
-    get().setTheme(current === 'dark' ? 'light' : 'dark')
-  },
-}))

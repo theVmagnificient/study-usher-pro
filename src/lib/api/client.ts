@@ -1,5 +1,4 @@
 import axios, { type AxiosInstance, type InternalAxiosRequestConfig, type AxiosError } from 'axios'
-import { superTokensAuthService } from '@/services/stAuthService'
 
 
 export enum ApiErrorType {
@@ -29,21 +28,12 @@ const retryCountMap = new Map<string, number>()
 
 
 export const apiClient: AxiosInstance = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || '',
+  baseURL: import.meta.env.VITE_API_BASE_URL || "",
   timeout: 30000,
   withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
   },
-})
-
-// Attach stored access token to every request
-apiClient.interceptors.request.use((config: InternalAxiosRequestConfig) => {
-  const token = superTokensAuthService.getAccessToken()
-  if (token) {
-    config.headers.set('Authorization', `Bearer ${token}`)
-  }
-  return config
 })
 
 

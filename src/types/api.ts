@@ -112,26 +112,9 @@ export interface TaskEvent {
   task_id: number
   user_id: number | null
   comment: string | null
-  accession_number?: string
   data: Record<string, any>
   created_at: string
   updated_at: string
-}
-
-export interface ClientTypeCreateData {
-  clientId: number
-  modality: Modality
-  bodyArea: BodyArea
-  hasPriors: boolean
-  expectedTAT: number
-  price: number
-  physicianPayout: number
-}
-
-export interface ClientTypeUpdateData {
-  expectedTAT?: number
-  price?: number
-  physicianPayout?: number
 }
 
 export interface ReportComment {
